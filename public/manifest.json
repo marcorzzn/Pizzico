@@ -1,0 +1,16 @@
+{
+  "short_name": "CreativeSuite",
+  "name": "Suite Creativa Multipiattaforma Offline-First",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><path d='M25 75 L50 25 L75 75 Z' fill='%2306b6d4'/><circle cx='50' cy='60' r='12' fill='%23f59e0b'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0c12",
+  "theme_color": "#0a0c12",
+  "display": "standalone",
+  "orientation": "any"
+}

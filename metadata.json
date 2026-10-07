@@ -1,0 +1,7 @@
+{
+  "name": "Suite Creativa Multipiattaforma",
+  "description": "Suite creativa professionale per logo design vettoriale, fotoritocco raster, AI generativa e Virtual Try-On con architettura multi-engine e blueprint interattivo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
