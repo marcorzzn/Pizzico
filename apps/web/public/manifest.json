@@ -1,0 +1,16 @@
+{
+  "name": "Pizzico — Creative Software Lab",
+  "short_name": "Pizzico",
+  "description": "Professional hybrid graphics editor, offline-first, scientific & free",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121316",
+  "theme_color": "#121316",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

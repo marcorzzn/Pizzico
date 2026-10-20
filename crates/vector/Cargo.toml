@@ -1,0 +1,17 @@
+# Pizzico — crates/vector/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.2
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-vector"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico mathematical vector engine: Bézier, κ-curves, Euler spiral strokes, exact booleans"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+thiserror.workspace = true
+log.workspace = true

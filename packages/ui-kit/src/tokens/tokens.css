@@ -1,0 +1,65 @@
+/*
+Pizzico — packages/ui-kit/src/tokens/tokens.css
+Riferimento manifesto: §5.1, §5.6
+Licenza: MIT OR Apache-2.0
+*/
+
+:root {
+  /* Surfaces & Backgrounds */
+  --pz-bg-app: #121316;
+  --pz-bg-surface: #1a1b1f;
+  --pz-bg-surface-hover: #24262c;
+  --pz-bg-surface-active: #2c2f37;
+  --pz-border-muted: #2c2d33;
+  --pz-border-strong: #3d3f47;
+
+  /* Accents */
+  --pz-accent-primary: #4f46e5;
+  --pz-accent-primary-hover: #6366f1;
+  --pz-accent-active: #4338ca;
+  --pz-accent-subtle: rgba(79, 70, 229, 0.15);
+
+  /* Semantic Feedback */
+  --pz-success: #10b981;
+  --pz-warning: #f59e0b;
+  --pz-danger: #ef4444;
+  --pz-info: #3b82f6;
+
+  /* Text Colors */
+  --pz-text-primary: #f9fafb;
+  --pz-text-secondary: #9ca3af;
+  --pz-text-muted: #6b7280;
+  --pz-text-inverse: #111827;
+
+  /* Spacing */
+  --pz-space-xs: 4px;
+  --pz-space-sm: 8px;
+  --pz-space-md: 12px;
+  --pz-space-lg: 16px;
+  --pz-space-xl: 24px;
+  --pz-space-xxl: 32px;
+
+  /* Radii */
+  --pz-radius-sm: 4px;
+  --pz-radius-md: 8px;
+  --pz-radius-lg: 12px;
+  --pz-radius-full: 9999px;
+
+  /* Density Defaults */
+  --pz-touch-min: 36px;
+  --pz-toolbar-item-size: 36px;
+
+  /* Typography */
+  --pz-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --pz-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+[data-density="compact"] {
+  --pz-touch-min: 28px;
+  --pz-toolbar-item-size: 30px;
+}
+
+[data-density="touch"] {
+  --pz-touch-min: 48px;
+  --pz-toolbar-item-size: 48px;
+}

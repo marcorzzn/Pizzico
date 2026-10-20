@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicepkg/tauri-schema/main/schema.json",
+  "productName": "Pizzico",
+  "version": "0.1.0",
+  "identifier": "io.pizzico.app",
+  "build": {
+    "frontendDist": "../web/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm --filter @pizzico/app-web dev",
+    "beforeBuildCommand": "pnpm --filter @pizzico/app-web build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Pizzico — Creative Software Lab",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 400,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' blob: data:; worker-src 'self' blob:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "../web/public/icon.svg"
+    ]
+  }
+}

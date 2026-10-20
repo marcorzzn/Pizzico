@@ -1,0 +1,32 @@
+# Pizzico — crates/wasm-bindings/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §11 Step 8
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-wasm-bindings"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WebAssembly bindings and bridge between Rust engine and TypeScript UI shell"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pizzico-core = { path = "../core" }
+pizzico-raster = { path = "../raster" }
+pizzico-vector = { path = "../vector" }
+pizzico-color = { path = "../color" }
+pizzico-commands = { path = "../commands" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+web-sys = { workspace = true, features = ["console", "Window", "Document"] }
+console_error_panic_hook = "0.1"
+
+[dependencies.web-time]
+version = "1.1"

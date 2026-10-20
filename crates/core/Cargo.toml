@@ -1,0 +1,17 @@
+# Pizzico — crates/core/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.1
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico core document engine, polymorphic layer model, history, undo/redo, and compositing"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true

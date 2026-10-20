@@ -1,0 +1,19 @@
+# Pizzico — crates/render/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.2
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-render"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico GPU rendering pipeline: WebGPU (wgpu), WebGL2 fallback, Stencil-then-Cover vector paths"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+bytemuck.workspace = true
+thiserror.workspace = true
+log.workspace = true
+wgpu = { version = "23.0", default-features = false, features = ["webgpu", "wgsl"] }

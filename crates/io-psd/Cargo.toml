@@ -1,0 +1,18 @@
+# Pizzico — crates/io-psd/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.5
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-io-psd"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico clean room PSD/PSB parser and writer according to official Adobe specification"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+thiserror.workspace = true
+log.workspace = true
+byteorder = "1.5"

@@ -1,0 +1,18 @@
+# Pizzico — crates/text/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.4
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-text"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico typography engine: OpenType shaping with rustybuzz (HarfBuzz port) and glyph layout"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+thiserror.workspace = true
+log.workspace = true
+rustybuzz = "0.14"

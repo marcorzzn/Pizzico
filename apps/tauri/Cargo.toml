@@ -1,0 +1,19 @@
+# Pizzico — apps/tauri/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §11 Step 4
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-tauri"
+version = "0.1.0"
+description = "Pizzico Tauri 2 Native Mobile & Desktop Shell"
+authors = ["Pizzico Contributors"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

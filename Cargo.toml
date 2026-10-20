@@ -1,0 +1,48 @@
+# Pizzico — Cargo.toml (Root Workspace)
+# Riferimento manifesto: §3.1, §4
+# Licenza: MIT OR Apache-2.0
+
+[workspace]
+members = [
+    "crates/core",
+    "crates/raster",
+    "crates/vector",
+    "crates/color",
+    "crates/io-psd",
+    "crates/io-native",
+    "crates/io-svg",
+    "crates/text",
+    "crates/render",
+    "crates/selection",
+    "crates/inpainting",
+    "crates/commands",
+    "crates/wasm-bindings",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Pizzico Contributors"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pizzico/pizzico"
+homepage = "https://github.com/pizzico/pizzico"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bytemuck = { version = "1.16", features = ["derive"] }
+log = "0.4"
+thiserror = "1.0"
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.release.package.pizzico-wasm-bindings]
+opt-level = "z" # Optimize for binary size in WebAssembly

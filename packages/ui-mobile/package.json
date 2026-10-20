@@ -1,0 +1,18 @@
+{
+  "name": "@pizzico/ui-mobile",
+  "version": "0.1.0",
+  "description": "Pizzico mobile & touch shell adaptations, bottom sheets and radial menus",
+  "license": "MIT OR Apache-2.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pizzico/shared": "workspace:*",
+    "@pizzico/ui-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

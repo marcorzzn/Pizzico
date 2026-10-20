@@ -1,0 +1,55 @@
+# Pizzico — .gitignore
+# Riferimento manifesto: §4
+# Licenza: MIT OR Apache-2.0
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+
+# Rust / WASM
+target/
+Cargo.lock
+crates/**/pkg/
+packages/**/pkg/
+*.wasm
+
+# Tauri
+apps/tauri/src-tauri/target/
+apps/tauri/gen/
+
+# Testing & Coverage
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+.antigravity/
+*.swp
+*.swo
+
+# Legacy isolated folder (preserve README, keep heavy dumps uncommitted)
+docs/_legacy/*
+!docs/_legacy/README.md
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example

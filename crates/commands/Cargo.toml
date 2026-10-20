@@ -1,0 +1,18 @@
+# Pizzico — crates/commands/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §5.5
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-commands"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico unified command registry (~700 API endpoints) driving Command Palette and actions"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true

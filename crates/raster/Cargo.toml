@@ -1,0 +1,17 @@
+# Pizzico — crates/raster/Cargo.toml
+# Riferimento manifesto: §3.1, §4, §6.1
+# Licenza: MIT OR Apache-2.0
+
+[package]
+name = "pizzico-raster"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pizzico high-performance raster engine: Halide pipeline, median O(1), recursive blur, liquify MLS"
+
+[dependencies]
+pizzico-core = { path = "../core" }
+serde.workspace = true
+thiserror.workspace = true
+log.workspace = true
