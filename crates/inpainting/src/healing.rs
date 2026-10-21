@@ -7,7 +7,7 @@
 //! evitando le sfocature o gli aloni tipici del solo solutore Poisson di 2° ordine.
 
 pub fn solve_4th_order_pde_healing(
-    src: &[u8],
+    _src: &[u8],
     dst: &mut [u8],
     width: usize,
     height: usize,

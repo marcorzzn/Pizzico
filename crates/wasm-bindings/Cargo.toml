@@ -30,3 +30,6 @@ console_error_panic_hook = "0.1"
 
 [dependencies.web-time]
 version = "1.1"
+
+[features]
+console_error_panic_hook = []
