@@ -1,0 +1,17 @@
+{
+  "name": "@pizzico/wasm-bindings",
+  "collaborators": [
+    "Pizzico Project"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "pizzico_wasm_bindings_bg.wasm",
+    "pizzico_wasm_bindings.js",
+    "pizzico_wasm_bindings.d.ts"
+  ],
+  "module": "pizzico_wasm_bindings.js",
+  "types": "pizzico_wasm_bindings.d.ts",
+  "sideEffects": [
+    "./pizzico_wasm_bindings.js"
+  ]
+}

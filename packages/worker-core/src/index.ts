@@ -3,6 +3,7 @@
 // Licenza: MIT OR Apache-2.0
 
 export * from './worker';
+export { default as initWasm, add, pizzico_version } from '../pkg/pizzico_wasm_bindings';
 
 export class WorkerClient {
   private worker: Worker | null = null;
