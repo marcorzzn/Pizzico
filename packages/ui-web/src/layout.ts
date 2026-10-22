@@ -11,6 +11,8 @@ export interface LayoutOptions {
   onToolSelect?: (tool: string) => void;
   onCommand?: (commandId: string) => void;
   onOpenPsd?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export class DesktopShellLayout {
@@ -21,9 +23,12 @@ export class DesktopShellLayout {
   public inspectorPanelBody!: HTMLDivElement;
   public palette: CommandPalette;
   public openPsdBtn: HTMLButtonElement;
+  public undoBtn: HTMLButtonElement;
+  public redoBtn: HTMLButtonElement;
 
   private currentMode: WorkspaceMode = 'quick';
   private activeTool = 'brush';
+  private toolButtons = new Map<string, HTMLButtonElement>();
 
   constructor(options: LayoutOptions = {}) {
     this.root = document.createElement('div');
@@ -71,9 +76,33 @@ export class DesktopShellLayout {
       modeSwitcher.appendChild(btn);
     });
 
-    // Top Right: Apri PSD + Command Palette Trigger Button
+    // Top Right: Undo/Redo + Apri PSD + Command Palette Trigger Button
     const topRight = document.createElement('div');
     topRight.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+
+    this.undoBtn = document.createElement('button');
+    this.undoBtn.id = 'undo-btn';
+    this.undoBtn.className = 'pz-btn pz-btn-secondary';
+    this.undoBtn.style.padding = '5px 10px';
+    this.undoBtn.style.fontSize = '12px';
+    this.undoBtn.innerHTML = '<span>↶ Undo</span>';
+    this.undoBtn.title = 'Annulla (Ctrl+Z)';
+    this.undoBtn.disabled = true;
+    this.undoBtn.addEventListener('click', () => {
+      if (options.onUndo) options.onUndo();
+    });
+
+    this.redoBtn = document.createElement('button');
+    this.redoBtn.id = 'redo-btn';
+    this.redoBtn.className = 'pz-btn pz-btn-secondary';
+    this.redoBtn.style.padding = '5px 10px';
+    this.redoBtn.style.fontSize = '12px';
+    this.redoBtn.innerHTML = '<span>↷ Redo</span>';
+    this.redoBtn.title = 'Ripristina (Ctrl+Y / Ctrl+Shift+Z)';
+    this.redoBtn.disabled = true;
+    this.redoBtn.addEventListener('click', () => {
+      if (options.onRedo) options.onRedo();
+    });
 
     this.openPsdBtn = document.createElement('button');
     this.openPsdBtn.id = 'open-psd-btn';
@@ -92,6 +121,8 @@ export class DesktopShellLayout {
     cmdPaletteBtn.innerHTML = '<span>⌘K Cerca comandi</span>';
     cmdPaletteBtn.addEventListener('click', () => this.palette.open());
 
+    topRight.appendChild(this.undoBtn);
+    topRight.appendChild(this.redoBtn);
     topRight.appendChild(this.openPsdBtn);
     topRight.appendChild(cmdPaletteBtn);
 
@@ -106,6 +137,7 @@ export class DesktopShellLayout {
     const tools = [
       { id: 'move', label: '✛', title: 'Sposta (V)' },
       { id: 'brush', label: '🖌', title: 'Pennello (B)' },
+      { id: 'eraser', label: '🧹', title: 'Gomma (E)' },
       { id: 'pen', label: '✒', title: 'Penna Bézier (P)' },
       { id: 'curvature', label: '∿', title: 'Curvatura κ-curves' },
       { id: 'wand', label: '🪄', title: 'Bacchetta Magica (W)' },
@@ -116,14 +148,14 @@ export class DesktopShellLayout {
     tools.forEach(({ id, label, title }) => {
       const btn = document.createElement('button');
       btn.className = `pz-tool-btn ${this.activeTool === id ? 'pz-active' : ''}`;
+      btn.dataset.tool = id;
       btn.innerHTML = label;
       btn.title = title;
       btn.addEventListener('click', () => {
-        leftToolbar.querySelectorAll('.pz-tool-btn').forEach((b) => b.classList.remove('pz-active'));
-        btn.classList.add('pz-active');
-        this.activeTool = id;
+        this.setActiveTool(id);
         if (options.onToolSelect) options.onToolSelect(id);
       });
+      this.toolButtons.set(id, btn);
       leftToolbar.appendChild(btn);
     });
 
@@ -189,6 +221,21 @@ export class DesktopShellLayout {
       onExecute: (cmdId) => {
         if (options.onCommand) options.onCommand(cmdId);
       },
+    });
+  }
+
+  public getActiveTool(): string {
+    return this.activeTool;
+  }
+
+  public setActiveTool(toolId: string) {
+    this.activeTool = toolId;
+    this.toolButtons.forEach((btn, id) => {
+      if (id === toolId) {
+        btn.classList.add('pz-active');
+      } else {
+        btn.classList.remove('pz-active');
+      }
     });
   }
 }

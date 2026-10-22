@@ -219,14 +219,16 @@ pub async fn init_webgpu_canvas(canvas_id: &str) -> Result<(), JsValue> {
 
         // Render del frame corrente con campionamento texture dinamica
         let mut ts_borrow = texture_state_c.borrow_mut();
-        let _ = render_frame(
+        if let Err(e) = render_frame(
             &device_c,
             &queue_c,
             &context_c,
             &pipeline_c,
             &sampler_c,
             &mut *ts_borrow,
-        );
+        ) {
+            web_sys::console::error_1(&e);
+        }
 
         // Schedula frame successivo
         if let Some(w) = web_sys::window() {

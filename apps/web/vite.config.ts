@@ -18,7 +18,13 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['@pizzico/worker-core'],
+    exclude: [
+      '@pizzico/worker-core',
+      '@pizzico/ui-web',
+      '@pizzico/ui-kit',
+      '@pizzico/command-palette',
+      '@pizzico/shared',
+    ],
   },
   build: {
     target: 'esnext',

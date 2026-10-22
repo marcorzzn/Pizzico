@@ -31,12 +31,77 @@ export class PizzicoEngine {
         return BigInt.asUintN(64, ret);
     }
     /**
+     * Avvia un tratto di pennello.
+     * @returns {boolean}
+     */
+    begin_stroke() {
+        const ret = wasm.pizzicoengine_begin_stroke(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Disegna un segmento di pennello.
+     * @param {number} from_x
+     * @param {number} from_y
+     * @param {number} to_x
+     * @param {number} to_y
+     * @param {number} radius
+     * @param {number} hardness
+     * @param {Uint8Array} color
+     * @param {number} opacity
+     * @returns {boolean}
+     */
+    brush_stroke(from_x, from_y, to_x, to_y, radius, hardness, color, opacity) {
+        const ptr0 = passArray8ToWasm0(color, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.pizzicoengine_brush_stroke(this.__wbg_ptr, from_x, from_y, to_x, to_y, radius, hardness, ptr0, len0, opacity);
+        return ret !== 0;
+    }
+    /**
+     * Può ripristinare?
+     * @returns {boolean}
+     */
+    can_redo() {
+        const ret = wasm.pizzicoengine_can_redo(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Può annullare?
+     * @returns {boolean}
+     */
+    can_undo() {
+        const ret = wasm.pizzicoengine_can_undo(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Crea un nuovo documento.
      * @param {number} width
      * @param {number} height
      */
     create_document(width, height) {
         wasm.pizzicoengine_create_document(this.__wbg_ptr, width, height);
+    }
+    /**
+     * Conclude il tratto registrando l'azione nella history.
+     * @returns {boolean}
+     */
+    end_stroke() {
+        const ret = wasm.pizzicoengine_end_stroke(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Disegna un segmento di gomma.
+     * @param {number} from_x
+     * @param {number} from_y
+     * @param {number} to_x
+     * @param {number} to_y
+     * @param {number} radius
+     * @param {number} hardness
+     * @param {number} opacity
+     * @returns {boolean}
+     */
+    eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity) {
+        const ret = wasm.pizzicoengine_eraser_stroke(this.__wbg_ptr, from_x, from_y, to_x, to_y, radius, hardness, opacity);
+        return ret !== 0;
     }
     /**
      * ID del livello attivo.
@@ -74,6 +139,17 @@ export class PizzicoEngine {
      */
     get_document_metadata() {
         const ret = wasm.pizzicoengine_get_document_metadata(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Informazioni sulla history.
+     * @returns {any}
+     */
+    get_history_info() {
+        const ret = wasm.pizzicoengine_get_history_info(this.__wbg_ptr);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -141,6 +217,14 @@ export class PizzicoEngine {
         return this;
     }
     /**
+     * Ripristina l'ultima azione annullata.
+     * @returns {boolean}
+     */
+    redo() {
+        const ret = wasm.pizzicoengine_redo(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Rimuove un livello dato il suo ID.
      * @param {number} id
      * @returns {boolean}
@@ -190,6 +274,14 @@ export class PizzicoEngine {
         wasm.pizzicoengine_set_layer_visibility(this.__wbg_ptr, id, visible);
     }
     /**
+     * Annulla l'ultima azione.
+     * @returns {boolean}
+     */
+    undo() {
+        const ret = wasm.pizzicoengine_undo(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Larghezza del documento corrente in pixel.
      * @returns {number}
      */
@@ -230,12 +322,85 @@ export function add_raster_layer(name, width, height, color) {
 }
 
 /**
+ * Avvia una sessione di tratto con il pennello o gomma.
+ * Memorizza lo stato iniziale del livello raster attivo per generare un unico comando Undo/Redo compatto.
+ * @returns {boolean}
+ */
+export function begin_stroke() {
+    const ret = wasm.begin_stroke();
+    return ret !== 0;
+}
+
+/**
+ * Rasterizza un segmento di pennello continuo tra (from_x, from_y) e (to_x, to_y) sul livello attivo.
+ * Aggiorna il dirty bounding box e notifica WebGPU per la ricomposizione immediata a schermo.
+ * @param {number} from_x
+ * @param {number} from_y
+ * @param {number} to_x
+ * @param {number} to_y
+ * @param {number} radius
+ * @param {number} hardness
+ * @param {Uint8Array} color
+ * @param {number} opacity
+ * @returns {boolean}
+ */
+export function brush_stroke(from_x, from_y, to_x, to_y, radius, hardness, color, opacity) {
+    const ptr0 = passArray8ToWasm0(color, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.brush_stroke(from_x, from_y, to_x, to_y, radius, hardness, ptr0, len0, opacity);
+    return ret !== 0;
+}
+
+/**
+ * Verifica se è presente almeno un'operazione ripristinabile nella cronologia.
+ * @returns {boolean}
+ */
+export function can_redo() {
+    const ret = wasm.can_redo();
+    return ret !== 0;
+}
+
+/**
+ * Verifica se è presente almeno un'operazione annullabile nella cronologia.
+ * @returns {boolean}
+ */
+export function can_undo() {
+    const ret = wasm.can_undo();
+    return ret !== 0;
+}
+
+/**
  * Crea o resetta il documento attivo con larghezza e altezza specificate.
  * @param {number} width
  * @param {number} height
  */
 export function create_document(width, height) {
     wasm.create_document(width, height);
+}
+
+/**
+ * Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
+ * @returns {boolean}
+ */
+export function end_stroke() {
+    const ret = wasm.end_stroke();
+    return ret !== 0;
+}
+
+/**
+ * Rasterizza un segmento di gomma tra (from_x, from_y) e (to_x, to_y) sul livello attivo.
+ * @param {number} from_x
+ * @param {number} from_y
+ * @param {number} to_x
+ * @param {number} to_y
+ * @param {number} radius
+ * @param {number} hardness
+ * @param {number} opacity
+ * @returns {boolean}
+ */
+export function eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity) {
+    const ret = wasm.eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity);
+    return ret !== 0;
 }
 
 /**
@@ -259,7 +424,7 @@ export function get_composite_buffer() {
 }
 
 /**
- * Restituisce le dimensioni [larghezza, altezza] del documento attivo in pixel.
+ * Restituisce le dimensioni correnti del documento attivo come array `[width, height]`.
  * @returns {Uint32Array}
  */
 export function get_document_dimensions() {
@@ -282,6 +447,18 @@ export function get_document_metadata() {
 }
 
 /**
+ * Restituisce lo stato corrente della History in formato oggetto JS `{ canUndo, canRedo, undoCount, redoCount }`.
+ * @returns {any}
+ */
+export function get_history_info() {
+    const ret = wasm.get_history_info();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Restituisce il numero di livelli presenti nel documento attivo.
  * @returns {number}
  */
@@ -291,7 +468,7 @@ export function get_layer_count() {
 }
 
 /**
- * Restituisce l'array JSON contenente i metadati di tutti i livelli nel documento attivo.
+ * Restituisce i metadati di tutti i livelli presenti nel documento attivo come array JS.
  * @returns {any}
  */
 export function get_layers_metadata() {
@@ -356,6 +533,15 @@ export function pizzico_version() {
 }
 
 /**
+ * Ripristina (Redo) l'ultima operazione precedentemente annullata.
+ * @returns {boolean}
+ */
+export function redo() {
+    const ret = wasm.redo();
+    return ret !== 0;
+}
+
+/**
  * Rimuove il livello specificato dal documento attivo.
  * @param {number} id
  * @returns {boolean}
@@ -397,6 +583,15 @@ export function set_layer_opacity(id, opacity) {
  */
 export function set_layer_visibility(id, visible) {
     wasm.set_layer_visibility(id, visible);
+}
+
+/**
+ * Annulla (Undo) l'ultima operazione effettuata nel documento.
+ * @returns {boolean}
+ */
+export function undo() {
+    const ret = wasm.undo();
+    return ret !== 0;
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -447,6 +642,9 @@ function __wbg_get_imports() {
             } finally {
                 wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
             }
+        },
+        __wbg_error_c9cf3fc2064683a9: function(arg0) {
+            console.error(arg0);
         },
         __wbg_getElementById_cc94972b404e4eaa: function(arg0, arg1, arg2) {
             const ret = arg0.getElementById(getStringFromWasm0(arg1, arg2));
@@ -573,7 +771,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 52, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },

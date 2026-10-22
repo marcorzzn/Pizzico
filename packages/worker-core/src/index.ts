@@ -11,9 +11,21 @@
 //! Il file `pkg/pizzico_wasm_bindings.js` e `pizzico_wasm_bindings.d.ts`
 //! vengono ri-generati ogni volta che si esegue `wasm-pack build`.
 
-// ── Inizializzazione e funzioni core ─────────────────────────────────────────
+import initWasmInternal from '../pkg/pizzico_wasm_bindings';
+
+export async function initWasm(moduleOrPath?: any): Promise<any> {
+  if (moduleOrPath !== undefined) {
+    return initWasmInternal(moduleOrPath);
+  }
+  if (typeof window !== 'undefined') {
+    const res = await fetch('/pizzico_wasm_bindings_bg.wasm?t=' + Date.now());
+    const bytes = await res.arrayBuffer();
+    return initWasmInternal({ module_or_path: bytes });
+  }
+  return initWasmInternal();
+}
+
 export {
-  default as initWasm,
   add,
   pizzico_version,
   PizzicoEngine,
@@ -33,6 +45,15 @@ export {
   set_dirty,
   load_psd_bytes,
   get_document_metadata,
+  begin_stroke,
+  brush_stroke,
+  eraser_stroke,
+  end_stroke,
+  undo,
+  redo,
+  can_undo,
+  can_redo,
+  get_history_info,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

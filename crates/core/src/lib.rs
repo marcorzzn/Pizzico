@@ -23,5 +23,8 @@ pub mod layer;
 pub use blend::{BlendMode, blend_pixel};
 pub use compositing::{CompositeBuffer, composite_layers};
 pub use document::{Document, DocumentMetadata};
-pub use history::HistoryStack;
+pub use history::{
+    AddLayerCommand, Command, History, HistoryStack, RemoveLayerCommand, SetOpacityCommand,
+    SetVisibilityCommand, StrokeCommand,
+};
 pub use layer::{Layer, LayerContent, LayerId, LayerKind};

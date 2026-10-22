@@ -17,12 +17,14 @@
 //! - Nehab et al. (2011), *Constant-Time GPU Filter*, SIGGRAPH Asia.
 //! - Schaefer et al. (2006), *Image Deformation Using Moving Least Squares*, SIGGRAPH.
 
+pub mod brush;
 pub mod liquify;
 pub mod median;
 pub mod pipeline;
 pub mod recursive;
 pub mod sparse;
 
+pub use brush::{BoundingBox, Brush, eraser_stamp, eraser_stroke, stamp, stroke};
 pub use liquify::MovingLeastSquares;
 pub use median::median_filter_o1;
 pub use pipeline::RasterPipeline;

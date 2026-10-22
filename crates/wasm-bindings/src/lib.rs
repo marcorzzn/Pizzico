@@ -1,5 +1,5 @@
 // Pizzico — crates/wasm-bindings/src/lib.rs
-// Riferimento manifesto: §3.1, §4, §6.1, §6.2, §11 Step 8
+// Riferimento manifesto: §3.1, §4, §6.1, §6.2, §10 Fase 1, §11 Step 8
 // Licenza: MIT OR Apache-2.0
 
 //! # Pizzico WebAssembly Bindings
@@ -17,22 +17,36 @@
 //! - `get_composite_buffer() -> Vec<u8>` — compositing RGBA 8-bit multi-livello
 //! - `PizzicoEngine` — handle principale a documento e cronologia comandi
 //! - `init_webgpu(canvas_id: &str) -> Promise` — avvia il render loop WebGPU
+//! - `begin_stroke()`, `brush_stroke()`, `eraser_stroke()`, `end_stroke()` — Brush Engine
+//! - `undo()`, `redo()`, `can_undo()`, `can_redo()`, `get_history_info()` — History System
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use wasm_bindgen::prelude::*;
 
 use pizzico_commands::CommandRegistry;
-use pizzico_core::{Document, Layer};
+use pizzico_core::{
+    AddLayerCommand, Command, Document, History, Layer, LayerKind, RemoveLayerCommand,
+    SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
+};
+use pizzico_raster::brush::{BoundingBox, Brush};
 
 pub mod gpu;
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Stato Globale Documento Attivo (Thread-Local per runtime WASM)
+// Stato Globale Documento Attivo & History (Thread-Local per runtime WASM)
 // ──────────────────────────────────────────────────────────────────────────────
+
+struct ActiveStrokeState {
+    layer_id: u64,
+    before_pixels: Vec<u8>,
+    dirty_bbox: Option<BoundingBox>,
+}
 
 thread_local! {
     static ACTIVE_DOCUMENT: RefCell<Document> = RefCell::new(Document::new(800, 600, "Pizzico Project"));
+    static ACTIVE_HISTORY: RefCell<History> = RefCell::new(History::new(50));
+    static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
 }
 
 static DOCUMENT_DIRTY: AtomicBool = AtomicBool::new(true);
@@ -103,6 +117,8 @@ pub fn create_document(width: u32, height: u32) {
     with_active_document_mut(|doc| {
         *doc = Document::new_empty(width, height);
     });
+    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
 }
 
 /// Aggiunge un nuovo livello raster al documento attivo riempito con un colore RGBA uniforme.
@@ -118,7 +134,9 @@ pub fn add_raster_layer(name: &str, width: u32, height: u32, color: &[u8]) -> u6
     with_active_document_mut(|doc| {
         let id = doc.allocate_layer_id();
         let layer = Layer::new_raster_color(id, name, width, height, col);
-        doc.add_layer(layer)
+        let cmd = Box::new(AddLayerCommand::new(layer));
+        ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+        doc.add_layer(Layer::new_raster_color(id, name, width, height, col))
     })
 }
 
@@ -128,7 +146,7 @@ pub fn get_composite_buffer() -> Vec<u8> {
     with_active_document(|doc| pizzico_core::composite_layers(doc))
 }
 
-/// Restituisce le dimensioni [larghezza, altezza] del documento attivo in pixel.
+/// Restituisce le dimensioni correnti del documento attivo come array `[width, height]`.
 #[wasm_bindgen]
 pub fn get_document_dimensions() -> Vec<u32> {
     with_active_document(|doc| vec![doc.width, doc.height])
@@ -140,10 +158,10 @@ pub fn get_layer_count() -> usize {
     with_active_document(|doc| doc.layer_count())
 }
 
-/// DTO serializzabile per l'invio dei metadati dei livelli al frontend TypeScript.
+/// DTO serializzabile per i metadati di un singolo livello.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LayerMetadataDto {
-    pub id: u32,
+    pub id: u64,
     pub name: String,
     pub kind: String,
     pub visible: bool,
@@ -153,14 +171,14 @@ pub struct LayerMetadataDto {
     pub blend_mode: String,
 }
 
-/// Restituisce l'array JSON contenente i metadati di tutti i livelli nel documento attivo.
+/// Restituisce i metadati di tutti i livelli presenti nel documento attivo come array JS.
 #[wasm_bindgen]
 pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
     let dtos: Vec<LayerMetadataDto> = with_active_document(|doc| {
         doc.layers
             .iter()
             .map(|l| LayerMetadataDto {
-                id: l.id as u32,
+                id: l.id,
                 name: l.name.clone(),
                 kind: match &l.kind {
                     pizzico_core::LayerKind::Raster { .. } => "Raster".to_string(),
@@ -183,17 +201,25 @@ pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
 /// Imposta l'opacità del livello specificato (0.0 - 1.0) e marca il documento dirty.
 #[wasm_bindgen]
 pub fn set_layer_opacity(id: u32, opacity: f32) {
+    let id_u64 = id as u64;
+    let old_opacity = with_active_document(|doc| doc.get_layer(id_u64).map(|l| l.opacity)).unwrap_or(1.0);
     with_active_document_mut(|doc| {
-        doc.set_layer_opacity(id as u64, opacity);
+        doc.set_layer_opacity(id_u64, opacity);
     });
+    let cmd = Box::new(SetOpacityCommand::new(id_u64, old_opacity, opacity));
+    ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
 }
 
 /// Imposta la visibilità del livello specificato e marca il documento dirty.
 #[wasm_bindgen]
 pub fn set_layer_visibility(id: u32, visible: bool) {
+    let id_u64 = id as u64;
+    let old_vis = with_active_document(|doc| doc.get_layer(id_u64).map(|l| l.visible)).unwrap_or(true);
     with_active_document_mut(|doc| {
-        doc.set_layer_visibility(id as u64, visible);
+        doc.set_layer_visibility(id_u64, visible);
     });
+    let cmd = Box::new(SetVisibilityCommand::new(id_u64, old_vis, visible));
+    ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
 }
 
 /// Seleziona il livello specificato come livello attivo nel documento.
@@ -207,9 +233,15 @@ pub fn select_layer(id: u32) {
 /// Rimuove il livello specificato dal documento attivo.
 #[wasm_bindgen]
 pub fn remove_layer(id: u32) -> bool {
-    with_active_document_mut(|doc| {
-        doc.remove_layer(id as u64).is_some()
-    })
+    let id_u64 = id as u64;
+    let cmd_opt = with_active_document(|doc| RemoveLayerCommand::new(doc, id_u64));
+    let success = with_active_document_mut(|doc| doc.remove_layer(id_u64).is_some());
+    if success {
+        if let Some(cmd) = cmd_opt {
+            ACTIVE_HISTORY.with(|h| h.borrow_mut().push(Box::new(cmd)));
+        }
+    }
+    success
 }
 
 /// Restituisce l'ID del livello attualmente selezionato (se presente).
@@ -266,7 +298,290 @@ pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
         *doc = imported_doc;
     });
 
+    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
+
     Ok(())
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Brush Engine & Undo/Redo Bridge (§6.1, §10 Fase 1)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Avvia una sessione di tratto con il pennello o gomma.
+/// Memorizza lo stato iniziale del livello raster attivo per generare un unico comando Undo/Redo compatto.
+#[wasm_bindgen]
+pub fn begin_stroke() -> bool {
+    with_active_document(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            if let Some(layer) = doc.get_layer(active_id) {
+                if let LayerKind::Raster { pixels, .. } = &layer.kind {
+                    ACTIVE_STROKE.with(|s| {
+                        *s.borrow_mut() = Some(ActiveStrokeState {
+                            layer_id: active_id,
+                            before_pixels: pixels.clone(),
+                            dirty_bbox: None,
+                        });
+                    });
+                    return true;
+                }
+            }
+        }
+        false
+    })
+}
+
+/// Rasterizza un segmento di pennello continuo tra (from_x, from_y) e (to_x, to_y) sul livello attivo.
+/// Aggiorna il dirty bounding box e notifica WebGPU per la ricomposizione immediata a schermo.
+#[wasm_bindgen]
+pub fn brush_stroke(
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    color: &[u8],
+    opacity: f32,
+) -> bool {
+    ACTIVE_STROKE.with(|s| {
+        if s.borrow().is_none() {
+            begin_stroke();
+        }
+    });
+
+    let col = if color.len() >= 4 {
+        [color[0], color[1], color[2], color[3]]
+    } else {
+        [0, 0, 0, 255]
+    };
+
+    let brush = Brush {
+        radius,
+        hardness,
+        color: col,
+        opacity,
+    };
+
+    let mut bbox_res: Option<BoundingBox> = None;
+
+    with_active_document_mut(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            if let Some(layer) = doc.get_layer_mut(active_id) {
+                let local_from_x = from_x - layer.transform.x as f32;
+                let local_from_y = from_y - layer.transform.y as f32;
+                let local_to_x = to_x - layer.transform.x as f32;
+                let local_to_y = to_y - layer.transform.y as f32;
+                bbox_res = pizzico_raster::brush::stroke(
+                    layer,
+                    (local_from_x, local_from_y),
+                    (local_to_x, local_to_y),
+                    &brush,
+                );
+            }
+        }
+    });
+
+    if let Some(bbox) = bbox_res {
+        ACTIVE_STROKE.with(|s| {
+            if let Some(ref mut st) = *s.borrow_mut() {
+                st.dirty_bbox = Some(match st.dirty_bbox {
+                    Some(current) => current.union(&bbox),
+                    None => bbox,
+                });
+            }
+        });
+        set_document_dirty(true);
+        true
+    } else {
+        false
+    }
+}
+
+/// Rasterizza un segmento di gomma tra (from_x, from_y) e (to_x, to_y) sul livello attivo.
+#[wasm_bindgen]
+pub fn eraser_stroke(
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    opacity: f32,
+) -> bool {
+    ACTIVE_STROKE.with(|s| {
+        if s.borrow().is_none() {
+            begin_stroke();
+        }
+    });
+
+    let brush = Brush {
+        radius,
+        hardness,
+        color: [0, 0, 0, 255],
+        opacity,
+    };
+
+    let mut bbox_res: Option<BoundingBox> = None;
+
+    with_active_document_mut(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            if let Some(layer) = doc.get_layer_mut(active_id) {
+                let local_from_x = from_x - layer.transform.x as f32;
+                let local_from_y = from_y - layer.transform.y as f32;
+                let local_to_x = to_x - layer.transform.x as f32;
+                let local_to_y = to_y - layer.transform.y as f32;
+                bbox_res = pizzico_raster::brush::eraser_stroke(
+                    layer,
+                    (local_from_x, local_from_y),
+                    (local_to_x, local_to_y),
+                    &brush,
+                );
+            }
+        }
+    });
+
+    if let Some(bbox) = bbox_res {
+        ACTIVE_STROKE.with(|s| {
+            if let Some(ref mut st) = *s.borrow_mut() {
+                st.dirty_bbox = Some(match st.dirty_bbox {
+                    Some(current) => current.union(&bbox),
+                    None => bbox,
+                });
+            }
+        });
+        set_document_dirty(true);
+        true
+    } else {
+        false
+    }
+}
+
+/// Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
+#[wasm_bindgen]
+pub fn end_stroke() -> bool {
+    let stroke_opt = ACTIVE_STROKE.with(|s| s.borrow_mut().take());
+    if let Some(stroke_state) = stroke_opt {
+        let layer_id = stroke_state.layer_id;
+        let before_pixels = stroke_state.before_pixels;
+        let dirty_bbox = stroke_state.dirty_bbox;
+
+        let cmd_opt: Option<Box<dyn Command>> = with_active_document(|doc| {
+            if let Some(layer) = doc.get_layer(layer_id) {
+                if let LayerKind::Raster { width, pixels: current_pixels, .. } = &layer.kind {
+                    if let Some(bbox) = dirty_bbox {
+                        let doc_w = *width;
+                        let bx = bbox.min_x;
+                        let by = bbox.min_y;
+                        let bw = bbox.width;
+                        let bh = bbox.height;
+
+                        let mut before_patch = Vec::with_capacity((bw * bh * 4) as usize);
+                        let mut after_patch = Vec::with_capacity((bw * bh * 4) as usize);
+
+                        for row in 0..bh {
+                            let offset = (((by + row) * doc_w + bx) * 4) as usize;
+                            let len = (bw * 4) as usize;
+                            if offset + len <= before_pixels.len() && offset + len <= current_pixels.len() {
+                                before_patch.extend_from_slice(&before_pixels[offset..offset + len]);
+                                after_patch.extend_from_slice(&current_pixels[offset..offset + len]);
+                            }
+                        }
+
+                        let cmd: Box<dyn Command> = Box::new(StrokeCommand::new_bounded(
+                            layer_id,
+                            (bx, by, bw, bh),
+                            before_patch,
+                            after_patch,
+                        ));
+                        return Some(cmd);
+                    } else {
+                        let cmd: Box<dyn Command> = Box::new(StrokeCommand::new_full(
+                            layer_id,
+                            before_pixels,
+                            current_pixels.clone(),
+                        ));
+                        return Some(cmd);
+                    }
+                }
+            }
+            None
+        });
+
+        if let Some(cmd) = cmd_opt {
+            ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+            set_document_dirty(true);
+            return true;
+        }
+    }
+    false
+}
+
+/// Annulla (Undo) l'ultima operazione effettuata nel documento.
+#[wasm_bindgen]
+pub fn undo() -> bool {
+    ACTIVE_HISTORY.with(|h| {
+        let res = with_active_document_mut(|doc| h.borrow_mut().undo(doc));
+        if res {
+            set_document_dirty(true);
+        }
+        res
+    })
+}
+
+/// Ripristina (Redo) l'ultima operazione precedentemente annullata.
+#[wasm_bindgen]
+pub fn redo() -> bool {
+    ACTIVE_HISTORY.with(|h| {
+        let res = with_active_document_mut(|doc| h.borrow_mut().redo(doc));
+        if res {
+            set_document_dirty(true);
+        }
+        res
+    })
+}
+
+/// Verifica se è presente almeno un'operazione annullabile nella cronologia.
+#[wasm_bindgen]
+pub fn can_undo() -> bool {
+    ACTIVE_HISTORY.with(|h| h.borrow().can_undo())
+}
+
+/// Verifica se è presente almeno un'operazione ripristinabile nella cronologia.
+#[wasm_bindgen]
+pub fn can_redo() -> bool {
+    ACTIVE_HISTORY.with(|h| h.borrow().can_redo())
+}
+
+/// DTO serializzabile per lo stato corrente del sistema di cronologia (Undo/Redo).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HistoryInfoDto {
+    #[serde(rename = "canUndo")]
+    pub can_undo: bool,
+    #[serde(rename = "canRedo")]
+    pub can_redo: bool,
+    #[serde(rename = "undoCount")]
+    pub undo_count: usize,
+    #[serde(rename = "redoCount")]
+    pub redo_count: usize,
+}
+
+/// Restituisce lo stato corrente della History in formato oggetto JS `{ canUndo, canRedo, undoCount, redoCount }`.
+#[wasm_bindgen]
+pub fn get_history_info() -> Result<JsValue, JsValue> {
+    let dto = ACTIVE_HISTORY.with(|h| {
+        let hist = h.borrow();
+        HistoryInfoDto {
+            can_undo: hist.can_undo(),
+            can_redo: hist.can_redo(),
+            undo_count: hist.undo_count(),
+            redo_count: hist.redo_count(),
+        }
+    });
+
+    let json_str = serde_json::to_string(&dto)
+        .map_err(|e| JsValue::from_str(&format!("Errore serializzazione info history: {}", e)))?;
+    js_sys::JSON::parse(&json_str)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -288,6 +603,8 @@ impl PizzicoEngine {
         with_active_document_mut(|doc| {
             *doc = Document::new(width, height, title);
         });
+        ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+        ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
         Self {
             registry: CommandRegistry::new(),
         }
@@ -371,6 +688,70 @@ impl PizzicoEngine {
     /// Restituisce i metadati globali del documento attivo.
     pub fn get_document_metadata(&self) -> Result<JsValue, JsValue> {
         get_document_metadata()
+    }
+
+    /// Avvia un tratto di pennello.
+    pub fn begin_stroke(&mut self) -> bool {
+        begin_stroke()
+    }
+
+    /// Disegna un segmento di pennello.
+    pub fn brush_stroke(
+        &mut self,
+        from_x: f32,
+        from_y: f32,
+        to_x: f32,
+        to_y: f32,
+        radius: f32,
+        hardness: f32,
+        color: &[u8],
+        opacity: f32,
+    ) -> bool {
+        brush_stroke(from_x, from_y, to_x, to_y, radius, hardness, color, opacity)
+    }
+
+    /// Disegna un segmento di gomma.
+    pub fn eraser_stroke(
+        &mut self,
+        from_x: f32,
+        from_y: f32,
+        to_x: f32,
+        to_y: f32,
+        radius: f32,
+        hardness: f32,
+        opacity: f32,
+    ) -> bool {
+        eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity)
+    }
+
+    /// Conclude il tratto registrando l'azione nella history.
+    pub fn end_stroke(&mut self) -> bool {
+        end_stroke()
+    }
+
+    /// Annulla l'ultima azione.
+    pub fn undo(&mut self) -> bool {
+        undo()
+    }
+
+    /// Ripristina l'ultima azione annullata.
+    pub fn redo(&mut self) -> bool {
+        redo()
+    }
+
+    /// Può annullare?
+    pub fn can_undo(&self) -> bool {
+        can_undo()
+    }
+
+    /// Può ripristinare?
+    pub fn can_redo(&self) -> bool {
+        can_redo()
+    }
+
+    /// Informazioni sulla history.
+    pub fn get_history_info(&self) -> Result<JsValue, JsValue> {
+        get_history_info()
     }
 
     /// Serializza il documento in formato JSON.
