@@ -3,12 +3,12 @@
 // Licenza: MIT OR Apache-2.0
 
 //! Struttura centrale del Documento di Pizzico.
-//! Include metadati, dimensioni canvas, palette, risoluzione e albero dei livelli.
+//! Include metadati, dimensioni canvas, albero dei livelli e gestione ID univoci.
 
 use crate::layer::{Layer, LayerId};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DocumentMetadata {
     pub title: String,
     pub author: String,
@@ -31,7 +31,8 @@ impl Default for DocumentMetadata {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Modello del Documento grafico principale.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Document {
     pub width: u32,
     pub height: u32,
@@ -42,45 +43,56 @@ pub struct Document {
 }
 
 impl Document {
+    /// Crea un nuovo documento con le dimensioni specificate e un livello di sfondo bianco iniziale.
     pub fn new(width: u32, height: u32, title: &str) -> Self {
-        let mut doc = Self {
-            width,
-            height,
-            metadata: DocumentMetadata {
-                title: title.to_string(),
-                ..Default::default()
-            },
-            layers: Vec::new(),
-            active_layer_id: None,
-            next_layer_id: 1,
-        };
+        let mut doc = Self::new_empty(width, height);
+        doc.metadata.title = title.to_string();
 
-        // Livello iniziale di sfondo
-        let bg_layer = Layer::new_raster(doc.allocate_layer_id(), "Sfondo".to_string(), width, height);
+        // Livello iniziale di sfondo bianco opaco
+        let bg_id = doc.allocate_layer_id();
+        let bg_layer = Layer::new_raster_color(bg_id, "Sfondo", width, height, [255, 255, 255, 255]);
         doc.add_layer(bg_layer);
         doc
     }
 
+    /// Crea un documento vuoto senza livelli iniziali.
+    pub fn new_empty(width: u32, height: u32) -> Self {
+        Self {
+            width,
+            height,
+            metadata: DocumentMetadata::default(),
+            layers: Vec::new(),
+            active_layer_id: None,
+            next_layer_id: 1,
+        }
+    }
+
+    /// Genera un identificativo numerico progressivo univoco per un nuovo livello.
     pub fn allocate_layer_id(&mut self) -> LayerId {
         let id = self.next_layer_id;
         self.next_layer_id += 1;
         id
     }
 
-    pub fn add_layer(&mut self, layer: Layer) {
+    /// Aggiunge un livello in cima allo stack e lo seleziona come livello attivo.
+    pub fn add_layer(&mut self, layer: Layer) -> LayerId {
         let id = layer.id;
         self.layers.push(layer);
         self.active_layer_id = Some(id);
+        id
     }
 
+    /// Restituisce un riferimento immutabile al livello specificato per ID.
     pub fn get_layer(&self, id: LayerId) -> Option<&Layer> {
         self.layers.iter().find(|l| l.id == id)
     }
 
+    /// Restituisce un riferimento mutabile al livello specificato per ID.
     pub fn get_layer_mut(&mut self, id: LayerId) -> Option<&mut Layer> {
         self.layers.iter_mut().find(|l| l.id == id)
     }
 
+    /// Rimuove un livello dato il suo ID e aggiorna il livello attivo.
     pub fn remove_layer(&mut self, id: LayerId) -> Option<Layer> {
         if let Some(pos) = self.layers.iter().position(|l| l.id == id) {
             let removed = self.layers.remove(pos);
@@ -91,5 +103,76 @@ impl Document {
         } else {
             None
         }
+    }
+
+    /// Restituisce il numero totale di livelli presenti.
+    pub fn layer_count(&self) -> usize {
+        self.layers.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_document_creation() {
+        let doc = Document::new(800, 600, "Progetto Test");
+        assert_eq!(doc.width, 800);
+        assert_eq!(doc.height, 600);
+        assert_eq!(doc.metadata.title, "Progetto Test");
+        assert_eq!(doc.layer_count(), 1);
+        assert_eq!(doc.layers[0].name, "Sfondo");
+        assert_eq!(doc.active_layer_id, Some(1));
+    }
+
+    #[test]
+    fn test_add_and_get_layer() {
+        let mut doc = Document::new_empty(400, 300);
+        assert_eq!(doc.layer_count(), 0);
+
+        let id1 = doc.allocate_layer_id();
+        let layer1 = Layer::new_raster_color(id1, "Livello 1", 400, 300, [255, 0, 0, 255]);
+        doc.add_layer(layer1);
+
+        assert_eq!(doc.layer_count(), 1);
+        assert_eq!(doc.active_layer_id, Some(id1));
+
+        let found = doc.get_layer(id1);
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().name, "Livello 1");
+    }
+
+    #[test]
+    fn test_remove_layer() {
+        let mut doc = Document::new_empty(400, 300);
+        let id1 = doc.allocate_layer_id();
+        let id2 = doc.allocate_layer_id();
+
+        doc.add_layer(Layer::new_raster(id1, "A", 400, 300));
+        doc.add_layer(Layer::new_raster(id2, "B", 400, 300));
+
+        assert_eq!(doc.layer_count(), 2);
+        assert_eq!(doc.active_layer_id, Some(id2));
+
+        let removed = doc.remove_layer(id2);
+        assert!(removed.is_some());
+        assert_eq!(removed.unwrap().name, "B");
+        assert_eq!(doc.layer_count(), 1);
+        assert_eq!(doc.active_layer_id, Some(id1));
+
+        // Rimuovere ID inesistente ritorna None
+        assert!(doc.remove_layer(999).is_none());
+    }
+
+    #[test]
+    fn test_unique_layer_ids() {
+        let mut doc = Document::new_empty(100, 100);
+        let id1 = doc.allocate_layer_id();
+        let id2 = doc.allocate_layer_id();
+        let id3 = doc.allocate_layer_id();
+        assert_ne!(id1, id2);
+        assert_ne!(id2, id3);
+        assert_ne!(id1, id3);
     }
 }

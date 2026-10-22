@@ -18,11 +18,13 @@ pub fn export_svg(doc: &Document) -> String {
         if !layer.visible {
             continue;
         }
-        if let pizzico_core::LayerContent::Vector(ref path_data) = layer.content {
-            svg.push_str(&format!(
-                r#"<path d="{}" opacity="{}" />"#,
-                path_data, layer.opacity
-            ));
+        if let pizzico_core::LayerKind::Vector { ref paths } = layer.kind {
+            for path_data in paths {
+                svg.push_str(&format!(
+                    r#"<path d="{}" opacity="{}" />"#,
+                    path_data, layer.opacity
+                ));
+            }
         }
     }
 

@@ -15,7 +15,15 @@
 import '@pizzico/ui-web/src/styles.css';
 import { DesktopShellLayout } from '@pizzico/ui-web';
 import { Slider, ColorPicker, LayerRow, Button } from '@pizzico/ui-kit';
-import { initWasm, add, pizzico_version, init_webgpu } from '@pizzico/worker-core';
+import {
+  initWasm,
+  add,
+  pizzico_version,
+  init_webgpu,
+  create_document,
+  add_raster_layer,
+  get_composite_buffer,
+} from '@pizzico/worker-core';
 
 console.log('🍕 Pizzico Engine initializing…');
 
@@ -112,7 +120,7 @@ shell.inspectorPanelBody.appendChild(wasmStatusBox);
 // Pulsante di verifica: chiama add() Rust
 const testWasmBtn = new Button({
   label: '⚡ Esegui add(2, 3) via WASM',
-  variant: 'primary',
+  variant: 'secondary',
   onClick: () => {
     const res = wasmReady ? add(2, 3) : 2 + 3;
     const resultSpan = document.getElementById('wasm-result');
@@ -124,6 +132,83 @@ const testWasmBtn = new Button({
   },
 });
 shell.inspectorPanelBody.appendChild(testWasmBtn.element);
+
+// Pulsanti Test Compositing Livelli (Fase 1 Core Document)
+const addRedLayerBtn = new Button({
+  label: '🔴 Aggiungi Livello Rosso',
+  variant: 'primary',
+  onClick: () => {
+    if (!wasmReady) return;
+    const id = add_raster_layer('Layer Rosso', 800, 600, new Uint8Array([255, 0, 0, 255]));
+    console.log(`[Core Document] ✅ Livello Rosso aggiunto: id = ${id}`);
+    const resultSpan = document.getElementById('wasm-result');
+    if (resultSpan) {
+      resultSpan.textContent = `Livello Rosso aggiunto (ID: ${id})`;
+      resultSpan.style.color = '#f87171';
+    }
+    const row = new LayerRow({
+      layer: {
+        id: Number(id),
+        name: 'Layer Rosso (Opaco)',
+        kind: 'Raster',
+        visible: true,
+        locked: false,
+        opacity: 1.0,
+        blendMode: 'Normal',
+      },
+      onSelect: (layerId) => console.log(`Livello selezionato: ${layerId}`),
+    });
+    shell.layersPanelBody.insertBefore(row.element, addLayerBtn.element);
+  },
+});
+shell.inspectorPanelBody.appendChild(addRedLayerBtn.element);
+
+const addBlueLayerBtn = new Button({
+  label: '🔵 Aggiungi Livello Blu (50% Trasparenza)',
+  variant: 'primary',
+  onClick: () => {
+    if (!wasmReady) return;
+    const id = add_raster_layer('Layer Blu', 800, 600, new Uint8Array([0, 0, 255, 128]));
+    console.log(`[Core Document] ✅ Livello Blu aggiunto (alpha 128): id = ${id}`);
+    const resultSpan = document.getElementById('wasm-result');
+    if (resultSpan) {
+      resultSpan.textContent = `Livello Blu aggiunto (Alpha 128 → Viola)`;
+      resultSpan.style.color = '#818cf8';
+    }
+    const row = new LayerRow({
+      layer: {
+        id: Number(id),
+        name: 'Layer Blu (50% Alpha)',
+        kind: 'Raster',
+        visible: true,
+        locked: false,
+        opacity: 0.5,
+        blendMode: 'Normal',
+      },
+      onSelect: (layerId) => console.log(`Livello selezionato: ${layerId}`),
+    });
+    shell.layersPanelBody.insertBefore(row.element, addLayerBtn.element);
+  },
+});
+shell.inspectorPanelBody.appendChild(addBlueLayerBtn.element);
+
+const resetDocBtn = new Button({
+  label: '⚪ Reset Documento Vuoto',
+  variant: 'secondary',
+  onClick: () => {
+    if (!wasmReady) return;
+    create_document(800, 600);
+    const buf = get_composite_buffer();
+    console.log(`[Core Document] ⚪ Documento resettato: buffer size = ${buf.length} bytes`);
+    const resultSpan = document.getElementById('wasm-result');
+    if (resultSpan) {
+      resultSpan.textContent = `Documento 800x600 resettato`;
+      resultSpan.style.color = '#94a3b8';
+    }
+  },
+});
+shell.inspectorPanelBody.appendChild(resetDocBtn.element);
+
 
 // ── 5. Inspector – Controlli ──────────────────────────────────────────────────
 

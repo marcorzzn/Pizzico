@@ -15,7 +15,31 @@ export class PizzicoEngine {
         wasm.__wbg_pizzicoengine_free(ptr, 0);
     }
     /**
-     * Serializza il documento in JSON (utile per DevTools e testing).
+     * Aggiunge un livello raster uniforme.
+     * @param {string} name
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} color
+     * @returns {bigint}
+     */
+    add_raster_layer(name, width, height, color) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(color, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.pizzicoengine_add_raster_layer(this.__wbg_ptr, ptr0, len0, width, height, ptr1, len1);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * Crea un nuovo documento.
+     * @param {number} width
+     * @param {number} height
+     */
+    create_document(width, height) {
+        wasm.pizzicoengine_create_document(this.__wbg_ptr, width, height);
+    }
+    /**
+     * Serializza il documento in formato JSON.
      * @returns {string}
      */
     get_document_json() {
@@ -53,7 +77,7 @@ export class PizzicoEngine {
         return ret >>> 0;
     }
     /**
-     * Crea un nuovo documento vuoto con le dimensioni specificate.
+     * Inizializza l'istanza dell'engine con un nuovo documento.
      * @param {number} width
      * @param {number} height
      * @param {string} title
@@ -89,7 +113,6 @@ if (Symbol.dispose) PizzicoEngine.prototype[Symbol.dispose] = PizzicoEngine.prot
 
 /**
  * Verifica l'integrità della pipeline WASM: addizione intera.
- * `add(2, 3)` deve restituire `5`.
  * @param {number} a
  * @param {number} b
  * @returns {number}
@@ -100,9 +123,65 @@ export function add(a, b) {
 }
 
 /**
+ * Aggiunge un nuovo livello raster al documento attivo riempito con un colore RGBA uniforme.
+ * Ritorna l'ID univoco del livello appena creato.
+ * @param {string} name
+ * @param {number} width
+ * @param {number} height
+ * @param {Uint8Array} color
+ * @returns {bigint}
+ */
+export function add_raster_layer(name, width, height, color) {
+    const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(color, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.add_raster_layer(ptr0, len0, width, height, ptr1, len1);
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * Crea o resetta il documento attivo con larghezza e altezza specificate.
+ * @param {number} width
+ * @param {number} height
+ */
+export function create_document(width, height) {
+    wasm.create_document(width, height);
+}
+
+/**
+ * Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
+ * @returns {Uint8Array}
+ */
+export function get_composite_buffer() {
+    const ret = wasm.get_composite_buffer();
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Restituisce le dimensioni [larghezza, altezza] del documento attivo in pixel.
+ * @returns {Uint32Array}
+ */
+export function get_document_dimensions() {
+    const ret = wasm.get_document_dimensions();
+    var v1 = getArrayU32FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v1;
+}
+
+/**
+ * Restituisce il numero di livelli presenti nel documento attivo.
+ * @returns {number}
+ */
+export function get_layer_count() {
+    const ret = wasm.get_layer_count();
+    return ret >>> 0;
+}
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
- * Chiamato UNA volta al boot del modulo WASM per ottenere backtrace
- * leggibili nella console del browser.
  */
 export function init_panic_hook() {
     wasm.init_panic_hook();
@@ -110,14 +189,8 @@ export function init_panic_hook() {
 
 /**
  * Inizializza WebGPU tramite web-sys, aggancia il Surface al `<canvas>`
- * identificato da `canvas_id`, e avvia il render loop a 60 FPS.
- *
- * Il render loop esegue il seguente frame:
- * 1. Clear color scuro di sfondo
- * 2. Disegno del rettangolo con shader WGSL (6 vertici, 2 triangoli)
- *    con la palette brand Pizzico (Indigo, Cyan, Rose, Purple)
- *
- * Ritorna un `Promise<void>` — deve essere atteso con `await` in JS/TS.
+ * identificato da `canvas_id`, e avvia il render loop a 60 FPS che campiona
+ * la texture del Documento composito.
  * @param {string} canvas_id
  * @returns {Promise<void>}
  */
@@ -129,7 +202,7 @@ export function init_webgpu(canvas_id) {
 }
 
 /**
- * Versione del core come intero (100 = v0.1.0, 200 = v0.2.0, …).
+ * Versione del core come intero (100 = v0.1.0).
  * @returns {number}
  */
 export function pizzico_version() {
@@ -230,6 +303,10 @@ function __wbg_get_imports() {
             const ret = new Array();
             return ret;
         },
+        __wbg_new_from_slice_9a868026ffa4208a: function(arg0, arg1) {
+            const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
+            return ret;
+        },
         __wbg_new_typed_b01cb72a8af741a3: function(arg0, arg1) {
             try {
                 var state0 = {a: arg0, b: arg1};
@@ -303,7 +380,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 28, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 29, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
@@ -367,6 +444,11 @@ const CLOSURE_DTORS = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(state => wasm.__wbindgen_destroy_closure(state.a, state.b));
 
+function getArrayU32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
@@ -382,6 +464,14 @@ function getDataViewMemory0() {
 
 function getStringFromWasm0(ptr, len) {
     return decodeText(ptr >>> 0, len);
+}
+
+let cachedUint32ArrayMemory0 = null;
+function getUint32ArrayMemory0() {
+    if (cachedUint32ArrayMemory0 === null || cachedUint32ArrayMemory0.byteLength === 0) {
+        cachedUint32ArrayMemory0 = new Uint32Array(wasm.memory.buffer);
+    }
+    return cachedUint32ArrayMemory0;
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -431,6 +521,13 @@ function makeMutClosure(arg0, arg1, f) {
     };
     CLOSURE_DTORS.register(real, state, state);
     return real;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
@@ -511,6 +608,7 @@ function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     wasmModule = module;
     cachedDataViewMemory0 = null;
+    cachedUint32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
     wasm.__wbindgen_start();
     return wasm;

@@ -18,6 +18,11 @@ export {
   pizzico_version,
   PizzicoEngine,
   init_webgpu,
+  create_document,
+  add_raster_layer,
+  get_composite_buffer,
+  get_document_dimensions,
+  get_layer_count,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

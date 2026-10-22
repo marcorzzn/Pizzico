@@ -8,7 +8,15 @@ export class PizzicoEngine {
     free(): void;
     [Symbol.dispose](): void;
     /**
-     * Serializza il documento in JSON (utile per DevTools e testing).
+     * Aggiunge un livello raster uniforme.
+     */
+    add_raster_layer(name: string, width: number, height: number, color: Uint8Array): bigint;
+    /**
+     * Crea un nuovo documento.
+     */
+    create_document(width: number, height: number): void;
+    /**
+     * Serializza il documento in formato JSON.
      */
     get_document_json(): string;
     /**
@@ -20,7 +28,7 @@ export class PizzicoEngine {
      */
     layer_count(): number;
     /**
-     * Crea un nuovo documento vuoto con le dimensioni specificate.
+     * Inizializza l'istanza dell'engine con un nuovo documento.
      */
     constructor(width: number, height: number, title: string);
     /**
@@ -35,32 +43,49 @@ export class PizzicoEngine {
 
 /**
  * Verifica l'integrità della pipeline WASM: addizione intera.
- * `add(2, 3)` deve restituire `5`.
  */
 export function add(a: number, b: number): number;
 
 /**
+ * Aggiunge un nuovo livello raster al documento attivo riempito con un colore RGBA uniforme.
+ * Ritorna l'ID univoco del livello appena creato.
+ */
+export function add_raster_layer(name: string, width: number, height: number, color: Uint8Array): bigint;
+
+/**
+ * Crea o resetta il documento attivo con larghezza e altezza specificate.
+ */
+export function create_document(width: number, height: number): void;
+
+/**
+ * Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
+ */
+export function get_composite_buffer(): Uint8Array;
+
+/**
+ * Restituisce le dimensioni [larghezza, altezza] del documento attivo in pixel.
+ */
+export function get_document_dimensions(): Uint32Array;
+
+/**
+ * Restituisce il numero di livelli presenti nel documento attivo.
+ */
+export function get_layer_count(): number;
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
- * Chiamato UNA volta al boot del modulo WASM per ottenere backtrace
- * leggibili nella console del browser.
  */
 export function init_panic_hook(): void;
 
 /**
  * Inizializza WebGPU tramite web-sys, aggancia il Surface al `<canvas>`
- * identificato da `canvas_id`, e avvia il render loop a 60 FPS.
- *
- * Il render loop esegue il seguente frame:
- * 1. Clear color scuro di sfondo
- * 2. Disegno del rettangolo con shader WGSL (6 vertici, 2 triangoli)
- *    con la palette brand Pizzico (Indigo, Cyan, Rose, Purple)
- *
- * Ritorna un `Promise<void>` — deve essere atteso con `await` in JS/TS.
+ * identificato da `canvas_id`, e avvia il render loop a 60 FPS che campiona
+ * la texture del Documento composito.
  */
 export function init_webgpu(canvas_id: string): Promise<void>;
 
 /**
- * Versione del core come intero (100 = v0.1.0, 200 = v0.2.0, …).
+ * Versione del core come intero (100 = v0.1.0).
  */
 export function pizzico_version(): number;
 
@@ -70,9 +95,16 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_pizzicoengine_free: (a: number, b: number) => void;
     readonly add: (a: number, b: number) => number;
+    readonly add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly create_document: (a: number, b: number) => void;
+    readonly get_composite_buffer: () => [number, number];
+    readonly get_document_dimensions: () => [number, number];
+    readonly get_layer_count: () => number;
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;
     readonly pizzico_version: () => number;
+    readonly pizzicoengine_add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => bigint;
+    readonly pizzicoengine_create_document: (a: number, b: number, c: number) => void;
     readonly pizzicoengine_get_document_json: (a: number) => [number, number, number, number];
     readonly pizzicoengine_height: (a: number) => number;
     readonly pizzicoengine_layer_count: (a: number) => number;
