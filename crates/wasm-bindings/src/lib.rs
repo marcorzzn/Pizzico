@@ -230,6 +230,45 @@ pub fn set_dirty(dirty: bool) {
     set_document_dirty(dirty);
 }
 
+/// DTO serializzabile per i metadati globali del Documento (dimensioni, titolo, conteggio livelli).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DocumentMetadataDto {
+    pub width: u32,
+    pub height: u32,
+    pub title: String,
+    #[serde(rename = "layerCount")]
+    pub layer_count: usize,
+}
+
+/// Restituisce i metadati globali del documento attivo in formato oggetto JSON.
+#[wasm_bindgen]
+pub fn get_document_metadata() -> Result<JsValue, JsValue> {
+    let dto = with_active_document(|doc| DocumentMetadataDto {
+        width: doc.width,
+        height: doc.height,
+        title: doc.metadata.title.clone(),
+        layer_count: doc.layer_count(),
+    });
+
+    let json_str = serde_json::to_string(&dto)
+        .map_err(|e| JsValue::from_str(&format!("Errore serializzazione metadati documento: {}", e)))?;
+    js_sys::JSON::parse(&json_str)
+}
+
+/// Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
+/// e segnala la necessità di un nuovo frame di compositing WebGPU.
+#[wasm_bindgen]
+pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
+    let imported_doc = pizzico_io_psd::import_psd(bytes)
+        .map_err(|e| JsValue::from_str(&format!("Errore importazione file PSD: {}", e)))?;
+
+    with_active_document_mut(|doc| {
+        *doc = imported_doc;
+    });
+
+    Ok(())
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Core Engine handle
 // ──────────────────────────────────────────────────────────────────────────────
@@ -322,6 +361,16 @@ impl PizzicoEngine {
     /// Esegue il compositing e restituisce il buffer RGBA 8-bit per Canvas.
     pub fn render_frame(&self) -> Vec<u8> {
         get_composite_buffer()
+    }
+
+    /// Carica un file PSD binario e sostituisce il documento corrente.
+    pub fn load_psd_bytes(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
+        load_psd_bytes(bytes)
+    }
+
+    /// Restituisce i metadati globali del documento attivo.
+    pub fn get_document_metadata(&self) -> Result<JsValue, JsValue> {
+        get_document_metadata()
     }
 
     /// Serializza il documento in formato JSON.

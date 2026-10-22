@@ -17,6 +17,9 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
+  optimizeDeps: {
+    exclude: ['@pizzico/worker-core'],
+  },
   build: {
     target: 'esnext',
   },

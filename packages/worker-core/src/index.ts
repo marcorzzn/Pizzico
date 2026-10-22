@@ -31,6 +31,8 @@ export {
   get_active_layer_id,
   is_dirty,
   set_dirty,
+  load_psd_bytes,
+  get_document_metadata,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

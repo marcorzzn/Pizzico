@@ -69,6 +69,17 @@ export class PizzicoEngine {
         }
     }
     /**
+     * Restituisce i metadati globali del documento attivo.
+     * @returns {any}
+     */
+    get_document_metadata() {
+        const ret = wasm.pizzicoengine_get_document_metadata(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
      * Metadati di tutti i livelli in formato array JS.
      * @returns {any}
      */
@@ -102,6 +113,18 @@ export class PizzicoEngine {
     layer_count() {
         const ret = wasm.pizzicoengine_layer_count(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * Carica un file PSD binario e sostituisce il documento corrente.
+     * @param {Uint8Array} bytes
+     */
+    load_psd_bytes(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.pizzicoengine_load_psd_bytes(this.__wbg_ptr, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
     }
     /**
      * Inizializza l'istanza dell'engine con un nuovo documento.
@@ -247,6 +270,18 @@ export function get_document_dimensions() {
 }
 
 /**
+ * Restituisce i metadati globali del documento attivo in formato oggetto JSON.
+ * @returns {any}
+ */
+export function get_document_metadata() {
+    const ret = wasm.get_document_metadata();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Restituisce il numero di livelli presenti nel documento attivo.
  * @returns {number}
  */
@@ -295,6 +330,20 @@ export function init_webgpu(canvas_id) {
 export function is_dirty() {
     const ret = wasm.is_dirty();
     return ret !== 0;
+}
+
+/**
+ * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
+ * e segnala la necessità di un nuovo frame di compositing WebGPU.
+ * @param {Uint8Array} bytes
+ */
+export function load_psd_bytes(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.load_psd_bytes(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 /**
@@ -524,12 +573,12 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 30, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 4, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 5, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_);
             return ret;
         },

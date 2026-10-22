@@ -10,6 +10,7 @@ export interface LayoutOptions {
   onModeChange?: (mode: WorkspaceMode) => void;
   onToolSelect?: (tool: string) => void;
   onCommand?: (commandId: string) => void;
+  onOpenPsd?: () => void;
 }
 
 export class DesktopShellLayout {
@@ -19,6 +20,7 @@ export class DesktopShellLayout {
   public layersPanelBody!: HTMLDivElement;
   public inspectorPanelBody!: HTMLDivElement;
   public palette: CommandPalette;
+  public openPsdBtn: HTMLButtonElement;
 
   private currentMode: WorkspaceMode = 'quick';
   private activeTool = 'brush';
@@ -69,7 +71,20 @@ export class DesktopShellLayout {
       modeSwitcher.appendChild(btn);
     });
 
-    // Command Palette Trigger Button
+    // Top Right: Apri PSD + Command Palette Trigger Button
+    const topRight = document.createElement('div');
+    topRight.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+
+    this.openPsdBtn = document.createElement('button');
+    this.openPsdBtn.id = 'open-psd-btn';
+    this.openPsdBtn.className = 'pz-btn pz-btn-primary';
+    this.openPsdBtn.style.padding = '5px 12px';
+    this.openPsdBtn.style.fontSize = '12px';
+    this.openPsdBtn.innerHTML = '<span>📂 Apri PSD</span>';
+    this.openPsdBtn.addEventListener('click', () => {
+      if (options.onOpenPsd) options.onOpenPsd();
+    });
+
     const cmdPaletteBtn = document.createElement('button');
     cmdPaletteBtn.className = 'pz-btn pz-btn-secondary';
     cmdPaletteBtn.style.padding = '4px 10px';
@@ -77,9 +92,12 @@ export class DesktopShellLayout {
     cmdPaletteBtn.innerHTML = '<span>⌘K Cerca comandi</span>';
     cmdPaletteBtn.addEventListener('click', () => this.palette.open());
 
+    topRight.appendChild(this.openPsdBtn);
+    topRight.appendChild(cmdPaletteBtn);
+
     topBar.appendChild(topLeft);
     topBar.appendChild(modeSwitcher);
-    topBar.appendChild(cmdPaletteBtn);
+    topBar.appendChild(topRight);
 
     // 2. Left Toolbar
     const leftToolbar = document.createElement('aside');

@@ -1,14 +1,15 @@
 // Pizzico — apps/web/src/main.ts
-// Riferimento manifesto: §3.1, §5.3, §5.4, §5.5, §6.1, §6.2, §11 Step 8
+// Riferimento manifesto: §3.1, §5.3, §5.4, §5.5, §6.1, §6.2, §6.5, §11 Step 8
 // Licenza: MIT OR Apache-2.0
 //
 // Nota architetturale (§3, §12):
 // Il TypeScript si limita a:
 //   1. Costruire la shell UI (DesktopShellLayout)
 //   2. Inizializzare il modulo WASM (initWasm)
-//   3. Renderizzare dinamicamente il pannello livelli leggendoli da get_layers_metadata()
-//   4. Collegare i controlli (opacità, visibilità, selezione, eliminazione) ai metodi WASM
-//   5. Delegare TUTTO il rendering WebGPU al core Rust via init_webgpu()
+//   3. Gestire l'I/O file (pulsante "Apri PSD" e Drag & Drop con spinner e toast)
+//   4. Passare il buffer binario al parser Rust via load_psd_bytes()
+//   5. Renderizzare dinamicamente il pannello livelli leggendoli da get_layers_metadata()
+//   6. Delegare TUTTO il rendering WebGPU al core Rust via init_webgpu()
 //
 // NESSUN codice WebGPU è presente in questo file.
 // Tutta la logica GPU (adapter, device, surface, shader WGSL, render loop)
@@ -32,6 +33,8 @@ import {
   select_layer,
   remove_layer,
   get_active_layer_id,
+  load_psd_bytes,
+  get_document_metadata,
 } from '@pizzico/worker-core';
 
 console.log('🍕 Pizzico Engine initializing…');
@@ -43,10 +46,52 @@ const shell = new DesktopShellLayout({
   onModeChange: (mode) => console.log(`[Workspace] Modalità attiva: ${mode}`),
   onToolSelect: (tool) => console.log(`[Toolbar] Strumento selezionato: ${tool}`),
   onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
+  onOpenPsd: () => fileInput.click(),
 });
 appContainer.appendChild(shell.root);
 
-// ── 2. Inizializzazione WASM Bridge ───────────────────────────────────────────
+// ── 2. Toast Notification System (§5.6) ───────────────────────────────────────
+
+const toastContainer = document.createElement('div');
+toastContainer.className = 'pz-toast-container';
+document.body.appendChild(toastContainer);
+
+function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `pz-toast pz-toast-${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px) scale(0.95)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// ── 3. Loading Spinner Overlay (§5.6) ─────────────────────────────────────────
+
+let spinnerOverlay: HTMLDivElement | null = null;
+
+function showLoadingSpinner(label = 'Elaborazione in corso…') {
+  if (spinnerOverlay) return;
+  spinnerOverlay = document.createElement('div');
+  spinnerOverlay.className = 'pz-loading-overlay';
+  spinnerOverlay.innerHTML = `
+    <div class="pz-spinner"></div>
+    <div style="font-weight: 500;">${label}</div>
+  `;
+  document.body.appendChild(spinnerOverlay);
+}
+
+function hideLoadingSpinner() {
+  if (spinnerOverlay) {
+    spinnerOverlay.remove();
+    spinnerOverlay = null;
+  }
+}
+
+// ── 4. Inizializzazione WASM Bridge ───────────────────────────────────────────
 
 let wasmReady = false;
 
@@ -75,7 +120,136 @@ function updateWasmStatusBadge(text: string, color: string) {
   }
 }
 
-// ── 3. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
+// ── 5. I/O File PSD: Input & Drag-and-Drop (§6.5) ──────────────────────────────
+
+// File Input nascosto per apertura file tramite esplora risorse
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = '.psd,.psb';
+fileInput.style.display = 'none';
+document.body.appendChild(fileInput);
+
+fileInput.addEventListener('change', async (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  await handlePsdFile(file);
+  fileInput.value = ''; // Reset per consentire ricaricamento stesso file
+});
+
+/**
+ * Gestisce il caricamento completo del file PSD:
+ * 1. Warning per file grandi (> 20 MB)
+ * 2. Lettura buffer ArrayBuffer -> Uint8Array
+ * 3. Chiamata WASM a load_psd_bytes()
+ * 4. Aggiornamento automatico del pannello livelli e dell'inspector
+ */
+async function handlePsdFile(file: File): Promise<void> {
+  if (!wasmReady) {
+    showToast('⚠️ Engine grafico WASM non ancora pronto', 'warning');
+    return;
+  }
+
+  const isPsd = file.name.toLowerCase().endsWith('.psd') || file.name.toLowerCase().endsWith('.psb');
+  if (!isPsd) {
+    showToast(`❌ Il file "${file.name}" non è un file PSD/PSB supportato`, 'error');
+    return;
+  }
+
+  // Warning per file superiori a 20 MB (§11 Step E)
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('⚠️ File grande (> 20 MB), il parsing potrebbe richiedere qualche secondo…', 'warning');
+  }
+
+  showLoadingSpinner(`Parsing Adobe PSD: "${file.name}"…`);
+
+  // Timeout per dare respiro al thread UI e mostrare lo spinner
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    load_psd_bytes(bytes);
+
+    const docMeta = get_document_metadata();
+    console.log('[PSD Import] ✅ Documento importato:', docMeta);
+
+    renderLayersPanel();
+    updateInspector();
+    hideLoadingSpinner();
+
+    showToast(
+      `✅ Caricato: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
+      'success'
+    );
+  } catch (err) {
+    hideLoadingSpinner();
+    console.error('[PSD Import] ❌ Errore durante il parsing PSD:', err);
+    showToast(`❌ Errore parsing PSD: ${err}`, 'error');
+  }
+}
+
+// ── 6. Drag & Drop sul Canvas e sulla Finestra (§6.5) ─────────────────────────
+
+let dragOverlay: HTMLDivElement | null = null;
+
+function showDragOverlay() {
+  if (dragOverlay) return;
+  dragOverlay = document.createElement('div');
+  dragOverlay.className = 'pz-drag-overlay';
+  dragOverlay.innerHTML = `
+    <div style="font-size: 36px;">📂</div>
+    <div class="pz-drag-overlay-text">Rilascia il file Photoshop (.PSD / .PSB) qui</div>
+  `;
+  shell.canvasContainer.style.position = 'relative';
+  shell.canvasContainer.appendChild(dragOverlay);
+}
+
+function hideDragOverlay() {
+  if (dragOverlay) {
+    dragOverlay.remove();
+    dragOverlay = null;
+  }
+}
+
+['dragenter', 'dragover'].forEach((eventName) => {
+  window.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showDragOverlay();
+  });
+});
+
+['dragleave', 'drop'].forEach((eventName) => {
+  window.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dragEvent = e as DragEvent;
+    if (e.type === 'dragleave' && dragEvent.clientX > 0 && dragEvent.clientY > 0) return;
+    hideDragOverlay();
+  });
+});
+
+window.addEventListener('drop', async (e: DragEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+  hideDragOverlay();
+
+  const file = e.dataTransfer?.files?.[0];
+  if (file) {
+    await handlePsdFile(file);
+  }
+});
+
+// Helper esposto per test automatizzati e verifica rapida browser
+(window as any).__loadSamplePsd = async () => {
+  const res = await fetch('/sample-01.psd');
+  const blob = await res.blob();
+  const file = new File([blob], 'sample-01.psd', { type: 'image/vnd.adobe.photoshop' });
+  await handlePsdFile(file);
+};
+
+// ── 7. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 
 const layersHeaderContainer = document.createElement('div');
 layersHeaderContainer.className = 'pz-layers-toolbar';
@@ -88,7 +262,7 @@ layersHeaderContainer.style.cssText = `
   margin-bottom: 8px;
 `;
 
-// Pulsante principale "+ Aggiungi Livello Vuoto" come richiesto da Step C
+// Pulsante principale "+ Aggiungi Livello Vuoto"
 const addEmptyBtn = new Button({
   label: '➕ Aggiungi Livello Vuoto',
   variant: 'primary',
@@ -184,7 +358,7 @@ function renderLayersPanel() {
       color: var(--pz-text-muted);
       font-size: 12px;
     `;
-    emptyNotice.textContent = 'Nessun livello presente. Clicca "+ Aggiungi Livello".';
+    emptyNotice.textContent = 'Nessun livello presente. Apri un PSD o crea un livello.';
     layersListContainer.appendChild(emptyNotice);
     return;
   }
@@ -207,7 +381,6 @@ function renderLayersPanel() {
       },
       onOpacityChange: (id, opacity) => {
         set_layer_opacity(id, opacity);
-        // Aggiorna l'inspector in tempo reale senza ricostruire tutta la lista
         syncInspectorOpacity(opacity);
       },
       onDelete: (id) => {
@@ -221,11 +394,11 @@ function renderLayersPanel() {
   }
 }
 
-// ── 4. Inspector Panel (§5.3 Context-Aware Surface) ───────────────────────────
+// ── 8. Inspector Panel (§5.3 Context-Aware Surface) ───────────────────────────
 
 shell.inspectorPanelBody.innerHTML = '';
 
-// Status Card Rust ↔ WASM
+// Status Card Rust ↔ WASM & Document Metadata
 const wasmStatusBox = document.createElement('div');
 wasmStatusBox.id = 'wasm-bridge-status';
 wasmStatusBox.style.cssText = `
@@ -239,6 +412,21 @@ wasmStatusBox.style.cssText = `
 `;
 wasmStatusBox.innerHTML = `<strong>Rust Core Engine</strong><br><span id="wasm-result">In attesa WASM…</span>`;
 shell.inspectorPanelBody.appendChild(wasmStatusBox);
+
+// Scheda Metadati Documento Attivo
+const docMetaBox = document.createElement('div');
+docMetaBox.id = 'doc-meta-status';
+docMetaBox.style.cssText = `
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--pz-text-secondary);
+`;
+docMetaBox.innerHTML = `<strong>Documento</strong>: 800 × 600 px · 1 livello`;
+shell.inspectorPanelBody.appendChild(docMetaBox);
 
 // Sezione contestuale: Proprietà del livello attivo
 const layerPropsSection = document.createElement('div');
@@ -265,6 +453,16 @@ function syncInspectorOpacity(opacity: number) {
 
 function updateInspector() {
   if (!wasmReady) return;
+
+  const docMeta = get_document_metadata();
+  if (docMeta) {
+    docMetaBox.innerHTML = `
+      <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${docMeta.title}</div>
+      <div style="font-size: 11px; color: var(--pz-text-muted);">
+        📐 ${docMeta.width} × ${docMeta.height} px · 🗂️ ${docMeta.layerCount} livelli
+      </div>
+    `;
+  }
 
   const metadataList: LayerMetadata[] = get_layers_metadata() || [];
   const activeId = get_active_layer_id();
@@ -298,8 +496,8 @@ function updateInspector() {
   const nameBox = document.createElement('div');
   nameBox.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 13px;`;
   nameBox.innerHTML = `
-    <span style="font-weight: 600; color: #fff;">${activeLayer.name}</span>
-    <span style="font-size: 11px; padding: 2px 6px; background: rgba(99,102,241,0.2); border-radius: 4px; color: #a5b4fc;">${activeLayer.kind}</span>
+    <span style="font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${activeLayer.name}">${activeLayer.name}</span>
+    <span style="font-size: 11px; padding: 2px 6px; background: rgba(99,102,241,0.2); border-radius: 4px; color: #a5b4fc;">${activeLayer.kind} · ${activeLayer.blendMode}</span>
   `;
   layerPropsSection.appendChild(nameBox);
 
@@ -327,10 +525,8 @@ function updateInspector() {
     const valSpan = document.getElementById('inspector-opacity-val');
     if (valSpan) valSpan.textContent = `${val}%`;
 
-    // Sincronizza verso il core WASM e WebGPU
     set_layer_opacity(activeLayer.id, val / 100.0);
 
-    // Sincronizza lo slider della riga corrispondente nel pannello livelli
     const rowEl = document.querySelector(`.pz-layer-row[data-layer-id="${activeLayer.id}"]`);
     if (rowEl) {
       const rowSlider = rowEl.querySelector('.pz-layer-opacity-slider') as HTMLInputElement;
@@ -343,7 +539,7 @@ function updateInspector() {
   opacityRow.appendChild(slider);
   layerPropsSection.appendChild(opacityRow);
 
-  // Toggle visibilità
+  // Toggle visibilità ed eliminazione
   const actionsRow = document.createElement('div');
   actionsRow.style.cssText = `display: flex; gap: 8px; margin-top: 4px;`;
 
@@ -390,7 +586,7 @@ shell.inspectorPanelBody.appendChild(
   }).element
 );
 
-// ── 5. Boot asincrono: WASM + WebGPU (tutto gestito in Rust) ──────────────────
+// ── 9. Boot asincrono: WASM + WebGPU (tutto gestito in Rust) ──────────────────
 
 (async () => {
   await setupWasm();

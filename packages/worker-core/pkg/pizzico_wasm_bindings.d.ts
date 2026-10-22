@@ -24,6 +24,10 @@ export class PizzicoEngine {
      */
     get_document_json(): string;
     /**
+     * Restituisce i metadati globali del documento attivo.
+     */
+    get_document_metadata(): any;
+    /**
      * Metadati di tutti i livelli in formato array JS.
      */
     get_layers_metadata(): any;
@@ -39,6 +43,10 @@ export class PizzicoEngine {
      * Numero di livelli presenti nel documento.
      */
     layer_count(): number;
+    /**
+     * Carica un file PSD binario e sostituisce il documento corrente.
+     */
+    load_psd_bytes(bytes: Uint8Array): void;
     /**
      * Inizializza l'istanza dell'engine con un nuovo documento.
      */
@@ -105,6 +113,11 @@ export function get_composite_buffer(): Uint8Array;
 export function get_document_dimensions(): Uint32Array;
 
 /**
+ * Restituisce i metadati globali del documento attivo in formato oggetto JSON.
+ */
+export function get_document_metadata(): any;
+
+/**
  * Restituisce il numero di livelli presenti nel documento attivo.
  */
 export function get_layer_count(): number;
@@ -130,6 +143,12 @@ export function init_webgpu(canvas_id: string): Promise<void>;
  * Verifica se il documento attivo necessita di un nuovo rendering WebGPU.
  */
 export function is_dirty(): boolean;
+
+/**
+ * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
+ * e segnala la necessità di un nuovo frame di compositing WebGPU.
+ */
+export function load_psd_bytes(bytes: Uint8Array): void;
 
 /**
  * Versione del core come intero (100 = v0.1.0).
@@ -172,20 +191,24 @@ export interface InitOutput {
     readonly get_active_layer_id: () => number;
     readonly get_composite_buffer: () => [number, number];
     readonly get_document_dimensions: () => [number, number];
+    readonly get_document_metadata: () => [number, number, number];
     readonly get_layer_count: () => number;
     readonly get_layers_metadata: () => [number, number, number];
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;
     readonly is_dirty: () => number;
+    readonly load_psd_bytes: (a: number, b: number) => [number, number];
     readonly pizzico_version: () => number;
     readonly pizzicoengine_add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => bigint;
     readonly pizzicoengine_create_document: (a: number, b: number, c: number) => void;
     readonly pizzicoengine_get_active_layer_id: (a: number) => number;
     readonly pizzicoengine_get_document_json: (a: number) => [number, number, number, number];
+    readonly pizzicoengine_get_document_metadata: (a: number) => [number, number, number];
     readonly pizzicoengine_get_layers_metadata: (a: number) => [number, number, number];
     readonly pizzicoengine_height: (a: number) => number;
     readonly pizzicoengine_is_dirty: (a: number) => number;
     readonly pizzicoengine_layer_count: (a: number) => number;
+    readonly pizzicoengine_load_psd_bytes: (a: number, b: number, c: number) => [number, number];
     readonly pizzicoengine_new: (a: number, b: number, c: number, d: number) => number;
     readonly pizzicoengine_remove_layer: (a: number, b: number) => number;
     readonly pizzicoengine_render_frame: (a: number) => [number, number];
