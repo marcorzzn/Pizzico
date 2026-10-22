@@ -23,6 +23,14 @@ export {
   get_composite_buffer,
   get_document_dimensions,
   get_layer_count,
+  get_layers_metadata,
+  set_layer_opacity,
+  set_layer_visibility,
+  select_layer,
+  remove_layer,
+  get_active_layer_id,
+  is_dirty,
+  set_dirty,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

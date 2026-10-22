@@ -140,6 +140,96 @@ pub fn get_layer_count() -> usize {
     with_active_document(|doc| doc.layer_count())
 }
 
+/// DTO serializzabile per l'invio dei metadati dei livelli al frontend TypeScript.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LayerMetadataDto {
+    pub id: u32,
+    pub name: String,
+    pub kind: String,
+    pub visible: bool,
+    pub locked: bool,
+    pub opacity: f32,
+    #[serde(rename = "blendMode")]
+    pub blend_mode: String,
+}
+
+/// Restituisce l'array JSON contenente i metadati di tutti i livelli nel documento attivo.
+#[wasm_bindgen]
+pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
+    let dtos: Vec<LayerMetadataDto> = with_active_document(|doc| {
+        doc.layers
+            .iter()
+            .map(|l| LayerMetadataDto {
+                id: l.id as u32,
+                name: l.name.clone(),
+                kind: match &l.kind {
+                    pizzico_core::LayerKind::Raster { .. } => "Raster".to_string(),
+                    pizzico_core::LayerKind::Vector { .. } => "Vector".to_string(),
+                    pizzico_core::LayerKind::Group { .. } => "Group".to_string(),
+                },
+                visible: l.visible,
+                locked: l.locked,
+                opacity: l.opacity,
+                blend_mode: format!("{:?}", l.blend_mode),
+            })
+            .collect()
+    });
+
+    let json_str = serde_json::to_string(&dtos)
+        .map_err(|e| JsValue::from_str(&format!("Errore serializzazione metadati livelli: {}", e)))?;
+    js_sys::JSON::parse(&json_str)
+}
+
+/// Imposta l'opacità del livello specificato (0.0 - 1.0) e marca il documento dirty.
+#[wasm_bindgen]
+pub fn set_layer_opacity(id: u32, opacity: f32) {
+    with_active_document_mut(|doc| {
+        doc.set_layer_opacity(id as u64, opacity);
+    });
+}
+
+/// Imposta la visibilità del livello specificato e marca il documento dirty.
+#[wasm_bindgen]
+pub fn set_layer_visibility(id: u32, visible: bool) {
+    with_active_document_mut(|doc| {
+        doc.set_layer_visibility(id as u64, visible);
+    });
+}
+
+/// Seleziona il livello specificato come livello attivo nel documento.
+#[wasm_bindgen]
+pub fn select_layer(id: u32) {
+    with_active_document_mut(|doc| {
+        doc.select_layer(id as u64);
+    });
+}
+
+/// Rimuove il livello specificato dal documento attivo.
+#[wasm_bindgen]
+pub fn remove_layer(id: u32) -> bool {
+    with_active_document_mut(|doc| {
+        doc.remove_layer(id as u64).is_some()
+    })
+}
+
+/// Restituisce l'ID del livello attualmente selezionato (se presente).
+#[wasm_bindgen]
+pub fn get_active_layer_id() -> Option<u32> {
+    with_active_document(|doc| doc.active_layer_id.map(|id| id as u32))
+}
+
+/// Verifica se il documento attivo necessita di un nuovo rendering WebGPU.
+#[wasm_bindgen]
+pub fn is_dirty() -> bool {
+    is_document_dirty()
+}
+
+/// Imposta manualmente il flag dirty del documento attivo.
+#[wasm_bindgen]
+pub fn set_dirty(dirty: bool) {
+    set_document_dirty(dirty);
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Core Engine handle
 // ──────────────────────────────────────────────────────────────────────────────
@@ -179,6 +269,16 @@ impl PizzicoEngine {
         with_active_document(|doc| doc.layer_count())
     }
 
+    /// Flag dirty del documento.
+    pub fn is_dirty(&self) -> bool {
+        is_document_dirty()
+    }
+
+    /// Imposta il flag dirty del documento.
+    pub fn set_dirty(&mut self, dirty: bool) {
+        set_document_dirty(dirty);
+    }
+
     /// Crea un nuovo documento.
     pub fn create_document(&mut self, width: u32, height: u32) {
         create_document(width, height);
@@ -187,6 +287,36 @@ impl PizzicoEngine {
     /// Aggiunge un livello raster uniforme.
     pub fn add_raster_layer(&mut self, name: &str, width: u32, height: u32, color: &[u8]) -> u64 {
         add_raster_layer(name, width, height, color)
+    }
+
+    /// Metadati di tutti i livelli in formato array JS.
+    pub fn get_layers_metadata(&self) -> Result<JsValue, JsValue> {
+        get_layers_metadata()
+    }
+
+    /// Modifica l'opacità di un livello.
+    pub fn set_layer_opacity(&mut self, id: u32, opacity: f32) {
+        set_layer_opacity(id, opacity);
+    }
+
+    /// Modifica la visibilità di un livello.
+    pub fn set_layer_visibility(&mut self, id: u32, visible: bool) {
+        set_layer_visibility(id, visible);
+    }
+
+    /// Seleziona un livello come attivo.
+    pub fn select_layer(&mut self, id: u32) {
+        select_layer(id);
+    }
+
+    /// Rimuove un livello dato il suo ID.
+    pub fn remove_layer(&mut self, id: u32) -> bool {
+        remove_layer(id)
+    }
+
+    /// ID del livello attivo.
+    pub fn get_active_layer_id(&self) -> Option<u32> {
+        get_active_layer_id()
     }
 
     /// Esegue il compositing e restituisce il buffer RGBA 8-bit per Canvas.

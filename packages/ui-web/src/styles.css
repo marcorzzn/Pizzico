@@ -221,11 +221,12 @@ body, html {
   display: flex;
   align-items: center;
   gap: var(--pz-space-sm);
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: var(--pz-radius-sm);
   background-color: transparent;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
 }
 
 .pz-layer-row:hover {
@@ -235,20 +236,68 @@ body, html {
 .pz-layer-row.pz-layer-selected {
   background-color: var(--pz-accent-subtle);
   border-left: 3px solid var(--pz-accent-primary);
+  border-top-color: rgba(99, 102, 241, 0.25);
+  border-right-color: rgba(99, 102, 241, 0.25);
+  border-bottom-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
 }
 
-.pz-layer-vis-btn, .pz-layer-lock-btn {
+.pz-layer-row.pz-layer-selected .pz-layer-name {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pz-layer-vis-btn, .pz-layer-lock-btn, .pz-layer-del-btn {
   background: none;
   border: none;
   color: var(--pz-text-secondary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pz-layer-vis-btn:hover, .pz-layer-del-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.pz-layer-del-btn:hover {
+  color: #f87171;
 }
 
 .pz-layer-name {
   flex: 1;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--pz-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pz-layer-opacity-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pz-layer-opacity-slider {
+  width: 55px;
+  height: 4px;
+  accent-color: var(--pz-accent-primary);
+  cursor: pointer;
+}
+
+.pz-layer-opacity-val {
+  font-size: 11px;
+  color: var(--pz-text-muted);
+  width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Status Bar */

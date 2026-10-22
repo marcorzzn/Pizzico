@@ -16,13 +16,25 @@ export class PizzicoEngine {
      */
     create_document(width: number, height: number): void;
     /**
+     * ID del livello attivo.
+     */
+    get_active_layer_id(): number | undefined;
+    /**
      * Serializza il documento in formato JSON.
      */
     get_document_json(): string;
     /**
+     * Metadati di tutti i livelli in formato array JS.
+     */
+    get_layers_metadata(): any;
+    /**
      * Altezza del documento corrente in pixel.
      */
     height(): number;
+    /**
+     * Flag dirty del documento.
+     */
+    is_dirty(): boolean;
     /**
      * Numero di livelli presenti nel documento.
      */
@@ -32,9 +44,29 @@ export class PizzicoEngine {
      */
     constructor(width: number, height: number, title: string);
     /**
+     * Rimuove un livello dato il suo ID.
+     */
+    remove_layer(id: number): boolean;
+    /**
      * Esegue il compositing e restituisce il buffer RGBA 8-bit per Canvas.
      */
     render_frame(): Uint8Array;
+    /**
+     * Seleziona un livello come attivo.
+     */
+    select_layer(id: number): void;
+    /**
+     * Imposta il flag dirty del documento.
+     */
+    set_dirty(dirty: boolean): void;
+    /**
+     * Modifica l'opacità di un livello.
+     */
+    set_layer_opacity(id: number, opacity: number): void;
+    /**
+     * Modifica la visibilità di un livello.
+     */
+    set_layer_visibility(id: number, visible: boolean): void;
     /**
      * Larghezza del documento corrente in pixel.
      */
@@ -58,6 +90,11 @@ export function add_raster_layer(name: string, width: number, height: number, co
 export function create_document(width: number, height: number): void;
 
 /**
+ * Restituisce l'ID del livello attualmente selezionato (se presente).
+ */
+export function get_active_layer_id(): number | undefined;
+
+/**
  * Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
  */
 export function get_composite_buffer(): Uint8Array;
@@ -73,6 +110,11 @@ export function get_document_dimensions(): Uint32Array;
 export function get_layer_count(): number;
 
 /**
+ * Restituisce l'array JSON contenente i metadati di tutti i livelli nel documento attivo.
+ */
+export function get_layers_metadata(): any;
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
  */
 export function init_panic_hook(): void;
@@ -85,9 +127,39 @@ export function init_panic_hook(): void;
 export function init_webgpu(canvas_id: string): Promise<void>;
 
 /**
+ * Verifica se il documento attivo necessita di un nuovo rendering WebGPU.
+ */
+export function is_dirty(): boolean;
+
+/**
  * Versione del core come intero (100 = v0.1.0).
  */
 export function pizzico_version(): number;
+
+/**
+ * Rimuove il livello specificato dal documento attivo.
+ */
+export function remove_layer(id: number): boolean;
+
+/**
+ * Seleziona il livello specificato come livello attivo nel documento.
+ */
+export function select_layer(id: number): void;
+
+/**
+ * Imposta manualmente il flag dirty del documento attivo.
+ */
+export function set_dirty(dirty: boolean): void;
+
+/**
+ * Imposta l'opacità del livello specificato (0.0 - 1.0) e marca il documento dirty.
+ */
+export function set_layer_opacity(id: number, opacity: number): void;
+
+/**
+ * Imposta la visibilità del livello specificato e marca il documento dirty.
+ */
+export function set_layer_visibility(id: number, visible: boolean): void;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -97,20 +169,36 @@ export interface InitOutput {
     readonly add: (a: number, b: number) => number;
     readonly add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number) => bigint;
     readonly create_document: (a: number, b: number) => void;
+    readonly get_active_layer_id: () => number;
     readonly get_composite_buffer: () => [number, number];
     readonly get_document_dimensions: () => [number, number];
     readonly get_layer_count: () => number;
+    readonly get_layers_metadata: () => [number, number, number];
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;
+    readonly is_dirty: () => number;
     readonly pizzico_version: () => number;
     readonly pizzicoengine_add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => bigint;
     readonly pizzicoengine_create_document: (a: number, b: number, c: number) => void;
+    readonly pizzicoengine_get_active_layer_id: (a: number) => number;
     readonly pizzicoengine_get_document_json: (a: number) => [number, number, number, number];
+    readonly pizzicoengine_get_layers_metadata: (a: number) => [number, number, number];
     readonly pizzicoengine_height: (a: number) => number;
+    readonly pizzicoengine_is_dirty: (a: number) => number;
     readonly pizzicoengine_layer_count: (a: number) => number;
     readonly pizzicoengine_new: (a: number, b: number, c: number, d: number) => number;
+    readonly pizzicoengine_remove_layer: (a: number, b: number) => number;
     readonly pizzicoengine_render_frame: (a: number) => [number, number];
+    readonly pizzicoengine_select_layer: (a: number, b: number) => void;
+    readonly pizzicoengine_set_dirty: (a: number, b: number) => void;
+    readonly pizzicoengine_set_layer_opacity: (a: number, b: number, c: number) => void;
+    readonly pizzicoengine_set_layer_visibility: (a: number, b: number, c: number) => void;
     readonly pizzicoengine_width: (a: number) => number;
+    readonly remove_layer: (a: number) => number;
+    readonly select_layer: (a: number) => void;
+    readonly set_dirty: (a: number) => void;
+    readonly set_layer_opacity: (a: number, b: number) => void;
+    readonly set_layer_visibility: (a: number, b: number) => void;
     readonly wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_: (a: number, b: number, c: number) => void;
     readonly wasm_bindgen_12528a006083644c___convert__closures_____invoke___js_sys_38ea4d597d213009___Function_fn_wasm_bindgen_12528a006083644c___JsValue_____wasm_bindgen_12528a006083644c___sys__Undefined___js_sys_38ea4d597d213009___Function_fn_wasm_bindgen_12528a006083644c___JsValue_____wasm_bindgen_12528a006083644c___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_: (a: number, b: number, c: any) => [number, number];

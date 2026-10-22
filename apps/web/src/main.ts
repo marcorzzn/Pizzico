@@ -1,12 +1,14 @@
 // Pizzico — apps/web/src/main.ts
-// Riferimento manifesto: §3.1, §5.5, §11 Step 8
+// Riferimento manifesto: §3.1, §5.3, §5.4, §5.5, §6.1, §6.2, §11 Step 8
 // Licenza: MIT OR Apache-2.0
 //
 // Nota architetturale (§3, §12):
 // Il TypeScript si limita a:
 //   1. Costruire la shell UI (DesktopShellLayout)
 //   2. Inizializzare il modulo WASM (initWasm)
-//   3. Delegare TUTTO il rendering WebGPU al core Rust via init_webgpu()
+//   3. Renderizzare dinamicamente il pannello livelli leggendoli da get_layers_metadata()
+//   4. Collegare i controlli (opacità, visibilità, selezione, eliminazione) ai metodi WASM
+//   5. Delegare TUTTO il rendering WebGPU al core Rust via init_webgpu()
 //
 // NESSUN codice WebGPU è presente in questo file.
 // Tutta la logica GPU (adapter, device, surface, shader WGSL, render loop)
@@ -15,6 +17,7 @@
 import '@pizzico/ui-web/src/styles.css';
 import { DesktopShellLayout } from '@pizzico/ui-web';
 import { Slider, ColorPicker, LayerRow, Button } from '@pizzico/ui-kit';
+import { LayerMetadata } from '@pizzico/shared';
 import {
   initWasm,
   add,
@@ -22,14 +25,28 @@ import {
   init_webgpu,
   create_document,
   add_raster_layer,
-  get_composite_buffer,
+  get_layer_count,
+  get_layers_metadata,
+  set_layer_opacity,
+  set_layer_visibility,
+  select_layer,
+  remove_layer,
+  get_active_layer_id,
 } from '@pizzico/worker-core';
 
 console.log('🍕 Pizzico Engine initializing…');
 
-// ── 1. Inizializzazione del modulo WASM ───────────────────────────────────────
-// Carichiamo il .wasm generato da wasm-pack; tutte le chiamate successive a
-// add() / init_webgpu() ecc. eseguono codice Rust compilato.
+// ── 1. Costruzione Shell UI ───────────────────────────────────────────────────
+
+const appContainer = document.getElementById('app')!;
+const shell = new DesktopShellLayout({
+  onModeChange: (mode) => console.log(`[Workspace] Modalità attiva: ${mode}`),
+  onToolSelect: (tool) => console.log(`[Toolbar] Strumento selezionato: ${tool}`),
+  onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
+});
+appContainer.appendChild(shell.root);
+
+// ── 2. Inizializzazione WASM Bridge ───────────────────────────────────────────
 
 let wasmReady = false;
 
@@ -41,72 +58,178 @@ async function setupWasm(): Promise<void> {
     console.log(
       `[WASM Bridge] ✅ Modulo Rust inizializzato — version: ${v}, add(2,3) = ${add(2, 3)}`
     );
-    // Aggiorna badge in Inspector se già presente nel DOM
-    const badge = document.getElementById('wasm-result');
-    if (badge) {
-      badge.textContent = `WASM Rust v${v} caricato`;
-      badge.style.color = '#38bdf8';
-    }
+    updateWasmStatusBadge(`WASM Rust v${v} pronto`, '#38bdf8');
+    renderLayersPanel();
+    updateInspector();
   } catch (err) {
     console.error('[WASM Bridge] ❌ Inizializzazione WASM fallita:', err);
+    updateWasmStatusBadge('Errore caricamento WASM', '#ef4444');
   }
 }
 
-// ── 2. Costruzione Shell UI ───────────────────────────────────────────────────
+function updateWasmStatusBadge(text: string, color: string) {
+  const badge = document.getElementById('wasm-result');
+  if (badge) {
+    badge.textContent = text;
+    badge.style.color = color;
+  }
+}
 
-const appContainer = document.getElementById('app')!;
-const shell = new DesktopShellLayout({
-  onModeChange: (mode) => console.log(`[Workspace] Modalità attiva: ${mode}`),
-  onToolSelect: (tool) => console.log(`[Toolbar] Strumento selezionato: ${tool}`),
-  onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
-});
-appContainer.appendChild(shell.root);
+// ── 3. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 
-// ── 3. Pannello Livelli ───────────────────────────────────────────────────────
+const layersHeaderContainer = document.createElement('div');
+layersHeaderContainer.className = 'pz-layers-toolbar';
+layersHeaderContainer.style.cssText = `
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  margin-bottom: 8px;
+`;
 
-const bgLayerRow = new LayerRow({
-  layer: {
-    id: 1,
-    name: 'Sfondo — WebGPU (Rust)',
-    kind: 'Raster',
-    visible: true,
-    locked: false,
-    opacity: 1.0,
-    blendMode: 'Normal',
-  },
-  selected: true,
-  onSelect: (id) => console.log(`Livello selezionato: ${id}`),
-});
-shell.layersPanelBody.appendChild(bgLayerRow.element);
-
-const addLayerBtn = new Button({
-  label: '+ Nuovo Livello',
-  variant: 'secondary',
+// Pulsante principale "+ Aggiungi Livello Vuoto" come richiesto da Step C
+const addEmptyBtn = new Button({
+  label: '➕ Aggiungi Livello Vuoto',
+  variant: 'primary',
   onClick: () => {
-    const newId = Date.now();
-    const newRow = new LayerRow({
-      layer: {
-        id: newId,
-        name: `Livello ${shell.layersPanelBody.children.length}`,
-        kind: 'Raster',
-        visible: true,
-        locked: false,
-        opacity: 1.0,
-        blendMode: 'Normal',
-      },
-      onSelect: (id) => console.log(`Livello selezionato: ${id}`),
-    });
-    shell.layersPanelBody.insertBefore(newRow.element, addLayerBtn.element);
+    if (!wasmReady) return;
+    const count = get_layer_count();
+    const id = add_raster_layer(`Livello ${count + 1}`, 800, 600, new Uint8Array([0, 0, 0, 0]));
+    console.log(`[Layers] Aggiunto livello vuoto (trasparente) ID: ${id}`);
+    renderLayersPanel();
+    updateInspector();
   },
 });
-shell.layersPanelBody.appendChild(addLayerBtn.element);
+layersHeaderContainer.appendChild(addEmptyBtn.element);
 
-// ── 4. Inspector – Badge WASM Bridge ─────────────────────────────────────────
+// Quick buttons per test rapido del compositing multi-livello (Rosso & Blu)
+const quickBtnsRow = document.createElement('div');
+quickBtnsRow.style.cssText = `display: flex; gap: 6px;`;
 
+const addRedBtn = document.createElement('button');
+addRedBtn.className = 'pz-btn pz-btn-secondary';
+addRedBtn.style.cssText = `flex: 1; font-size: 11px; padding: 5px 8px; cursor: pointer;`;
+addRedBtn.innerHTML = '🔴 + Rosso';
+addRedBtn.title = 'Aggiungi livello rosso opaco (800x600)';
+addRedBtn.addEventListener('click', () => {
+  if (!wasmReady) return;
+  const id = add_raster_layer('Layer Rosso', 800, 600, new Uint8Array([255, 0, 0, 255]));
+  console.log(`[Layers] Aggiunto Layer Rosso: id = ${id}`);
+  renderLayersPanel();
+  updateInspector();
+});
+
+const addBlueBtn = document.createElement('button');
+addBlueBtn.className = 'pz-btn pz-btn-secondary';
+addBlueBtn.style.cssText = `flex: 1; font-size: 11px; padding: 5px 8px; cursor: pointer;`;
+addBlueBtn.innerHTML = '🔵 + Blu';
+addBlueBtn.title = 'Aggiungi livello blu con 50% trasparenza (alpha 128)';
+addBlueBtn.addEventListener('click', () => {
+  if (!wasmReady) return;
+  const id = add_raster_layer('Layer Blu', 800, 600, new Uint8Array([0, 0, 255, 128]));
+  console.log(`[Layers] Aggiunto Layer Blu: id = ${id}`);
+  renderLayersPanel();
+  updateInspector();
+});
+
+const resetBtn = document.createElement('button');
+resetBtn.className = 'pz-btn pz-btn-secondary';
+resetBtn.style.cssText = `font-size: 11px; padding: 5px 8px; cursor: pointer;`;
+resetBtn.innerHTML = '⚪ Reset';
+resetBtn.title = 'Resetta documento vuoto';
+resetBtn.addEventListener('click', () => {
+  if (!wasmReady) return;
+  create_document(800, 600);
+  console.log('[Layers] Documento resettato');
+  renderLayersPanel();
+  updateInspector();
+});
+
+quickBtnsRow.appendChild(addRedBtn);
+quickBtnsRow.appendChild(addBlueBtn);
+quickBtnsRow.appendChild(resetBtn);
+layersHeaderContainer.appendChild(quickBtnsRow);
+
+const layersListContainer = document.createElement('div');
+layersListContainer.className = 'pz-layers-list';
+layersListContainer.style.cssText = `
+  display: flex;
+  flex-direction: column-reverse; /* I livelli in cima allo stack sono in alto */
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 400px;
+`;
+
+shell.layersPanelBody.innerHTML = '';
+shell.layersPanelBody.appendChild(layersHeaderContainer);
+shell.layersPanelBody.appendChild(layersListContainer);
+
+/**
+ * Legge i metadati dal core Rust tramite `get_layers_metadata()` e ripopola il DOM.
+ */
+function renderLayersPanel() {
+  if (!wasmReady) return;
+
+  const metadataList: LayerMetadata[] = get_layers_metadata() || [];
+  const activeId = get_active_layer_id();
+
+  layersListContainer.innerHTML = '';
+
+  if (metadataList.length === 0) {
+    const emptyNotice = document.createElement('div');
+    emptyNotice.style.cssText = `
+      padding: 16px;
+      text-align: center;
+      color: var(--pz-text-muted);
+      font-size: 12px;
+    `;
+    emptyNotice.textContent = 'Nessun livello presente. Clicca "+ Aggiungi Livello".';
+    layersListContainer.appendChild(emptyNotice);
+    return;
+  }
+
+  for (const meta of metadataList) {
+    const isSelected = activeId !== undefined && activeId === meta.id;
+
+    const row = new LayerRow({
+      layer: meta,
+      selected: isSelected,
+      onSelect: (id) => {
+        select_layer(id);
+        renderLayersPanel();
+        updateInspector();
+      },
+      onToggleVisibility: (id) => {
+        set_layer_visibility(id, !meta.visible);
+        renderLayersPanel();
+        updateInspector();
+      },
+      onOpacityChange: (id, opacity) => {
+        set_layer_opacity(id, opacity);
+        // Aggiorna l'inspector in tempo reale senza ricostruire tutta la lista
+        syncInspectorOpacity(opacity);
+      },
+      onDelete: (id) => {
+        remove_layer(id);
+        renderLayersPanel();
+        updateInspector();
+      },
+    });
+
+    layersListContainer.appendChild(row.element);
+  }
+}
+
+// ── 4. Inspector Panel (§5.3 Context-Aware Surface) ───────────────────────────
+
+shell.inspectorPanelBody.innerHTML = '';
+
+// Status Card Rust ↔ WASM
 const wasmStatusBox = document.createElement('div');
 wasmStatusBox.id = 'wasm-bridge-status';
 wasmStatusBox.style.cssText = `
-  margin: 12px 0;
+  margin-bottom: 12px;
   padding: 10px 12px;
   background: rgba(79, 70, 229, 0.12);
   border: 1px solid rgba(79, 70, 229, 0.35);
@@ -114,151 +237,175 @@ wasmStatusBox.style.cssText = `
   font-size: 12px;
   color: #c7d2fe;
 `;
-wasmStatusBox.innerHTML = `<strong>Rust ↔ WASM Bridge</strong><br><span id="wasm-result">In attesa WASM…</span>`;
+wasmStatusBox.innerHTML = `<strong>Rust Core Engine</strong><br><span id="wasm-result">In attesa WASM…</span>`;
 shell.inspectorPanelBody.appendChild(wasmStatusBox);
 
-// Pulsante di verifica: chiama add() Rust
-const testWasmBtn = new Button({
-  label: '⚡ Esegui add(2, 3) via WASM',
-  variant: 'secondary',
-  onClick: () => {
-    const res = wasmReady ? add(2, 3) : 2 + 3;
-    const resultSpan = document.getElementById('wasm-result');
-    if (resultSpan) {
-      resultSpan.textContent = `add(2, 3) = ${res} (${wasmReady ? 'Rust WASM' : 'JS fallback'})`;
-      resultSpan.style.color = '#34d399';
+// Sezione contestuale: Proprietà del livello attivo
+const layerPropsSection = document.createElement('div');
+layerPropsSection.id = 'active-layer-inspector';
+layerPropsSection.style.cssText = `
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  border-radius: 8px;
+  margin-bottom: 16px;
+`;
+shell.inspectorPanelBody.appendChild(layerPropsSection);
+
+function syncInspectorOpacity(opacity: number) {
+  const inspectorSlider = document.getElementById('inspector-opacity-input') as HTMLInputElement;
+  const inspectorVal = document.getElementById('inspector-opacity-val');
+  const pct = Math.round(opacity * 100);
+  if (inspectorSlider) inspectorSlider.value = String(pct);
+  if (inspectorVal) inspectorVal.textContent = `${pct}%`;
+}
+
+function updateInspector() {
+  if (!wasmReady) return;
+
+  const metadataList: LayerMetadata[] = get_layers_metadata() || [];
+  const activeId = get_active_layer_id();
+  const activeLayer = metadataList.find((l) => l.id === activeId);
+
+  layerPropsSection.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.style.cssText = `
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pz-text-secondary);
+  `;
+  header.textContent = 'Proprietà Livello';
+  layerPropsSection.appendChild(header);
+
+  if (!activeLayer) {
+    const noneText = document.createElement('div');
+    noneText.style.cssText = `font-size: 12px; color: var(--pz-text-muted);`;
+    noneText.textContent = 'Nessun livello selezionato.';
+    layerPropsSection.appendChild(noneText);
+    return;
+  }
+
+  // Nome e tipo livello
+  const nameBox = document.createElement('div');
+  nameBox.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 13px;`;
+  nameBox.innerHTML = `
+    <span style="font-weight: 600; color: #fff;">${activeLayer.name}</span>
+    <span style="font-size: 11px; padding: 2px 6px; background: rgba(99,102,241,0.2); border-radius: 4px; color: #a5b4fc;">${activeLayer.kind}</span>
+  `;
+  layerPropsSection.appendChild(nameBox);
+
+  // Controllo Opacità sincronizzato
+  const opacityPct = Math.round(activeLayer.opacity * 100);
+  const opacityRow = document.createElement('div');
+  opacityRow.style.cssText = `display: flex; flex-direction: column; gap: 4px;`;
+  opacityRow.innerHTML = `
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--pz-text-secondary);">
+      <span>Opacità</span>
+      <span id="inspector-opacity-val" style="font-variant-numeric: tabular-nums;">${opacityPct}%</span>
+    </div>
+  `;
+
+  const slider = document.createElement('input');
+  slider.id = 'inspector-opacity-input';
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = '100';
+  slider.value = String(opacityPct);
+  slider.className = 'pz-slider-input';
+  slider.style.cssText = `width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;`;
+  slider.addEventListener('input', (e) => {
+    const val = Number((e.target as HTMLInputElement).value);
+    const valSpan = document.getElementById('inspector-opacity-val');
+    if (valSpan) valSpan.textContent = `${val}%`;
+
+    // Sincronizza verso il core WASM e WebGPU
+    set_layer_opacity(activeLayer.id, val / 100.0);
+
+    // Sincronizza lo slider della riga corrispondente nel pannello livelli
+    const rowEl = document.querySelector(`.pz-layer-row[data-layer-id="${activeLayer.id}"]`);
+    if (rowEl) {
+      const rowSlider = rowEl.querySelector('.pz-layer-opacity-slider') as HTMLInputElement;
+      const rowVal = rowEl.querySelector('.pz-layer-opacity-val');
+      if (rowSlider) rowSlider.value = String(val);
+      if (rowVal) rowVal.textContent = `${val}%`;
     }
-    console.log(`[WASM Bridge Click] add(2, 3) = ${res}`);
-  },
-});
-shell.inspectorPanelBody.appendChild(testWasmBtn.element);
+  });
 
-// Pulsanti Test Compositing Livelli (Fase 1 Core Document)
-const addRedLayerBtn = new Button({
-  label: '🔴 Aggiungi Livello Rosso',
-  variant: 'primary',
-  onClick: () => {
-    if (!wasmReady) return;
-    const id = add_raster_layer('Layer Rosso', 800, 600, new Uint8Array([255, 0, 0, 255]));
-    console.log(`[Core Document] ✅ Livello Rosso aggiunto: id = ${id}`);
-    const resultSpan = document.getElementById('wasm-result');
-    if (resultSpan) {
-      resultSpan.textContent = `Livello Rosso aggiunto (ID: ${id})`;
-      resultSpan.style.color = '#f87171';
-    }
-    const row = new LayerRow({
-      layer: {
-        id: Number(id),
-        name: 'Layer Rosso (Opaco)',
-        kind: 'Raster',
-        visible: true,
-        locked: false,
-        opacity: 1.0,
-        blendMode: 'Normal',
-      },
-      onSelect: (layerId) => console.log(`Livello selezionato: ${layerId}`),
-    });
-    shell.layersPanelBody.insertBefore(row.element, addLayerBtn.element);
-  },
-});
-shell.inspectorPanelBody.appendChild(addRedLayerBtn.element);
+  opacityRow.appendChild(slider);
+  layerPropsSection.appendChild(opacityRow);
 
-const addBlueLayerBtn = new Button({
-  label: '🔵 Aggiungi Livello Blu (50% Trasparenza)',
-  variant: 'primary',
-  onClick: () => {
-    if (!wasmReady) return;
-    const id = add_raster_layer('Layer Blu', 800, 600, new Uint8Array([0, 0, 255, 128]));
-    console.log(`[Core Document] ✅ Livello Blu aggiunto (alpha 128): id = ${id}`);
-    const resultSpan = document.getElementById('wasm-result');
-    if (resultSpan) {
-      resultSpan.textContent = `Livello Blu aggiunto (Alpha 128 → Viola)`;
-      resultSpan.style.color = '#818cf8';
-    }
-    const row = new LayerRow({
-      layer: {
-        id: Number(id),
-        name: 'Layer Blu (50% Alpha)',
-        kind: 'Raster',
-        visible: true,
-        locked: false,
-        opacity: 0.5,
-        blendMode: 'Normal',
-      },
-      onSelect: (layerId) => console.log(`Livello selezionato: ${layerId}`),
-    });
-    shell.layersPanelBody.insertBefore(row.element, addLayerBtn.element);
-  },
-});
-shell.inspectorPanelBody.appendChild(addBlueLayerBtn.element);
+  // Toggle visibilità
+  const actionsRow = document.createElement('div');
+  actionsRow.style.cssText = `display: flex; gap: 8px; margin-top: 4px;`;
 
-const resetDocBtn = new Button({
-  label: '⚪ Reset Documento Vuoto',
-  variant: 'secondary',
-  onClick: () => {
-    if (!wasmReady) return;
-    create_document(800, 600);
-    const buf = get_composite_buffer();
-    console.log(`[Core Document] ⚪ Documento resettato: buffer size = ${buf.length} bytes`);
-    const resultSpan = document.getElementById('wasm-result');
-    if (resultSpan) {
-      resultSpan.textContent = `Documento 800x600 resettato`;
-      resultSpan.style.color = '#94a3b8';
-    }
-  },
-});
-shell.inspectorPanelBody.appendChild(resetDocBtn.element);
+  const visBtn = document.createElement('button');
+  visBtn.className = 'pz-btn pz-btn-secondary';
+  visBtn.style.cssText = `flex: 1; font-size: 11px; padding: 6px 10px; cursor: pointer;`;
+  visBtn.textContent = activeLayer.visible ? '👁️ Visibile' : '🕶️ Nascosto';
+  visBtn.addEventListener('click', () => {
+    set_layer_visibility(activeLayer.id, !activeLayer.visible);
+    renderLayersPanel();
+    updateInspector();
+  });
+  actionsRow.appendChild(visBtn);
 
+  const delBtn = document.createElement('button');
+  delBtn.className = 'pz-btn pz-btn-secondary';
+  delBtn.style.cssText = `font-size: 11px; padding: 6px 10px; color: #f87171; cursor: pointer;`;
+  delBtn.textContent = '🗑️ Elimina';
+  delBtn.addEventListener('click', () => {
+    remove_layer(activeLayer.id);
+    renderLayersPanel();
+    updateInspector();
+  });
+  actionsRow.appendChild(delBtn);
 
-// ── 5. Inspector – Controlli ──────────────────────────────────────────────────
+  layerPropsSection.appendChild(actionsRow);
+}
 
+// Controlli standard pennello/colore
 shell.inspectorPanelBody.appendChild(
-  new Slider({ label: 'Opacità Livello', min: 0, max: 100, value: 100, unit: '%',
-    onChange: (v) => console.log(`Opacità: ${v}%`) }).element
+  new Slider({
+    label: 'Dimensione Tratto',
+    min: 1,
+    max: 200,
+    value: 24,
+    unit: 'px',
+    onChange: (v) => console.log(`Pennello: ${v}px`),
+  }).element
 );
 shell.inspectorPanelBody.appendChild(
-  new Slider({ label: 'Dimensione Tratto', min: 1, max: 200, value: 24, unit: 'px',
-    onChange: (v) => console.log(`Pennello: ${v}px`) }).element
-);
-shell.inspectorPanelBody.appendChild(
-  new ColorPicker({ color: '#4f46e5',
-    onChange: (c) => console.log(`Colore: ${c}`) }).element
+  new ColorPicker({
+    color: '#4f46e5',
+    onChange: (c) => console.log(`Colore: ${c}`),
+  }).element
 );
 
-// ── 6. Boot asincrono: prima WASM, poi WebGPU (tutto in Rust) ─────────────────
-// Il rendering WebGPU è delegato INTERAMENTE al core Rust.
-// Il canvas deve già essere nel DOM prima che init_webgpu() lo cerchi.
+// ── 5. Boot asincrono: WASM + WebGPU (tutto gestito in Rust) ──────────────────
 
 (async () => {
   await setupWasm();
 
   if (wasmReady) {
-    // Rust prende il controllo del canvas e avvia il loop di rendering
     try {
       await init_webgpu('pizzico-canvas');
-      console.log('[WebGPU] ✅ Render loop Rust attivo — 60 FPS via RAF');
+      console.log('[WebGPU] ✅ Render loop Rust attivo — 60 FPS via RAF con dirty checking');
     } catch (err) {
       console.warn('[WebGPU] ⚠️ Fallback a Canvas2D — WebGPU non disponibile:', err);
-      // Fallback Canvas2D minimale
       const ctx = shell.canvas.getContext('2d');
       if (ctx) {
         ctx.fillStyle = '#121316';
         ctx.fillRect(0, 0, shell.canvas.width, shell.canvas.height);
-        const grad = ctx.createLinearGradient(0, 0, shell.canvas.width, shell.canvas.height);
-        grad.addColorStop(0, '#4f46e5');
-        grad.addColorStop(1, '#06b6d4');
-        ctx.fillStyle = grad;
-        ctx.roundRect(
-          shell.canvas.width * 0.1,
-          shell.canvas.height * 0.2,
-          shell.canvas.width * 0.8,
-          shell.canvas.height * 0.6,
-          16
-        );
-        ctx.fill();
       }
     }
-  } else {
-    console.warn('[Boot] WASM non pronto — init_webgpu() non chiamata');
   }
 })();

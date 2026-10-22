@@ -39,6 +39,14 @@ export class PizzicoEngine {
         wasm.pizzicoengine_create_document(this.__wbg_ptr, width, height);
     }
     /**
+     * ID del livello attivo.
+     * @returns {number | undefined}
+     */
+    get_active_layer_id() {
+        const ret = wasm.pizzicoengine_get_active_layer_id(this.__wbg_ptr);
+        return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+    }
+    /**
      * Serializza il documento in formato JSON.
      * @returns {string}
      */
@@ -61,12 +69,31 @@ export class PizzicoEngine {
         }
     }
     /**
+     * Metadati di tutti i livelli in formato array JS.
+     * @returns {any}
+     */
+    get_layers_metadata() {
+        const ret = wasm.pizzicoengine_get_layers_metadata(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
      * Altezza del documento corrente in pixel.
      * @returns {number}
      */
     height() {
         const ret = wasm.pizzicoengine_height(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * Flag dirty del documento.
+     * @returns {boolean}
+     */
+    is_dirty() {
+        const ret = wasm.pizzicoengine_is_dirty(this.__wbg_ptr);
+        return ret !== 0;
     }
     /**
      * Numero di livelli presenti nel documento.
@@ -91,6 +118,15 @@ export class PizzicoEngine {
         return this;
     }
     /**
+     * Rimuove un livello dato il suo ID.
+     * @param {number} id
+     * @returns {boolean}
+     */
+    remove_layer(id) {
+        const ret = wasm.pizzicoengine_remove_layer(this.__wbg_ptr, id);
+        return ret !== 0;
+    }
+    /**
      * Esegue il compositing e restituisce il buffer RGBA 8-bit per Canvas.
      * @returns {Uint8Array}
      */
@@ -99,6 +135,36 @@ export class PizzicoEngine {
         var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
         return v1;
+    }
+    /**
+     * Seleziona un livello come attivo.
+     * @param {number} id
+     */
+    select_layer(id) {
+        wasm.pizzicoengine_select_layer(this.__wbg_ptr, id);
+    }
+    /**
+     * Imposta il flag dirty del documento.
+     * @param {boolean} dirty
+     */
+    set_dirty(dirty) {
+        wasm.pizzicoengine_set_dirty(this.__wbg_ptr, dirty);
+    }
+    /**
+     * Modifica l'opacità di un livello.
+     * @param {number} id
+     * @param {number} opacity
+     */
+    set_layer_opacity(id, opacity) {
+        wasm.pizzicoengine_set_layer_opacity(this.__wbg_ptr, id, opacity);
+    }
+    /**
+     * Modifica la visibilità di un livello.
+     * @param {number} id
+     * @param {boolean} visible
+     */
+    set_layer_visibility(id, visible) {
+        wasm.pizzicoengine_set_layer_visibility(this.__wbg_ptr, id, visible);
     }
     /**
      * Larghezza del documento corrente in pixel.
@@ -150,6 +216,15 @@ export function create_document(width, height) {
 }
 
 /**
+ * Restituisce l'ID del livello attualmente selezionato (se presente).
+ * @returns {number | undefined}
+ */
+export function get_active_layer_id() {
+    const ret = wasm.get_active_layer_id();
+    return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+}
+
+/**
  * Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
  * @returns {Uint8Array}
  */
@@ -181,6 +256,18 @@ export function get_layer_count() {
 }
 
 /**
+ * Restituisce l'array JSON contenente i metadati di tutti i livelli nel documento attivo.
+ * @returns {any}
+ */
+export function get_layers_metadata() {
+    const ret = wasm.get_layers_metadata();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
  */
 export function init_panic_hook() {
@@ -202,12 +289,65 @@ export function init_webgpu(canvas_id) {
 }
 
 /**
+ * Verifica se il documento attivo necessita di un nuovo rendering WebGPU.
+ * @returns {boolean}
+ */
+export function is_dirty() {
+    const ret = wasm.is_dirty();
+    return ret !== 0;
+}
+
+/**
  * Versione del core come intero (100 = v0.1.0).
  * @returns {number}
  */
 export function pizzico_version() {
     const ret = wasm.pizzico_version();
     return ret >>> 0;
+}
+
+/**
+ * Rimuove il livello specificato dal documento attivo.
+ * @param {number} id
+ * @returns {boolean}
+ */
+export function remove_layer(id) {
+    const ret = wasm.remove_layer(id);
+    return ret !== 0;
+}
+
+/**
+ * Seleziona il livello specificato come livello attivo nel documento.
+ * @param {number} id
+ */
+export function select_layer(id) {
+    wasm.select_layer(id);
+}
+
+/**
+ * Imposta manualmente il flag dirty del documento attivo.
+ * @param {boolean} dirty
+ */
+export function set_dirty(dirty) {
+    wasm.set_dirty(dirty);
+}
+
+/**
+ * Imposta l'opacità del livello specificato (0.0 - 1.0) e marca il documento dirty.
+ * @param {number} id
+ * @param {number} opacity
+ */
+export function set_layer_opacity(id, opacity) {
+    wasm.set_layer_opacity(id, opacity);
+}
+
+/**
+ * Imposta la visibilità del livello specificato e marca il documento dirty.
+ * @param {number} id
+ * @param {boolean} visible
+ */
+export function set_layer_visibility(id, visible) {
+    wasm.set_layer_visibility(id, visible);
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -325,6 +465,10 @@ function __wbg_get_imports() {
                 state0.a = 0;
             }
         },
+        __wbg_parse_0fc53dead14b3b42: function() { return handleError(function (arg0, arg1) {
+            const ret = JSON.parse(getStringFromWasm0(arg0, arg1));
+            return ret;
+        }, arguments); },
         __wbg_push_2baf45db356cf468: function(arg0, arg1) {
             const ret = arg0.push(arg1);
             return ret;
@@ -380,12 +524,12 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 29, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 30, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 3, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 4, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_);
             return ret;
         },

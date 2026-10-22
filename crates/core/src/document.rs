@@ -105,6 +105,36 @@ impl Document {
         }
     }
 
+    /// Imposta l'opacità di un livello (clamped tra 0.0 e 1.0).
+    pub fn set_layer_opacity(&mut self, id: LayerId, opacity: f32) -> bool {
+        if let Some(layer) = self.get_layer_mut(id) {
+            layer.opacity = opacity.clamp(0.0, 1.0);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Imposta la visibilità di un livello.
+    pub fn set_layer_visibility(&mut self, id: LayerId, visible: bool) -> bool {
+        if let Some(layer) = self.get_layer_mut(id) {
+            layer.visible = visible;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Imposta il livello attivo specificato per ID.
+    pub fn select_layer(&mut self, id: LayerId) -> bool {
+        if self.get_layer(id).is_some() {
+            self.active_layer_id = Some(id);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Restituisce il numero totale di livelli presenti.
     pub fn layer_count(&self) -> usize {
         self.layers.len()
@@ -174,5 +204,48 @@ mod tests {
         assert_ne!(id1, id2);
         assert_ne!(id2, id3);
         assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_layer_opacity_and_visibility() {
+        let mut doc = Document::new_empty(100, 100);
+        let id = doc.allocate_layer_id();
+        doc.add_layer(Layer::new_raster(id, "Livello", 100, 100));
+
+        assert_eq!(doc.get_layer(id).unwrap().opacity, 1.0);
+        assert!(doc.get_layer(id).unwrap().visible);
+
+        assert!(doc.set_layer_opacity(id, 0.42));
+        assert_eq!(doc.get_layer(id).unwrap().opacity, 0.42);
+
+        // Clamping check
+        doc.set_layer_opacity(id, 1.5);
+        assert_eq!(doc.get_layer(id).unwrap().opacity, 1.0);
+        doc.set_layer_opacity(id, -0.5);
+        assert_eq!(doc.get_layer(id).unwrap().opacity, 0.0);
+
+        assert!(doc.set_layer_visibility(id, false));
+        assert!(!doc.get_layer(id).unwrap().visible);
+
+        // Inexistent ID
+        assert!(!doc.set_layer_opacity(999, 0.5));
+        assert!(!doc.set_layer_visibility(999, true));
+    }
+
+    #[test]
+    fn test_select_layer() {
+        let mut doc = Document::new_empty(100, 100);
+        let id1 = doc.allocate_layer_id();
+        let id2 = doc.allocate_layer_id();
+        doc.add_layer(Layer::new_raster(id1, "L1", 100, 100));
+        doc.add_layer(Layer::new_raster(id2, "L2", 100, 100));
+
+        assert_eq!(doc.active_layer_id, Some(id2));
+
+        assert!(doc.select_layer(id1));
+        assert_eq!(doc.active_layer_id, Some(id1));
+
+        assert!(!doc.select_layer(999));
+        assert_eq!(doc.active_layer_id, Some(id1));
     }
 }
