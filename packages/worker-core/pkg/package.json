@@ -1,17 +1,20 @@
 {
-  "name": "@pizzico/wasm-bindings",
+  "name": "pizzico-wasm-bindings",
+  "type": "module",
   "collaborators": [
-    "Pizzico Project"
+    "Pizzico Contributors"
   ],
+  "description": "WebAssembly bindings and bridge between Rust engine and TypeScript UI shell",
   "version": "0.1.0",
+  "license": "MIT OR Apache-2.0",
   "files": [
     "pizzico_wasm_bindings_bg.wasm",
     "pizzico_wasm_bindings.js",
     "pizzico_wasm_bindings.d.ts"
   ],
-  "module": "pizzico_wasm_bindings.js",
+  "main": "pizzico_wasm_bindings.js",
   "types": "pizzico_wasm_bindings.d.ts",
   "sideEffects": [
-    "./pizzico_wasm_bindings.js"
+    "./snippets/*"
   ]
 }

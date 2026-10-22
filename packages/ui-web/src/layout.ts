@@ -114,6 +114,7 @@ export class DesktopShellLayout {
     this.canvasContainer.className = 'pz-canvas-viewport';
 
     this.canvas = document.createElement('canvas');
+    this.canvas.id = 'pizzico-canvas';
     this.canvas.className = 'pz-canvas-element';
     this.canvas.width = 1200;
     this.canvas.height = 800;

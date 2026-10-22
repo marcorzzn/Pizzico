@@ -33,7 +33,7 @@ jobs:
         run: cargo test --workspace
 
   typescript-check:
-    name: TypeScript & Web Build Check
+    name: TypeScript & Typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -56,5 +56,46 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build Web App
+  test-wasm:
+    name: WebAssembly Build & Web Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Build WASM Package
+        run: wasm-pack build crates/wasm-bindings --target web --out-dir ../../packages/worker-core/pkg
+
+      - name: Build Web Application
         run: pnpm --filter @pizzico/app-web build
+
+      - name: Verify Web Dist Artifacts (WASM & COOP/COEP headers)
+        run: |
+          test -f apps/web/dist/_headers
+          grep -q "Cross-Origin-Opener-Policy: same-origin" apps/web/dist/_headers
+          grep -q "Cross-Origin-Embedder-Policy: require-corp" apps/web/dist/_headers
+          ls -lh apps/web/dist/assets/*.wasm
+          echo "✅ All WASM and security header artifacts verified in dist/"
+

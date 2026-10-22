@@ -1,9 +1,30 @@
 // Pizzico — packages/worker-core/src/index.ts
-// Riferimento manifesto: §3.1, §4
+// Riferimento manifesto: §3.1, §4, §11 Step 8
 // Licenza: MIT OR Apache-2.0
 
+//! Re-export delle funzionalità WASM generate da wasm-pack.
+//! Il percorso `../pkg/` è la destinazione canonicale di
+//! `wasm-pack build crates/wasm-bindings --target web --out-dir ../../packages/worker-core/pkg`
+//!
+//! NOTE: I tipi e le funzioni esportate qui sono generati AUTOMATICAMENTE
+//! da wasm-pack/wasm-bindgen e NON devono essere scritti a mano.
+//! Il file `pkg/pizzico_wasm_bindings.js` e `pizzico_wasm_bindings.d.ts`
+//! vengono ri-generati ogni volta che si esegue `wasm-pack build`.
+
+// ── Inizializzazione e funzioni core ─────────────────────────────────────────
+export {
+  default as initWasm,
+  add,
+  pizzico_version,
+  PizzicoEngine,
+  init_webgpu,
+} from '../pkg/pizzico_wasm_bindings';
+
+export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';
+
 export * from './worker';
-export { default as initWasm, add, pizzico_version } from '../pkg/pizzico_wasm_bindings';
+
+// ── WorkerClient ──────────────────────────────────────────────────────────────
 
 export class WorkerClient {
   private worker: Worker | null = null;

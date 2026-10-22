@@ -46,3 +46,6 @@ panic = "abort"
 
 [profile.release.package.pizzico-wasm-bindings]
 opt-level = "z" # Optimize for binary size in WebAssembly
+
+[patch.crates-io]
+rustversion = { path = "tools/patches/rustversion" }

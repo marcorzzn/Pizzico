@@ -30,6 +30,9 @@ Questo prodotto include software e concetti ingegneristici derivati o ispirati d
 - **OpenColorIO (`ocio`)**
   - Licenza: Modified BSD License
   - Ruolo: Gestione del colore professionale e trasformazioni colorimetriche in `crates/color`.
+- **`rustversion`** (`tools/patches/rustversion`)
+  - Licenza: MIT OR Apache-2.0 (Copyright (c) 2019 David Tolnay)
+  - Ruolo: Fork locale temporaneo di `rustversion 1.0.23` con patch di fallback in `build/build.rs` per mitigare il fallimento di `rustc --version` su ambienti Windows non-interattivi (ADR 0003).
 
 ---
 
