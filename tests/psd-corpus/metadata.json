@@ -1,0 +1,39 @@
+{
+  "corpus_version": "1.0.0",
+  "files": [
+    {
+      "filename": "sample-01.psd",
+      "description": "File PSD standard 800x600 a 8-bit RGB con 3 livelli raster e compressione RLE PackBits",
+      "dimensions": {
+        "width": 800,
+        "height": 600
+      },
+      "color_mode": "RGB",
+      "depth": 8,
+      "channels": 4,
+      "layers": [
+        {
+          "name": "Sfondo",
+          "bounds": { "top": 0, "left": 0, "bottom": 600, "right": 800 },
+          "opacity": 255,
+          "visible": true,
+          "blend_mode": "Normal"
+        },
+        {
+          "name": "Layer Rosso",
+          "bounds": { "top": 50, "left": 50, "bottom": 350, "right": 450 },
+          "opacity": 255,
+          "visible": true,
+          "blend_mode": "Normal"
+        },
+        {
+          "name": "Layer Blu Trasparente",
+          "bounds": { "top": 150, "left": 150, "bottom": 450, "right": 550 },
+          "opacity": 128,
+          "visible": true,
+          "blend_mode": "Multiply"
+        }
+      ]
+    }
+  ]
+}

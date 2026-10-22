@@ -33,6 +33,15 @@ Questo prodotto include software e concetti ingegneristici derivati o ispirati d
 - **`rustversion`** (`tools/patches/rustversion`)
   - Licenza: MIT OR Apache-2.0 (Copyright (c) 2019 David Tolnay)
   - Ruolo: Fork locale temporaneo di `rustversion 1.0.23` con patch di fallback in `build/build.rs` per mitigare il fallimento di `rustc --version` su ambienti Windows non-interattivi (ADR 0003).
+- **`psd` crate** (`chinedufn/psd`)
+  - Licenza: MIT OR Apache-2.0 (Copyright (c) 2019 Chinedu Francis Nwoga)
+  - Ruolo: Riferimento concettuale clean room per la semantica di decodifica dei canali e dei flag di visibilità in `crates/io-psd`.
+- **`psd-tools`** (`psd-tools/psd-tools`)
+  - Licenza: MIT License (Copyright (c) 2013-2024 Mikhail Korobov, Vladislav Gorodetskiy)
+  - Ruolo: Riferimento concettuale clean room per la struttura dei blocchi aggiuntivi e l'allineamento dei Layer Records in `crates/io-psd`.
+- **Adobe Photoshop File Formats Specification**
+  - Riferimento: Adobe Developer Connection (pubblicazione tecnica ufficiale Adobe Systems Inc.)
+  - Ruolo: Specifica primaria per la decodifica dell'Header, Color Mode, Image Resources, Layer Records e Image Data.
 
 ---
 
