@@ -27,6 +27,7 @@ import {
   init_webgpu,
   create_document,
   add_raster_layer,
+  get_composite_buffer,
   get_layer_count,
   get_layers_metadata,
   set_layer_opacity,
@@ -45,6 +46,15 @@ import {
   can_undo,
   can_redo,
   get_history_info,
+  begin_move_layer,
+  move_active_layer,
+  translate_active_layer,
+  end_move_layer,
+  get_active_layer_offset,
+  set_selection,
+  clear_selection,
+  has_active_selection,
+  get_selection,
 } from '@pizzico/worker-core';
 
 console.log('🍕 Pizzico Engine initializing…');
@@ -78,12 +88,14 @@ const shell = new DesktopShellLayout({
   onToolSelect: (tool) => {
     currentTool = tool;
     console.log(`[Toolbar] Strumento selezionato: ${tool}`);
+    updateCanvasCursor();
     updateInspector();
   },
   onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
   onOpenPsd: () => fileInput.click(),
   onUndo: () => handleUndo(),
   onRedo: () => handleRedo(),
+  onDeselect: () => handleDeselect(),
 });
 appContainer.appendChild(shell.root);
 
@@ -187,6 +199,7 @@ function handleUndo() {
   const success = undo();
   if (success) {
     syncHistoryUi();
+    syncSelectionUi();
     renderLayersPanel();
     updateInspector();
     showToast('↶ Azione annullata (Undo)', 'success');
@@ -200,6 +213,7 @@ function handleRedo() {
   const success = redo();
   if (success) {
     syncHistoryUi();
+    syncSelectionUi();
     renderLayersPanel();
     updateInspector();
     showToast('↷ Azione ripristinata (Redo)', 'success');
@@ -208,7 +222,7 @@ function handleRedo() {
   }
 }
 
-// Scorciatoie da tastiera (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, B, E)
+// Scorciatoie da tastiera (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Ctrl+D, V, M, B, E)
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
     e.preventDefault();
@@ -220,14 +234,29 @@ window.addEventListener('keydown', (e) => {
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
     e.preventDefault();
     handleRedo();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+    e.preventDefault();
+    handleDeselect();
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-    if (e.key.toLowerCase() === 'b') {
+    if (e.key.toLowerCase() === 'v') {
+      shell.setActiveTool('move');
+      currentTool = 'move';
+      updateCanvasCursor();
+      updateInspector();
+    } else if (e.key.toLowerCase() === 'm') {
+      shell.setActiveTool('marquee');
+      currentTool = 'marquee';
+      updateCanvasCursor();
+      updateInspector();
+    } else if (e.key.toLowerCase() === 'b') {
       shell.setActiveTool('brush');
       currentTool = 'brush';
+      updateCanvasCursor();
       updateInspector();
     } else if (e.key.toLowerCase() === 'e') {
       shell.setActiveTool('eraser');
       currentTool = 'eraser';
+      updateCanvasCursor();
       updateInspector();
     }
   }
@@ -351,10 +380,28 @@ window.addEventListener('drop', async (e: DragEvent) => {
   await handlePsdFile(file);
 };
 
-// ── 7. Brush Tool: Gestione Eventi Pointer sul Canvas (§10 Fase 1) ────────────
+// ── 7. Tool Engine: Sposta, Selezione e Pennello (§10 Fase 1) ────────────
 
 let isDrawing = false;
+let isMovingLayer = false;
+let isSelecting = false;
+
 let lastDocPoint: { x: number; y: number } | null = null;
+let moveStartDoc: { x: number; y: number } | null = null;
+let moveInitialOffset: [number, number] = [0, 0];
+let selStartDoc: { x: number; y: number } | null = null;
+
+function updateCanvasCursor() {
+  if (currentTool === 'move') {
+    shell.canvas.style.cursor = isMovingLayer ? 'grabbing' : 'grab';
+  } else if (currentTool === 'marquee') {
+    shell.canvas.style.cursor = 'crosshair';
+  } else if (currentTool === 'brush' || currentTool === 'eraser') {
+    shell.canvas.style.cursor = 'crosshair';
+  } else {
+    shell.canvas.style.cursor = 'default';
+  }
+}
 
 /**
  * Converte le coordinate dell'evento Pointer nelle coordinate pixel logiche del documento.
@@ -378,77 +425,169 @@ function getDocCoordinates(e: PointerEvent): { x: number; y: number } {
   };
 }
 
+function updateSelectionOverlayRect(docX: number, docY: number, docW: number, docH: number) {
+  const rect = shell.canvas.getBoundingClientRect();
+  const docMeta = get_document_metadata();
+  const metaW = docMeta?.width ?? 800;
+  const metaH = docMeta?.height ?? 600;
+  const scaleX = rect.width / metaW;
+  const scaleY = rect.height / metaH;
+
+  shell.selectionOverlay.style.left = `${docX * scaleX}px`;
+  shell.selectionOverlay.style.top = `${docY * scaleY}px`;
+  shell.selectionOverlay.style.width = `${docW * scaleX}px`;
+  shell.selectionOverlay.style.height = `${docH * scaleY}px`;
+  shell.selectionOverlay.style.display = docW > 0 || docH > 0 ? 'block' : 'none';
+}
+
+function syncSelectionUi() {
+  if (!wasmReady) return;
+  const active = has_active_selection();
+  if (active) {
+    shell.deselectBtn.style.display = 'inline-flex';
+    const sel = get_selection();
+    if (sel && sel.active) {
+      updateSelectionOverlayRect(sel.x, sel.y, sel.width, sel.height);
+    }
+  } else {
+    shell.deselectBtn.style.display = 'none';
+    shell.selectionOverlay.style.display = 'none';
+  }
+}
+
+function handleDeselect() {
+  if (!wasmReady) return;
+  clear_selection();
+  syncSelectionUi();
+  updateInspector();
+  showToast('Selezione rimossa', 'success');
+}
+
 shell.canvas.style.touchAction = 'none';
-shell.canvas.style.cursor = 'crosshair';
+updateCanvasCursor();
 
 shell.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
   if (e.button !== 0 || !wasmReady) return;
-  if (currentTool !== 'brush' && currentTool !== 'eraser') return;
-
   e.preventDefault();
   try {
     shell.canvas.setPointerCapture(e.pointerId);
   } catch (_) {}
 
-  isDrawing = true;
   const pt = getDocCoordinates(e);
-  lastDocPoint = pt;
 
-  begin_stroke();
+  if (currentTool === 'move') {
+    isMovingLayer = true;
+    moveStartDoc = pt;
+    begin_move_layer();
+    const offset = get_active_layer_offset();
+    moveInitialOffset = offset && Array.isArray(offset) && offset.length >= 2 ? [offset[0], offset[1]] : [0, 0];
+    updateCanvasCursor();
+  } else if (currentTool === 'marquee') {
+    isSelecting = true;
+    selStartDoc = pt;
+    updateSelectionOverlayRect(pt.x, pt.y, 0, 0);
+  } else if (currentTool === 'brush' || currentTool === 'eraser') {
+    isDrawing = true;
+    lastDocPoint = pt;
+    begin_stroke();
 
-  if (currentTool === 'eraser') {
-    eraser_stroke(pt.x, pt.y, pt.x, pt.y, brushRadius, brushHardness, brushOpacity);
-  } else {
-    brush_stroke(
-      pt.x,
-      pt.y,
-      pt.x,
-      pt.y,
-      brushRadius,
-      brushHardness,
-      new Uint8Array(brushColorRgba),
-      brushOpacity
-    );
+    if (currentTool === 'eraser') {
+      eraser_stroke(pt.x, pt.y, pt.x, pt.y, brushRadius, brushHardness, brushOpacity);
+    } else {
+      brush_stroke(
+        pt.x,
+        pt.y,
+        pt.x,
+        pt.y,
+        brushRadius,
+        brushHardness,
+        new Uint8Array(brushColorRgba),
+        brushOpacity
+      );
+    }
   }
 });
 
 shell.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-  if (!isDrawing || !lastDocPoint || !wasmReady) return;
-  e.preventDefault();
-
+  if (!wasmReady) return;
   const pt = getDocCoordinates(e);
 
-  if (currentTool === 'eraser') {
-    eraser_stroke(lastDocPoint.x, lastDocPoint.y, pt.x, pt.y, brushRadius, brushHardness, brushOpacity);
-  } else {
-    brush_stroke(
-      lastDocPoint.x,
-      lastDocPoint.y,
-      pt.x,
-      pt.y,
-      brushRadius,
-      brushHardness,
-      new Uint8Array(brushColorRgba),
-      brushOpacity
-    );
+  if (isMovingLayer && moveStartDoc) {
+    e.preventDefault();
+    const dx = Math.round(pt.x - moveStartDoc.x);
+    const dy = Math.round(pt.y - moveStartDoc.y);
+    move_active_layer(moveInitialOffset[0] + dx, moveInitialOffset[1] + dy);
+  } else if (isSelecting && selStartDoc) {
+    e.preventDefault();
+    const minX = Math.min(selStartDoc.x, pt.x);
+    const minY = Math.min(selStartDoc.y, pt.y);
+    const w = Math.abs(pt.x - selStartDoc.x);
+    const h = Math.abs(pt.y - selStartDoc.y);
+    updateSelectionOverlayRect(minX, minY, w, h);
+  } else if (isDrawing && lastDocPoint) {
+    e.preventDefault();
+    if (currentTool === 'eraser') {
+      eraser_stroke(lastDocPoint.x, lastDocPoint.y, pt.x, pt.y, brushRadius, brushHardness, brushOpacity);
+    } else {
+      brush_stroke(
+        lastDocPoint.x,
+        lastDocPoint.y,
+        pt.x,
+        pt.y,
+        brushRadius,
+        brushHardness,
+        new Uint8Array(brushColorRgba),
+        brushOpacity
+      );
+    }
+    lastDocPoint = pt;
   }
-
-  lastDocPoint = pt;
 });
 
 const handlePointerUp = (e: PointerEvent) => {
-  if (!isDrawing) return;
-  isDrawing = false;
-  lastDocPoint = null;
-  end_stroke();
-  syncHistoryUi();
   try {
     shell.canvas.releasePointerCapture(e.pointerId);
   } catch (_) {}
+
+  if (isMovingLayer) {
+    isMovingLayer = false;
+    moveStartDoc = null;
+    const moved = end_move_layer();
+    if (moved) {
+      syncHistoryUi();
+      renderLayersPanel();
+      updateInspector();
+    }
+    updateCanvasCursor();
+  } else if (isSelecting && selStartDoc) {
+    isSelecting = false;
+    const pt = getDocCoordinates(e);
+    const minX = Math.min(selStartDoc.x, pt.x);
+    const minY = Math.min(selStartDoc.y, pt.y);
+    const w = Math.abs(pt.x - selStartDoc.x);
+    const h = Math.abs(pt.y - selStartDoc.y);
+    selStartDoc = null;
+
+    if (w > 2 && h > 2) {
+      set_selection(Math.round(minX), Math.round(minY), Math.round(w), Math.round(h));
+      syncSelectionUi();
+      showToast(`Selezione attiva: ${Math.round(w)}×${Math.round(h)} px`, 'success');
+    } else {
+      clear_selection();
+      syncSelectionUi();
+    }
+    updateInspector();
+  } else if (isDrawing) {
+    isDrawing = false;
+    lastDocPoint = null;
+    end_stroke();
+    syncHistoryUi();
+  }
 };
 
 shell.canvas.addEventListener('pointerup', handlePointerUp);
 shell.canvas.addEventListener('pointercancel', handlePointerUp);
+window.addEventListener('resize', () => syncSelectionUi());
 
 // Helper di automazione esposti su window per verifica browser e test
 (window as any).__testStroke = (x0 = 100, y0 = 100, x1 = 300, y1 = 200) => {
@@ -466,9 +605,25 @@ shell.canvas.addEventListener('pointercancel', handlePointerUp);
   end_stroke();
   syncHistoryUi();
 };
+(window as any).__moveActiveLayer = (dx: number, dy: number) => {
+  begin_move_layer();
+  translate_active_layer(dx, dy);
+  end_move_layer();
+  syncHistoryUi();
+  renderLayersPanel();
+  updateInspector();
+};
+(window as any).__setSelection = (x: number, y: number, w: number, h: number) => {
+  set_selection(x, y, w, h);
+  syncSelectionUi();
+  updateInspector();
+};
+(window as any).__clearSelection = () => handleDeselect();
+(window as any).__getSelection = () => get_selection();
 (window as any).__undo = () => handleUndo();
 (window as any).__redo = () => handleRedo();
 (window as any).__getHistory = () => get_history_info();
+(window as any).__getCompositeBuffer = () => get_composite_buffer();
 
 // ── 8. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 
@@ -688,6 +843,10 @@ function syncInspectorOpacity(opacity: number) {
 function updateInspector() {
   if (!wasmReady) return;
 
+  const metadataList: LayerMetadata[] = get_layers_metadata() || [];
+  const activeId = get_active_layer_id();
+  const activeLayer = metadataList.find((l) => l.id === activeId);
+
   // 1. Metadati Documento
   const docMeta = get_document_metadata();
   if (docMeta) {
@@ -699,88 +858,133 @@ function updateInspector() {
     `;
   }
 
-  // 2. Proprietà Pennello / Strumento Attivo
-  brushPropsSection.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
-      <span>Strumento: ${currentTool === 'eraser' ? '🧹 Gomma' : '🖌️ Pennello'}</span>
-      <span style="font-size: 11px; color: #38bdf8;">${currentTool === 'eraser' ? 'Eraser Mode' : 'Brush Mode'}</span>
-    </div>
-
-    <!-- Raggio -->
-    <div style="display: flex; flex-direction: column; gap: 3px;">
-      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-        <span>Dimensione (Raggio)</span>
-        <span id="brush-radius-val">${brushRadius} px</span>
+  // 2. Proprietà Strumento Attivo
+  if (currentTool === 'move') {
+    brushPropsSection.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+        <span>Strumento: ✥ Sposta</span>
+        <span style="font-size: 11px; color: #a855f7;">Move Tool (V)</span>
       </div>
-      <input type="range" min="1" max="100" value="${brushRadius}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-radius-input">
-    </div>
-
-    <!-- Durezza -->
-    <div style="display: flex; flex-direction: column; gap: 3px;">
-      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-        <span>Durezza (Hardness)</span>
-        <span id="brush-hardness-val">${Math.round(brushHardness * 100)}%</span>
+      <div style="font-size: 12px; color: var(--pz-text-secondary); line-height: 1.4;">
+        Trascina con il cursore sul canvas per riposizionare il livello attivo nel documento. Ogni spostamento genera un'azione Undo/Redo atomica.
       </div>
-      <input type="range" min="0" max="100" value="${Math.round(brushHardness * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-hardness-input">
-    </div>
-
-    <!-- Opacità Tratto -->
-    <div style="display: flex; flex-direction: column; gap: 3px;">
-      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-        <span>Opacità Tratto</span>
-        <span id="brush-opacity-val">${Math.round(brushOpacity * 100)}%</span>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 6px 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 6px; color: #d8b4fe;">
+        <span>Coordinate offset:</span>
+        <span style="font-weight: 600;">X: ${activeLayer?.offsetX ?? 0} px, Y: ${activeLayer?.offsetY ?? 0} px</span>
       </div>
-      <input type="range" min="1" max="100" value="${Math.round(brushOpacity * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-opacity-input">
-    </div>
-
-    <!-- Color Picker (attivo solo in modalità Pennello) -->
-    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);">
-      <span style="font-size: 11px; color: var(--pz-text-secondary);">Colore Tratto</span>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <input type="color" value="${brushColorHex}" id="brush-color-picker" style="border: none; width: 28px; height: 26px; border-radius: 4px; cursor: pointer; background: transparent;">
-        <span id="brush-color-hex" style="font-family: monospace; font-size: 11px; color: #fff;">${brushColorHex}</span>
+    `;
+  } else if (currentTool === 'marquee') {
+    const hasSel = has_active_selection();
+    const sel = hasSel ? get_selection() : null;
+    brushPropsSection.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+        <span>Strumento: ⬚ Selezione</span>
+        <span style="font-size: 11px; color: #06b6d4;">Marquee (M)</span>
       </div>
-    </div>
-  `;
+      <div style="font-size: 12px; color: var(--pz-text-secondary); line-height: 1.4;">
+        Trascina sul canvas per definire la selezione rettangolare. Il pennello disegna rigorosamente entro i bordi della selezione attiva.
+      </div>
+      ${hasSel && sel ? `
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; padding: 6px 10px; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 6px; color: #67e8f9;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Dimensioni:</span>
+            <span style="font-weight: 600;">${sel.width} × ${sel.height} px</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Offset:</span>
+            <span style="font-weight: 600;">X: ${sel.x}, Y: ${sel.y}</span>
+          </div>
+        </div>
+        <button id="inspector-deselect-btn" class="pz-btn pz-btn-secondary" style="font-size: 11px; padding: 5px 8px; width: 100%;">
+          ✕ Rimuovi Selezione (Ctrl+D)
+        </button>
+      ` : `
+        <div style="font-size: 11px; color: var(--pz-text-muted);">
+          Nessuna selezione attiva al momento.
+        </div>
+      `}
+    `;
+    const deselBtn = document.getElementById('inspector-deselect-btn');
+    deselBtn?.addEventListener('click', handleDeselect);
+  } else {
+    brushPropsSection.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+        <span>Strumento: ${currentTool === 'eraser' ? '🧹 Gomma' : '🖌️ Pennello'}</span>
+        <span style="font-size: 11px; color: #38bdf8;">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
+      </div>
 
-  // Listener controlli pennello
-  const rInput = document.getElementById('brush-radius-input') as HTMLInputElement;
-  const rVal = document.getElementById('brush-radius-val');
-  rInput?.addEventListener('input', (e) => {
-    brushRadius = Number((e.target as HTMLInputElement).value);
-    if (rVal) rVal.textContent = `${brushRadius} px`;
-  });
+      <!-- Raggio -->
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
+          <span>Dimensione (Raggio)</span>
+          <span id="brush-radius-val">${brushRadius} px</span>
+        </div>
+        <input type="range" min="1" max="100" value="${brushRadius}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-radius-input">
+      </div>
 
-  const hInput = document.getElementById('brush-hardness-input') as HTMLInputElement;
-  const hVal = document.getElementById('brush-hardness-val');
-  hInput?.addEventListener('input', (e) => {
-    const v = Number((e.target as HTMLInputElement).value);
-    brushHardness = v / 100.0;
-    if (hVal) hVal.textContent = `${v}%`;
-  });
+      <!-- Durezza -->
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
+          <span>Durezza (Hardness)</span>
+          <span id="brush-hardness-val">${Math.round(brushHardness * 100)}%</span>
+        </div>
+        <input type="range" min="0" max="100" value="${Math.round(brushHardness * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-hardness-input">
+      </div>
 
-  const oInput = document.getElementById('brush-opacity-input') as HTMLInputElement;
-  const oVal = document.getElementById('brush-opacity-val');
-  oInput?.addEventListener('input', (e) => {
-    const v = Number((e.target as HTMLInputElement).value);
-    brushOpacity = v / 100.0;
-    brushColorRgba[3] = Math.round(brushOpacity * 255);
-    if (oVal) oVal.textContent = `${v}%`;
-  });
+      <!-- Opacità Tratto -->
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
+          <span>Opacità Tratto</span>
+          <span id="brush-opacity-val">${Math.round(brushOpacity * 100)}%</span>
+        </div>
+        <input type="range" min="1" max="100" value="${Math.round(brushOpacity * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-opacity-input">
+      </div>
 
-  const cInput = document.getElementById('brush-color-picker') as HTMLInputElement;
-  const cHex = document.getElementById('brush-color-hex');
-  cInput?.addEventListener('input', (e) => {
-    brushColorHex = (e.target as HTMLInputElement).value;
-    brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
-    if (cHex) cHex.textContent = brushColorHex;
-  });
+      <!-- Color Picker (attivo solo in modalità Pennello) -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);">
+        <span style="font-size: 11px; color: var(--pz-text-secondary);">Colore Tratto</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="color" value="${brushColorHex}" id="brush-color-picker" style="border: none; width: 28px; height: 26px; border-radius: 4px; cursor: pointer; background: transparent;">
+          <span id="brush-color-hex" style="font-family: monospace; font-size: 11px; color: #fff;">${brushColorHex}</span>
+        </div>
+      </div>
+    `;
+
+    // Listener controlli pennello
+    const rInput = document.getElementById('brush-radius-input') as HTMLInputElement;
+    const rVal = document.getElementById('brush-radius-val');
+    rInput?.addEventListener('input', (e) => {
+      brushRadius = Number((e.target as HTMLInputElement).value);
+      if (rVal) rVal.textContent = `${brushRadius} px`;
+    });
+
+    const hInput = document.getElementById('brush-hardness-input') as HTMLInputElement;
+    const hVal = document.getElementById('brush-hardness-val');
+    hInput?.addEventListener('input', (e) => {
+      const v = Number((e.target as HTMLInputElement).value);
+      brushHardness = v / 100.0;
+      if (hVal) hVal.textContent = `${v}%`;
+    });
+
+    const oInput = document.getElementById('brush-opacity-input') as HTMLInputElement;
+    const oVal = document.getElementById('brush-opacity-val');
+    oInput?.addEventListener('input', (e) => {
+      const v = Number((e.target as HTMLInputElement).value);
+      brushOpacity = v / 100.0;
+      brushColorRgba[3] = Math.round(brushOpacity * 255);
+      if (oVal) oVal.textContent = `${v}%`;
+    });
+
+    const cInput = document.getElementById('brush-color-picker') as HTMLInputElement;
+    const cHex = document.getElementById('brush-color-hex');
+    cInput?.addEventListener('input', (e) => {
+      brushColorHex = (e.target as HTMLInputElement).value;
+      brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
+      if (cHex) cHex.textContent = brushColorHex;
+    });
+  }
 
   // 3. Proprietà Livello Attivo
-  const metadataList: LayerMetadata[] = get_layers_metadata() || [];
-  const activeId = get_active_layer_id();
-  const activeLayer = metadataList.find((l) => l.id === activeId);
-
   layerPropsSection.innerHTML = '';
 
   const header = document.createElement('div');
@@ -813,6 +1017,15 @@ function updateInspector() {
     <span style="font-size: 11px; padding: 2px 6px; background: rgba(99,102,241,0.2); border-radius: 4px; color: #a5b4fc;">${activeLayer.kind} · ${activeLayer.blendMode}</span>
   `;
   layerPropsSection.appendChild(nameBox);
+
+  // Posizione / Offset Livello
+  const posBox = document.createElement('div');
+  posBox.style.cssText = `display: flex; justify-content: space-between; font-size: 12px; color: var(--pz-text-secondary);`;
+  posBox.innerHTML = `
+    <span>Posizione (Offset)</span>
+    <span style="font-variant-numeric: tabular-nums; color: #fff; font-weight: 500;">X: ${activeLayer.offsetX ?? 0} px, Y: ${activeLayer.offsetY ?? 0} px</span>
+  `;
+  layerPropsSection.appendChild(posBox);
 
   // Controllo Opacità sincronizzato
   const opacityPct = Math.round(activeLayer.opacity * 100);
@@ -890,6 +1103,13 @@ function updateInspector() {
   await setupWasm();
 
   if (wasmReady) {
+    try {
+      await (window as any).__loadSamplePsd();
+      console.log('[Boot] ✅ sample-01.psd precaricato automaticamente');
+    } catch (e) {
+      console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
+    }
+
     try {
       await init_webgpu('pizzico-canvas');
       console.log('[WebGPU] ✅ Render loop Rust attivo — 60 FPS via RAF con dirty checking');

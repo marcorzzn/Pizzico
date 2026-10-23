@@ -28,6 +28,16 @@ export interface LayerMetadata {
   locked: boolean;
   opacity: number;
   blendMode: BlendMode;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export interface SelectionInfo {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  active: boolean;
 }
 
 export interface DocumentInfo {

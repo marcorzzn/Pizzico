@@ -31,6 +31,14 @@ export class PizzicoEngine {
         return BigInt.asUintN(64, ret);
     }
     /**
+     * Inizia traslazione layer attivo.
+     * @returns {boolean}
+     */
+    begin_move_layer() {
+        const ret = wasm.pizzicoengine_begin_move_layer(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Avvia un tratto di pennello.
      * @returns {boolean}
      */
@@ -73,12 +81,28 @@ export class PizzicoEngine {
         return ret !== 0;
     }
     /**
+     * Rimuove selezione attiva.
+     * @returns {boolean}
+     */
+    clear_selection() {
+        const ret = wasm.pizzicoengine_clear_selection(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Crea un nuovo documento.
      * @param {number} width
      * @param {number} height
      */
     create_document(width, height) {
         wasm.pizzicoengine_create_document(this.__wbg_ptr, width, height);
+    }
+    /**
+     * Termina traslazione layer attivo con registrazione history.
+     * @returns {boolean}
+     */
+    end_move_layer() {
+        const ret = wasm.pizzicoengine_end_move_layer(this.__wbg_ptr);
+        return ret !== 0;
     }
     /**
      * Conclude il tratto registrando l'azione nella history.
@@ -110,6 +134,14 @@ export class PizzicoEngine {
     get_active_layer_id() {
         const ret = wasm.pizzicoengine_get_active_layer_id(this.__wbg_ptr);
         return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+    }
+    /**
+     * Restituisce [x, y] del layer attivo.
+     * @returns {any}
+     */
+    get_active_layer_offset() {
+        const ret = wasm.pizzicoengine_get_active_layer_offset(this.__wbg_ptr);
+        return ret;
     }
     /**
      * Serializza il documento in formato JSON.
@@ -167,6 +199,25 @@ export class PizzicoEngine {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * Restituisce la selezione attiva in formato JS.
+     * @returns {any}
+     */
+    get_selection() {
+        const ret = wasm.pizzicoengine_get_selection(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Verifica presenza selezione attiva.
+     * @returns {boolean}
+     */
+    has_active_selection() {
+        const ret = wasm.pizzicoengine_has_active_selection(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Altezza del documento corrente in pixel.
      * @returns {number}
      */
@@ -201,6 +252,16 @@ export class PizzicoEngine {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * Imposta posizione assoluta del layer attivo.
+     * @param {number} x
+     * @param {number} y
+     * @returns {boolean}
+     */
+    move_active_layer(x, y) {
+        const ret = wasm.pizzicoengine_move_active_layer(this.__wbg_ptr, x, y);
+        return ret !== 0;
     }
     /**
      * Inizializza l'istanza dell'engine con un nuovo documento.
@@ -274,6 +335,28 @@ export class PizzicoEngine {
         wasm.pizzicoengine_set_layer_visibility(this.__wbg_ptr, id, visible);
     }
     /**
+     * Imposta selezione rettangolare.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} width
+     * @param {number} height
+     * @returns {boolean}
+     */
+    set_selection(x, y, width, height) {
+        const ret = wasm.pizzicoengine_set_selection(this.__wbg_ptr, x, y, width, height);
+        return ret !== 0;
+    }
+    /**
+     * Trasla il layer attivo del delta specificato.
+     * @param {number} dx
+     * @param {number} dy
+     * @returns {boolean}
+     */
+    translate_active_layer(dx, dy) {
+        const ret = wasm.pizzicoengine_translate_active_layer(this.__wbg_ptr, dx, dy);
+        return ret !== 0;
+    }
+    /**
      * Annulla l'ultima azione.
      * @returns {boolean}
      */
@@ -319,6 +402,16 @@ export function add_raster_layer(name, width, height, color) {
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.add_raster_layer(ptr0, len0, width, height, ptr1, len1);
     return BigInt.asUintN(64, ret);
+}
+
+/**
+ * Inizia un'operazione di traslazione (Move Tool) per il livello attivo.
+ * Registra la posizione iniziale per generare un unico `MoveLayerCommand` al rilascio del cursore.
+ * @returns {boolean}
+ */
+export function begin_move_layer() {
+    const ret = wasm.begin_move_layer();
+    return ret !== 0;
 }
 
 /**
@@ -370,12 +463,31 @@ export function can_undo() {
 }
 
 /**
+ * Rimuove la selezione attiva (deseleziona).
+ * @returns {boolean}
+ */
+export function clear_selection() {
+    const ret = wasm.clear_selection();
+    return ret !== 0;
+}
+
+/**
  * Crea o resetta il documento attivo con larghezza e altezza specificate.
  * @param {number} width
  * @param {number} height
  */
 export function create_document(width, height) {
     wasm.create_document(width, height);
+}
+
+/**
+ * Termina l'operazione di spostamento del livello attivo.
+ * Se l'offset finale differisce da quello iniziale, registra un `MoveLayerCommand` nella History.
+ * @returns {boolean}
+ */
+export function end_move_layer() {
+    const ret = wasm.end_move_layer();
+    return ret !== 0;
 }
 
 /**
@@ -410,6 +522,15 @@ export function eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opac
 export function get_active_layer_id() {
     const ret = wasm.get_active_layer_id();
     return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+}
+
+/**
+ * Restituisce l'offset corrente `[x, y]` del livello attivo, oppure null.
+ * @returns {any}
+ */
+export function get_active_layer_offset() {
+    const ret = wasm.get_active_layer_offset();
+    return ret;
 }
 
 /**
@@ -480,6 +601,27 @@ export function get_layers_metadata() {
 }
 
 /**
+ * Restituisce la selezione corrente serializzata come oggetto JS, o null se inattiva.
+ * @returns {any}
+ */
+export function get_selection() {
+    const ret = wasm.get_selection();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Restituisce true se è presente una selezione rettangolare attiva.
+ * @returns {boolean}
+ */
+export function has_active_selection() {
+    const ret = wasm.has_active_selection();
+    return ret !== 0;
+}
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
  */
 export function init_panic_hook() {
@@ -521,6 +663,17 @@ export function load_psd_bytes(bytes) {
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
+}
+
+/**
+ * Imposta la posizione assoluta (x, y) del livello attivo e marca il documento dirty.
+ * @param {number} x
+ * @param {number} y
+ * @returns {boolean}
+ */
+export function move_active_layer(x, y) {
+    const ret = wasm.move_active_layer(x, y);
+    return ret !== 0;
 }
 
 /**
@@ -583,6 +736,30 @@ export function set_layer_opacity(id, opacity) {
  */
 export function set_layer_visibility(id, visible) {
     wasm.set_layer_visibility(id, visible);
+}
+
+/**
+ * Imposta la selezione rettangolare attiva nel documento in coordinate logiche documento.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} width
+ * @param {number} height
+ * @returns {boolean}
+ */
+export function set_selection(x, y, width, height) {
+    const ret = wasm.set_selection(x, y, width, height);
+    return ret !== 0;
+}
+
+/**
+ * Trasla il livello attivo del delta (dx, dy) e marca il documento dirty.
+ * @param {number} dx
+ * @param {number} dy
+ * @returns {boolean}
+ */
+export function translate_active_layer(dx, dy) {
+    const ret = wasm.translate_active_layer(dx, dy);
+    return ret !== 0;
 }
 
 /**
@@ -771,7 +948,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 52, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 55, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },

@@ -133,6 +133,33 @@ impl Command for SetVisibilityCommand {
     }
 }
 
+/// Comando per traslare (spostare) la posizione di un livello nel documento.
+pub struct MoveLayerCommand {
+    pub id: LayerId,
+    pub old_offset: (i32, i32),
+    pub new_offset: (i32, i32),
+}
+
+impl MoveLayerCommand {
+    pub fn new(id: LayerId, old_offset: (i32, i32), new_offset: (i32, i32)) -> Self {
+        Self {
+            id,
+            old_offset,
+            new_offset,
+        }
+    }
+}
+
+impl Command for MoveLayerCommand {
+    fn apply(&mut self, doc: &mut Document) {
+        doc.set_layer_offset(self.id, self.new_offset.0, self.new_offset.1);
+    }
+
+    fn undo(&mut self, doc: &mut Document) {
+        doc.set_layer_offset(self.id, self.old_offset.0, self.old_offset.1);
+    }
+}
+
 /// Comando per un tratto raster (pennello/gomma/filtro).
 /// Salva i pixel prima e dopo. Se `bounds` è `Some((x, y, w, h))`,
 /// conserva e ripristina solo la porzione modificata per ottimizzare memoria e prestazioni.
@@ -433,5 +460,31 @@ mod tests {
         assert_eq!(doc.layer_count(), 0);
         assert!(history.redo(&mut doc));
         assert_eq!(doc.layer_count(), 1);
+    }
+
+    #[test]
+    fn test_history_move_layer() {
+        let mut doc = Document::new(100, 100, "Test Move");
+        let id = doc.layers[0].id;
+        let mut history = History::new(10);
+
+        assert_eq!(doc.get_layer(id).unwrap().transform.x, 0);
+        assert_eq!(doc.get_layer(id).unwrap().transform.y, 0);
+
+        let cmd = Box::new(MoveLayerCommand::new(id, (0, 0), (25, 40)));
+        history.apply_and_push(cmd, &mut doc);
+
+        assert_eq!(doc.get_layer(id).unwrap().transform.x, 25);
+        assert_eq!(doc.get_layer(id).unwrap().transform.y, 40);
+
+        // Undo
+        assert!(history.undo(&mut doc));
+        assert_eq!(doc.get_layer(id).unwrap().transform.x, 0);
+        assert_eq!(doc.get_layer(id).unwrap().transform.y, 0);
+
+        // Redo
+        assert!(history.redo(&mut doc));
+        assert_eq!(doc.get_layer(id).unwrap().transform.x, 25);
+        assert_eq!(doc.get_layer(id).unwrap().transform.y, 40);
     }
 }

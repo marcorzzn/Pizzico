@@ -12,6 +12,10 @@ export class PizzicoEngine {
      */
     add_raster_layer(name: string, width: number, height: number, color: Uint8Array): bigint;
     /**
+     * Inizia traslazione layer attivo.
+     */
+    begin_move_layer(): boolean;
+    /**
      * Avvia un tratto di pennello.
      */
     begin_stroke(): boolean;
@@ -28,9 +32,17 @@ export class PizzicoEngine {
      */
     can_undo(): boolean;
     /**
+     * Rimuove selezione attiva.
+     */
+    clear_selection(): boolean;
+    /**
      * Crea un nuovo documento.
      */
     create_document(width: number, height: number): void;
+    /**
+     * Termina traslazione layer attivo con registrazione history.
+     */
+    end_move_layer(): boolean;
     /**
      * Conclude il tratto registrando l'azione nella history.
      */
@@ -43,6 +55,10 @@ export class PizzicoEngine {
      * ID del livello attivo.
      */
     get_active_layer_id(): number | undefined;
+    /**
+     * Restituisce [x, y] del layer attivo.
+     */
+    get_active_layer_offset(): any;
     /**
      * Serializza il documento in formato JSON.
      */
@@ -60,6 +76,14 @@ export class PizzicoEngine {
      */
     get_layers_metadata(): any;
     /**
+     * Restituisce la selezione attiva in formato JS.
+     */
+    get_selection(): any;
+    /**
+     * Verifica presenza selezione attiva.
+     */
+    has_active_selection(): boolean;
+    /**
      * Altezza del documento corrente in pixel.
      */
     height(): number;
@@ -75,6 +99,10 @@ export class PizzicoEngine {
      * Carica un file PSD binario e sostituisce il documento corrente.
      */
     load_psd_bytes(bytes: Uint8Array): void;
+    /**
+     * Imposta posizione assoluta del layer attivo.
+     */
+    move_active_layer(x: number, y: number): boolean;
     /**
      * Inizializza l'istanza dell'engine con un nuovo documento.
      */
@@ -108,6 +136,14 @@ export class PizzicoEngine {
      */
     set_layer_visibility(id: number, visible: boolean): void;
     /**
+     * Imposta selezione rettangolare.
+     */
+    set_selection(x: number, y: number, width: number, height: number): boolean;
+    /**
+     * Trasla il layer attivo del delta specificato.
+     */
+    translate_active_layer(dx: number, dy: number): boolean;
+    /**
      * Annulla l'ultima azione.
      */
     undo(): boolean;
@@ -127,6 +163,12 @@ export function add(a: number, b: number): number;
  * Ritorna l'ID univoco del livello appena creato.
  */
 export function add_raster_layer(name: string, width: number, height: number, color: Uint8Array): bigint;
+
+/**
+ * Inizia un'operazione di traslazione (Move Tool) per il livello attivo.
+ * Registra la posizione iniziale per generare un unico `MoveLayerCommand` al rilascio del cursore.
+ */
+export function begin_move_layer(): boolean;
 
 /**
  * Avvia una sessione di tratto con il pennello o gomma.
@@ -151,9 +193,20 @@ export function can_redo(): boolean;
 export function can_undo(): boolean;
 
 /**
+ * Rimuove la selezione attiva (deseleziona).
+ */
+export function clear_selection(): boolean;
+
+/**
  * Crea o resetta il documento attivo con larghezza e altezza specificate.
  */
 export function create_document(width: number, height: number): void;
+
+/**
+ * Termina l'operazione di spostamento del livello attivo.
+ * Se l'offset finale differisce da quello iniziale, registra un `MoveLayerCommand` nella History.
+ */
+export function end_move_layer(): boolean;
 
 /**
  * Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
@@ -169,6 +222,11 @@ export function eraser_stroke(from_x: number, from_y: number, to_x: number, to_y
  * Restituisce l'ID del livello attualmente selezionato (se presente).
  */
 export function get_active_layer_id(): number | undefined;
+
+/**
+ * Restituisce l'offset corrente `[x, y]` del livello attivo, oppure null.
+ */
+export function get_active_layer_offset(): any;
 
 /**
  * Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
@@ -201,6 +259,16 @@ export function get_layer_count(): number;
 export function get_layers_metadata(): any;
 
 /**
+ * Restituisce la selezione corrente serializzata come oggetto JS, o null se inattiva.
+ */
+export function get_selection(): any;
+
+/**
+ * Restituisce true se è presente una selezione rettangolare attiva.
+ */
+export function has_active_selection(): boolean;
+
+/**
  * Installa il panic hook di `console_error_panic_hook`.
  */
 export function init_panic_hook(): void;
@@ -222,6 +290,11 @@ export function is_dirty(): boolean;
  * e segnala la necessità di un nuovo frame di compositing WebGPU.
  */
 export function load_psd_bytes(bytes: Uint8Array): void;
+
+/**
+ * Imposta la posizione assoluta (x, y) del livello attivo e marca il documento dirty.
+ */
+export function move_active_layer(x: number, y: number): boolean;
 
 /**
  * Versione del core come intero (100 = v0.1.0).
@@ -259,6 +332,16 @@ export function set_layer_opacity(id: number, opacity: number): void;
 export function set_layer_visibility(id: number, visible: boolean): void;
 
 /**
+ * Imposta la selezione rettangolare attiva nel documento in coordinate logiche documento.
+ */
+export function set_selection(x: number, y: number, width: number, height: number): boolean;
+
+/**
+ * Trasla il livello attivo del delta (dx, dy) e marca il documento dirty.
+ */
+export function translate_active_layer(dx: number, dy: number): boolean;
+
+/**
  * Annulla (Undo) l'ultima operazione effettuata nel documento.
  */
 export function undo(): boolean;
@@ -270,42 +353,56 @@ export interface InitOutput {
     readonly __wbg_pizzicoengine_free: (a: number, b: number) => void;
     readonly add: (a: number, b: number) => number;
     readonly add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly begin_move_layer: () => number;
     readonly begin_stroke: () => number;
     readonly brush_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly can_redo: () => number;
     readonly can_undo: () => number;
+    readonly clear_selection: () => number;
     readonly create_document: (a: number, b: number) => void;
+    readonly end_move_layer: () => number;
     readonly end_stroke: () => number;
     readonly eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly get_active_layer_id: () => number;
+    readonly get_active_layer_offset: () => any;
     readonly get_composite_buffer: () => [number, number];
     readonly get_document_dimensions: () => [number, number];
     readonly get_document_metadata: () => [number, number, number];
     readonly get_history_info: () => [number, number, number];
     readonly get_layer_count: () => number;
     readonly get_layers_metadata: () => [number, number, number];
+    readonly get_selection: () => [number, number, number];
+    readonly has_active_selection: () => number;
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;
     readonly is_dirty: () => number;
     readonly load_psd_bytes: (a: number, b: number) => [number, number];
+    readonly move_active_layer: (a: number, b: number) => number;
     readonly pizzico_version: () => number;
     readonly pizzicoengine_add_raster_layer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => bigint;
+    readonly pizzicoengine_begin_move_layer: (a: number) => number;
     readonly pizzicoengine_begin_stroke: (a: number) => number;
     readonly pizzicoengine_brush_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => number;
     readonly pizzicoengine_can_redo: (a: number) => number;
     readonly pizzicoengine_can_undo: (a: number) => number;
+    readonly pizzicoengine_clear_selection: (a: number) => number;
     readonly pizzicoengine_create_document: (a: number, b: number, c: number) => void;
+    readonly pizzicoengine_end_move_layer: (a: number) => number;
     readonly pizzicoengine_end_stroke: (a: number) => number;
     readonly pizzicoengine_eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly pizzicoengine_get_active_layer_id: (a: number) => number;
+    readonly pizzicoengine_get_active_layer_offset: (a: number) => any;
     readonly pizzicoengine_get_document_json: (a: number) => [number, number, number, number];
     readonly pizzicoengine_get_document_metadata: (a: number) => [number, number, number];
     readonly pizzicoengine_get_history_info: (a: number) => [number, number, number];
     readonly pizzicoengine_get_layers_metadata: (a: number) => [number, number, number];
+    readonly pizzicoengine_get_selection: (a: number) => [number, number, number];
+    readonly pizzicoengine_has_active_selection: (a: number) => number;
     readonly pizzicoengine_height: (a: number) => number;
     readonly pizzicoengine_is_dirty: (a: number) => number;
     readonly pizzicoengine_layer_count: (a: number) => number;
     readonly pizzicoengine_load_psd_bytes: (a: number, b: number, c: number) => [number, number];
+    readonly pizzicoengine_move_active_layer: (a: number, b: number, c: number) => number;
     readonly pizzicoengine_new: (a: number, b: number, c: number, d: number) => number;
     readonly pizzicoengine_redo: (a: number) => number;
     readonly pizzicoengine_remove_layer: (a: number, b: number) => number;
@@ -314,6 +411,8 @@ export interface InitOutput {
     readonly pizzicoengine_set_dirty: (a: number, b: number) => void;
     readonly pizzicoengine_set_layer_opacity: (a: number, b: number, c: number) => void;
     readonly pizzicoengine_set_layer_visibility: (a: number, b: number, c: number) => void;
+    readonly pizzicoengine_set_selection: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly pizzicoengine_translate_active_layer: (a: number, b: number, c: number) => number;
     readonly pizzicoengine_undo: (a: number) => number;
     readonly pizzicoengine_width: (a: number) => number;
     readonly redo: () => number;
@@ -322,6 +421,8 @@ export interface InitOutput {
     readonly set_dirty: (a: number) => void;
     readonly set_layer_opacity: (a: number, b: number) => void;
     readonly set_layer_visibility: (a: number, b: number) => void;
+    readonly set_selection: (a: number, b: number, c: number, d: number) => number;
+    readonly translate_active_layer: (a: number, b: number) => number;
     readonly undo: () => number;
     readonly wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_: (a: number, b: number, c: number) => void;
     readonly wasm_bindgen_12528a006083644c___convert__closures_____invoke___js_sys_38ea4d597d213009___Function_fn_wasm_bindgen_12528a006083644c___JsValue_____wasm_bindgen_12528a006083644c___sys__Undefined___js_sys_38ea4d597d213009___Function_fn_wasm_bindgen_12528a006083644c___JsValue_____wasm_bindgen_12528a006083644c___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;

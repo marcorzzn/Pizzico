@@ -19,12 +19,14 @@ pub mod compositing;
 pub mod document;
 pub mod history;
 pub mod layer;
+pub mod selection;
 
 pub use blend::{BlendMode, blend_pixel};
 pub use compositing::{CompositeBuffer, composite_layers};
 pub use document::{Document, DocumentMetadata};
 pub use history::{
-    AddLayerCommand, Command, History, HistoryStack, RemoveLayerCommand, SetOpacityCommand,
-    SetVisibilityCommand, StrokeCommand,
+    AddLayerCommand, Command, History, HistoryStack, MoveLayerCommand, RemoveLayerCommand,
+    SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
 };
 pub use layer::{Layer, LayerContent, LayerId, LayerKind};
+pub use selection::RectSelection;

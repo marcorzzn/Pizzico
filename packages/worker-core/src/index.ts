@@ -54,6 +54,15 @@ export {
   can_undo,
   can_redo,
   get_history_info,
+  begin_move_layer,
+  move_active_layer,
+  translate_active_layer,
+  end_move_layer,
+  get_active_layer_offset,
+  set_selection,
+  clear_selection,
+  has_active_selection,
+  get_selection,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

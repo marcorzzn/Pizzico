@@ -6,6 +6,7 @@
 //! Include metadati, dimensioni canvas, albero dei livelli e gestione ID univoci.
 
 use crate::layer::{Layer, LayerId};
+use crate::selection::RectSelection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -39,6 +40,7 @@ pub struct Document {
     pub metadata: DocumentMetadata,
     pub layers: Vec<Layer>,
     pub active_layer_id: Option<LayerId>,
+    pub selection: RectSelection,
     next_layer_id: LayerId,
 }
 
@@ -63,6 +65,7 @@ impl Document {
             metadata: DocumentMetadata::default(),
             layers: Vec::new(),
             active_layer_id: None,
+            selection: RectSelection::default(),
             next_layer_id: 1,
         }
     }
@@ -90,6 +93,17 @@ impl Document {
     /// Restituisce un riferimento mutabile al livello specificato per ID.
     pub fn get_layer_mut(&mut self, id: LayerId) -> Option<&mut Layer> {
         self.layers.iter_mut().find(|l| l.id == id)
+    }
+
+    /// Restituisce un riferimento immutabile al livello attualmente attivo.
+    pub fn get_active_layer(&self) -> Option<&Layer> {
+        self.active_layer_id.and_then(|id| self.get_layer(id))
+    }
+
+    /// Restituisce un riferimento mutabile al livello attualmente attivo.
+    pub fn get_active_layer_mut(&mut self) -> Option<&mut Layer> {
+        let active_id = self.active_layer_id?;
+        self.get_layer_mut(active_id)
     }
 
     /// Rimuove un livello dato il suo ID e aggiorna il livello attivo.
@@ -133,6 +147,43 @@ impl Document {
         } else {
             false
         }
+    }
+
+    /// Imposta l'offset (x, y) della traslazione del livello specificato.
+    pub fn set_layer_offset(&mut self, id: LayerId, x: i32, y: i32) -> bool {
+        if let Some(layer) = self.get_layer_mut(id) {
+            layer.transform.x = x;
+            layer.transform.y = y;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Sposta (trasla di dx, dy) il livello specificato.
+    pub fn translate_layer(&mut self, id: LayerId, dx: i32, dy: i32) -> bool {
+        if let Some(layer) = self.get_layer_mut(id) {
+            layer.transform.x += dx;
+            layer.transform.y += dy;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Imposta la selezione rettangolare attiva nel documento.
+    pub fn set_selection(&mut self, x: u32, y: u32, width: u32, height: u32) {
+        self.selection = RectSelection::new(x, y, width, height);
+    }
+
+    /// Annulla e rimuove la selezione attiva nel documento.
+    pub fn clear_selection(&mut self) {
+        self.selection = RectSelection::none();
+    }
+
+    /// Verifica se è presente una selezione rettangolare attiva.
+    pub fn has_active_selection(&self) -> bool {
+        self.selection.active
     }
 
     /// Restituisce il numero totale di livelli presenti.

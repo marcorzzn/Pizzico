@@ -68,12 +68,32 @@ impl BoundingBox {
 /// Disegna un singolo punto/timbro circolare sul livello raster.
 /// Restituisce il bounding box dei pixel modificati, oppure `None` se il timbro cade fuori dal livello.
 pub fn stamp(layer: &mut Layer, center: (f32, f32), brush: &Brush) -> Option<BoundingBox> {
-    apply_stamp(layer, center, brush, false)
+    apply_stamp(layer, center, brush, false, None)
+}
+
+/// Disegna un singolo timbro con clipping rettangolare (es. per selezione attiva).
+pub fn stamp_clipped(
+    layer: &mut Layer,
+    center: (f32, f32),
+    brush: &Brush,
+    clip_bounds: Option<BoundingBox>,
+) -> Option<BoundingBox> {
+    apply_stamp(layer, center, brush, false, clip_bounds)
 }
 
 /// Disegna un singolo timbro in modalità gomma (cancella riducendo l'alpha).
 pub fn eraser_stamp(layer: &mut Layer, center: (f32, f32), brush: &Brush) -> Option<BoundingBox> {
-    apply_stamp(layer, center, brush, true)
+    apply_stamp(layer, center, brush, true, None)
+}
+
+/// Disegna un singolo timbro in modalità gomma con clipping rettangolare.
+pub fn eraser_stamp_clipped(
+    layer: &mut Layer,
+    center: (f32, f32),
+    brush: &Brush,
+    clip_bounds: Option<BoundingBox>,
+) -> Option<BoundingBox> {
+    apply_stamp(layer, center, brush, true, clip_bounds)
 }
 
 fn apply_stamp(
@@ -81,6 +101,7 @@ fn apply_stamp(
     center: (f32, f32),
     brush: &Brush,
     is_eraser: bool,
+    clip_bounds: Option<BoundingBox>,
 ) -> Option<BoundingBox> {
     let (cx, cy) = center;
     let r = brush.radius.max(0.5);
@@ -89,10 +110,19 @@ fn apply_stamp(
         let doc_w = *width;
         let doc_h = *height;
 
-        let min_x = (cx - r).floor().max(0.0) as u32;
-        let max_x = (cx + r).ceil().min(doc_w as f32 - 1.0) as u32;
-        let min_y = (cy - r).floor().max(0.0) as u32;
-        let max_y = (cy + r).ceil().min(doc_h as f32 - 1.0) as u32;
+        let mut min_x = (cx - r).floor().max(0.0) as u32;
+        let mut max_x = (cx + r).ceil().min(doc_w as f32 - 1.0) as u32;
+        let mut min_y = (cy - r).floor().max(0.0) as u32;
+        let mut max_y = (cy + r).ceil().min(doc_h as f32 - 1.0) as u32;
+
+        if let Some(clip) = clip_bounds {
+            min_x = min_x.max(clip.min_x);
+            let clip_max_x = clip.min_x + clip.width.saturating_sub(1);
+            let clip_max_y = clip.min_y + clip.height.saturating_sub(1);
+            max_x = max_x.min(clip_max_x);
+            min_y = min_y.max(clip.min_y);
+            max_y = max_y.min(clip_max_y);
+        }
 
         if min_x > max_x || min_y > max_y {
             return None;
@@ -174,7 +204,18 @@ pub fn stroke(
     to: (f32, f32),
     brush: &Brush,
 ) -> Option<BoundingBox> {
-    stroke_internal(layer, from, to, brush, false)
+    stroke_internal(layer, from, to, brush, false, None)
+}
+
+/// Disegna un tratto continuo limitato da un bounding box di ritaglio (clipping).
+pub fn stroke_clipped(
+    layer: &mut Layer,
+    from: (f32, f32),
+    to: (f32, f32),
+    brush: &Brush,
+    clip_bounds: Option<BoundingBox>,
+) -> Option<BoundingBox> {
+    stroke_internal(layer, from, to, brush, false, clip_bounds)
 }
 
 /// Disegna un tratto continuo in modalità gomma tra due punti.
@@ -184,7 +225,18 @@ pub fn eraser_stroke(
     to: (f32, f32),
     brush: &Brush,
 ) -> Option<BoundingBox> {
-    stroke_internal(layer, from, to, brush, true)
+    stroke_internal(layer, from, to, brush, true, None)
+}
+
+/// Disegna un tratto continuo in modalità gomma con clipping.
+pub fn eraser_stroke_clipped(
+    layer: &mut Layer,
+    from: (f32, f32),
+    to: (f32, f32),
+    brush: &Brush,
+    clip_bounds: Option<BoundingBox>,
+) -> Option<BoundingBox> {
+    stroke_internal(layer, from, to, brush, true, clip_bounds)
 }
 
 fn stroke_internal(
@@ -193,6 +245,7 @@ fn stroke_internal(
     to: (f32, f32),
     brush: &Brush,
     is_eraser: bool,
+    clip_bounds: Option<BoundingBox>,
 ) -> Option<BoundingBox> {
     let (x0, y0) = from;
     let (x1, y1) = to;
@@ -207,13 +260,13 @@ fn stroke_internal(
     let mut total_bbox: Option<BoundingBox> = None;
 
     if steps == 0 {
-        return apply_stamp(layer, to, brush, is_eraser);
+        return apply_stamp(layer, to, brush, is_eraser, clip_bounds);
     }
 
     for i in 0..=steps {
         let t = i as f32 / steps as f32;
         let pt = (x0 + t * dx, y0 + t * dy);
-        if let Some(bbox) = apply_stamp(layer, pt, brush, is_eraser) {
+        if let Some(bbox) = apply_stamp(layer, pt, brush, is_eraser, clip_bounds) {
             total_bbox = Some(match total_bbox {
                 Some(current) => current.union(&bbox),
                 None => bbox,
@@ -285,6 +338,41 @@ mod tests {
             let center_idx = ((10 * width + 10) * 4) as usize;
             // L'alpha al centro deve essere azzerato
             assert_eq!(pixels[center_idx + 3], 0);
+        }
+    }
+
+    #[test]
+    fn test_stroke_clipped_to_selection() {
+        let mut layer = Layer::new_raster_color(1, "Test", 100, 100, [255, 255, 255, 255]);
+        let brush = Brush {
+            radius: 5.0,
+            hardness: 1.0,
+            color: [255, 0, 0, 255],
+            opacity: 1.0,
+        };
+
+        // Selezione attiva tra (30, 30) e (70, 70)
+        let clip = Some(BoundingBox::new(30, 30, 40, 40));
+
+        // Tratto che attraversa da (10, 50) a (90, 50)
+        let bbox = stroke_clipped(&mut layer, (10.0, 50.0), (90.0, 50.0), &brush, clip);
+        assert!(bbox.is_some());
+        let b = bbox.unwrap();
+        assert!(b.min_x >= 30);
+        assert!(b.min_x + b.width <= 71);
+
+        if let LayerKind::Raster { width, pixels, .. } = &layer.kind {
+            // Fuori dalla selezione: (20, 50) deve rimanere bianco puro
+            let outside_idx = ((50 * width + 20) * 4) as usize;
+            assert_eq!(&pixels[outside_idx..outside_idx + 4], &[255, 255, 255, 255]);
+
+            // Fuori dalla selezione: (80, 50) deve rimanere bianco puro
+            let outside_idx2 = ((50 * width + 80) * 4) as usize;
+            assert_eq!(&pixels[outside_idx2..outside_idx2 + 4], &[255, 255, 255, 255]);
+
+            // Dentro la selezione: (50, 50) deve essere rosso
+            let inside_idx = ((50 * width + 50) * 4) as usize;
+            assert_eq!(&pixels[inside_idx..inside_idx + 4], &[255, 0, 0, 255]);
         }
     }
 }

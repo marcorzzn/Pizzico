@@ -155,10 +155,44 @@ body, html {
   background-size: 16px 16px;
 }
 
+.pz-canvas-wrapper {
+  position: relative;
+  line-height: 0;
+  display: inline-block;
+}
+
 .pz-canvas-element {
   box-shadow: 0 10px 40px rgba(0,0,0,0.7);
   border-radius: 2px;
   background-color: #121316;
+  display: block;
+}
+
+/* Marching Ants Selection Overlay (§10 Fase 1) */
+.pz-selection-marquee {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(0deg, #fff, #fff 4px, transparent 4px, transparent 8px),
+                    repeating-linear-gradient(90deg, #fff, #fff 4px, transparent 4px, transparent 8px),
+                    repeating-linear-gradient(180deg, #fff, #fff 4px, transparent 4px, transparent 8px),
+                    repeating-linear-gradient(270deg, #fff, #fff 4px, transparent 4px, transparent 8px);
+  background-size: 1px 100%, 100% 1px, 1px 100%, 100% 1px;
+  background-position: 0 0, 0 0, 100% 0, 0 100%;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7);
+  background-color: rgba(79, 70, 229, 0.08);
+  animation: pz-marching-ants 0.8s linear infinite;
+  z-index: 50;
+}
+
+@keyframes pz-marching-ants {
+  0% {
+    background-position: 0 0, 0 0, 100% 0, 0 100%;
+  }
+  100% {
+    background-position: 0 -8px, 8px 0, 100% 8px, -8px 100%;
+  }
 }
 
 /* Floating Action HUD (§5.5) */

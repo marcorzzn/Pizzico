@@ -13,18 +13,22 @@ export interface LayoutOptions {
   onOpenPsd?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  onDeselect?: () => void;
 }
 
 export class DesktopShellLayout {
   public root: HTMLDivElement;
   public canvasContainer: HTMLElement;
+  public canvasWrapper!: HTMLDivElement;
   public canvas: HTMLCanvasElement;
+  public selectionOverlay!: HTMLDivElement;
   public layersPanelBody!: HTMLDivElement;
   public inspectorPanelBody!: HTMLDivElement;
   public palette: CommandPalette;
   public openPsdBtn: HTMLButtonElement;
   public undoBtn: HTMLButtonElement;
   public redoBtn: HTMLButtonElement;
+  public deselectBtn: HTMLButtonElement;
 
   private currentMode: WorkspaceMode = 'quick';
   private activeTool = 'brush';
@@ -114,6 +118,18 @@ export class DesktopShellLayout {
       if (options.onOpenPsd) options.onOpenPsd();
     });
 
+    this.deselectBtn = document.createElement('button');
+    this.deselectBtn.id = 'deselect-btn';
+    this.deselectBtn.className = 'pz-btn pz-btn-secondary';
+    this.deselectBtn.style.padding = '5px 10px';
+    this.deselectBtn.style.fontSize = '12px';
+    this.deselectBtn.innerHTML = '<span>✕ Deseleziona</span>';
+    this.deselectBtn.title = 'Deseleziona (Ctrl+D)';
+    this.deselectBtn.style.display = 'none';
+    this.deselectBtn.addEventListener('click', () => {
+      if (options.onDeselect) options.onDeselect();
+    });
+
     const cmdPaletteBtn = document.createElement('button');
     cmdPaletteBtn.className = 'pz-btn pz-btn-secondary';
     cmdPaletteBtn.style.padding = '4px 10px';
@@ -123,6 +139,7 @@ export class DesktopShellLayout {
 
     topRight.appendChild(this.undoBtn);
     topRight.appendChild(this.redoBtn);
+    topRight.appendChild(this.deselectBtn);
     topRight.appendChild(this.openPsdBtn);
     topRight.appendChild(cmdPaletteBtn);
 
@@ -135,7 +152,8 @@ export class DesktopShellLayout {
     leftToolbar.className = 'pz-left-toolbar';
 
     const tools = [
-      { id: 'move', label: '✛', title: 'Sposta (V)' },
+      { id: 'move', label: '✥', title: 'Sposta Livello (V)' },
+      { id: 'marquee', label: '⬚', title: 'Selezione Rettangolare (M)' },
       { id: 'brush', label: '🖌', title: 'Pennello (B)' },
       { id: 'eraser', label: '🧹', title: 'Gomma (E)' },
       { id: 'pen', label: '✒', title: 'Penna Bézier (P)' },
@@ -178,7 +196,18 @@ export class DesktopShellLayout {
       { id: 'crop', label: 'Ritaglia', icon: '📐' },
     ]);
 
-    this.canvasContainer.appendChild(this.canvas);
+    this.canvasWrapper = document.createElement('div');
+    this.canvasWrapper.className = 'pz-canvas-wrapper';
+
+    this.selectionOverlay = document.createElement('div');
+    this.selectionOverlay.id = 'pizzico-selection-overlay';
+    this.selectionOverlay.className = 'pz-selection-marquee';
+    this.selectionOverlay.style.display = 'none';
+
+    this.canvasWrapper.appendChild(this.canvas);
+    this.canvasWrapper.appendChild(this.selectionOverlay);
+
+    this.canvasContainer.appendChild(this.canvasWrapper);
     this.canvasContainer.appendChild(hud.element);
 
     // 4. Right Sidebar (Inspector + Layers)

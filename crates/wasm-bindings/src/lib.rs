@@ -26,8 +26,8 @@ use wasm_bindgen::prelude::*;
 
 use pizzico_commands::CommandRegistry;
 use pizzico_core::{
-    AddLayerCommand, Command, Document, History, Layer, LayerKind, RemoveLayerCommand,
-    SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
+    AddLayerCommand, Command, Document, History, Layer, LayerKind, MoveLayerCommand,
+    RemoveLayerCommand, SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
 };
 use pizzico_raster::brush::{BoundingBox, Brush};
 
@@ -43,10 +43,16 @@ struct ActiveStrokeState {
     dirty_bbox: Option<BoundingBox>,
 }
 
+struct ActiveMoveState {
+    layer_id: u64,
+    initial_offset: (i32, i32),
+}
+
 thread_local! {
     static ACTIVE_DOCUMENT: RefCell<Document> = RefCell::new(Document::new(800, 600, "Pizzico Project"));
     static ACTIVE_HISTORY: RefCell<History> = RefCell::new(History::new(50));
     static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
+    static ACTIVE_MOVE: RefCell<Option<ActiveMoveState>> = RefCell::new(None);
 }
 
 static DOCUMENT_DIRTY: AtomicBool = AtomicBool::new(true);
@@ -169,6 +175,10 @@ pub struct LayerMetadataDto {
     pub opacity: f32,
     #[serde(rename = "blendMode")]
     pub blend_mode: String,
+    #[serde(rename = "offsetX")]
+    pub offset_x: i32,
+    #[serde(rename = "offsetY")]
+    pub offset_y: i32,
 }
 
 /// Restituisce i metadati di tutti i livelli presenti nel documento attivo come array JS.
@@ -189,6 +199,8 @@ pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
                 locked: l.locked,
                 opacity: l.opacity,
                 blend_mode: format!("{:?}", l.blend_mode),
+                offset_x: l.transform.x,
+                offset_y: l.transform.y,
             })
             .collect()
     });
@@ -367,16 +379,38 @@ pub fn brush_stroke(
 
     with_active_document_mut(|doc| {
         if let Some(active_id) = doc.active_layer_id {
+            let clip_bounds = if doc.has_active_selection() {
+                if let Some(layer) = doc.get_layer(active_id) {
+                    if let LayerKind::Raster { width, height, .. } = layer.kind {
+                        match doc.selection.to_layer_local_clip(layer.transform.x, layer.transform.y, width, height) {
+                            Some((min_x, min_y, max_x, max_y)) => {
+                                Some(BoundingBox::new(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1))
+                            }
+                            None => {
+                                return;
+                            }
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             if let Some(layer) = doc.get_layer_mut(active_id) {
                 let local_from_x = from_x - layer.transform.x as f32;
                 let local_from_y = from_y - layer.transform.y as f32;
                 let local_to_x = to_x - layer.transform.x as f32;
                 let local_to_y = to_y - layer.transform.y as f32;
-                bbox_res = pizzico_raster::brush::stroke(
+                bbox_res = pizzico_raster::brush::stroke_clipped(
                     layer,
                     (local_from_x, local_from_y),
                     (local_to_x, local_to_y),
                     &brush,
+                    clip_bounds,
                 );
             }
         }
@@ -426,16 +460,38 @@ pub fn eraser_stroke(
 
     with_active_document_mut(|doc| {
         if let Some(active_id) = doc.active_layer_id {
+            let clip_bounds = if doc.has_active_selection() {
+                if let Some(layer) = doc.get_layer(active_id) {
+                    if let LayerKind::Raster { width, height, .. } = layer.kind {
+                        match doc.selection.to_layer_local_clip(layer.transform.x, layer.transform.y, width, height) {
+                            Some((min_x, min_y, max_x, max_y)) => {
+                                Some(BoundingBox::new(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1))
+                            }
+                            None => {
+                                return;
+                            }
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             if let Some(layer) = doc.get_layer_mut(active_id) {
                 let local_from_x = from_x - layer.transform.x as f32;
                 let local_from_y = from_y - layer.transform.y as f32;
                 let local_to_x = to_x - layer.transform.x as f32;
                 let local_to_y = to_y - layer.transform.y as f32;
-                bbox_res = pizzico_raster::brush::eraser_stroke(
+                bbox_res = pizzico_raster::brush::eraser_stroke_clipped(
                     layer,
                     (local_from_x, local_from_y),
                     (local_to_x, local_to_y),
                     &brush,
+                    clip_bounds,
                 );
             }
         }
@@ -582,6 +638,146 @@ pub fn get_history_info() -> Result<JsValue, JsValue> {
     let json_str = serde_json::to_string(&dto)
         .map_err(|e| JsValue::from_str(&format!("Errore serializzazione info history: {}", e)))?;
     js_sys::JSON::parse(&json_str)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Move Tool & Traslazione Livelli (§10 Fase 1)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Inizia un'operazione di traslazione (Move Tool) per il livello attivo.
+/// Registra la posizione iniziale per generare un unico `MoveLayerCommand` al rilascio del cursore.
+#[wasm_bindgen]
+pub fn begin_move_layer() -> bool {
+    with_active_document(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            if let Some(layer) = doc.get_layer(active_id) {
+                let initial_offset = (layer.transform.x, layer.transform.y);
+                ACTIVE_MOVE.with(|m| {
+                    *m.borrow_mut() = Some(ActiveMoveState {
+                        layer_id: active_id,
+                        initial_offset,
+                    });
+                });
+                return true;
+            }
+        }
+        false
+    })
+}
+
+/// Imposta la posizione assoluta (x, y) del livello attivo e marca il documento dirty.
+#[wasm_bindgen]
+pub fn move_active_layer(x: i32, y: i32) -> bool {
+    let mut changed = false;
+    with_active_document_mut(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            changed = doc.set_layer_offset(active_id, x, y);
+        }
+    });
+    if changed {
+        set_document_dirty(true);
+    }
+    changed
+}
+
+/// Trasla il livello attivo del delta (dx, dy) e marca il documento dirty.
+#[wasm_bindgen]
+pub fn translate_active_layer(dx: i32, dy: i32) -> bool {
+    let mut changed = false;
+    with_active_document_mut(|doc| {
+        if let Some(active_id) = doc.active_layer_id {
+            changed = doc.translate_layer(active_id, dx, dy);
+        }
+    });
+    if changed {
+        set_document_dirty(true);
+    }
+    changed
+}
+
+/// Termina l'operazione di spostamento del livello attivo.
+/// Se l'offset finale differisce da quello iniziale, registra un `MoveLayerCommand` nella History.
+#[wasm_bindgen]
+pub fn end_move_layer() -> bool {
+    let move_state_opt = ACTIVE_MOVE.with(|m| m.borrow_mut().take());
+    if let Some(move_state) = move_state_opt {
+        let final_offset_opt = with_active_document(|doc| {
+            doc.get_layer(move_state.layer_id).map(|l| (l.transform.x, l.transform.y))
+        });
+        if let Some(final_offset) = final_offset_opt {
+            if final_offset != move_state.initial_offset {
+                let cmd = Box::new(MoveLayerCommand::new(
+                    move_state.layer_id,
+                    move_state.initial_offset,
+                    final_offset,
+                ));
+                ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+                set_document_dirty(true);
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Restituisce l'offset corrente `[x, y]` del livello attivo, oppure null.
+#[wasm_bindgen]
+pub fn get_active_layer_offset() -> JsValue {
+    let offset_opt = with_active_document(|doc| {
+        doc.get_active_layer().map(|l| (l.transform.x, l.transform.y))
+    });
+    match offset_opt {
+        Some((x, y)) => {
+            let arr = js_sys::Array::new();
+            arr.push(&JsValue::from_f64(x as f64));
+            arr.push(&JsValue::from_f64(y as f64));
+            arr.into()
+        }
+        None => JsValue::NULL,
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Rectangular Selection (Marquee) (§10 Fase 1)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Imposta la selezione rettangolare attiva nel documento in coordinate logiche documento.
+#[wasm_bindgen]
+pub fn set_selection(x: u32, y: u32, width: u32, height: u32) -> bool {
+    with_active_document_mut(|doc| {
+        doc.set_selection(x, y, width, height);
+    });
+    set_document_dirty(true);
+    true
+}
+
+/// Rimuove la selezione attiva (deseleziona).
+#[wasm_bindgen]
+pub fn clear_selection() -> bool {
+    with_active_document_mut(|doc| {
+        doc.clear_selection();
+    });
+    set_document_dirty(true);
+    true
+}
+
+/// Restituisce true se è presente una selezione rettangolare attiva.
+#[wasm_bindgen]
+pub fn has_active_selection() -> bool {
+    with_active_document(|doc| doc.has_active_selection())
+}
+
+/// Restituisce la selezione corrente serializzata come oggetto JS, o null se inattiva.
+#[wasm_bindgen]
+pub fn get_selection() -> Result<JsValue, JsValue> {
+    let sel = with_active_document(|doc| doc.selection);
+    if sel.active {
+        let json_str = serde_json::to_string(&sel)
+            .map_err(|e| JsValue::from_str(&format!("Errore serializzazione selezione: {}", e)))?;
+        js_sys::JSON::parse(&json_str)
+    } else {
+        Ok(JsValue::NULL)
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -752,6 +948,51 @@ impl PizzicoEngine {
     /// Informazioni sulla history.
     pub fn get_history_info(&self) -> Result<JsValue, JsValue> {
         get_history_info()
+    }
+
+    /// Inizia traslazione layer attivo.
+    pub fn begin_move_layer(&mut self) -> bool {
+        begin_move_layer()
+    }
+
+    /// Imposta posizione assoluta del layer attivo.
+    pub fn move_active_layer(&mut self, x: i32, y: i32) -> bool {
+        move_active_layer(x, y)
+    }
+
+    /// Trasla il layer attivo del delta specificato.
+    pub fn translate_active_layer(&mut self, dx: i32, dy: i32) -> bool {
+        translate_active_layer(dx, dy)
+    }
+
+    /// Termina traslazione layer attivo con registrazione history.
+    pub fn end_move_layer(&mut self) -> bool {
+        end_move_layer()
+    }
+
+    /// Restituisce [x, y] del layer attivo.
+    pub fn get_active_layer_offset(&self) -> JsValue {
+        get_active_layer_offset()
+    }
+
+    /// Imposta selezione rettangolare.
+    pub fn set_selection(&mut self, x: u32, y: u32, width: u32, height: u32) -> bool {
+        set_selection(x, y, width, height)
+    }
+
+    /// Rimuove selezione attiva.
+    pub fn clear_selection(&mut self) -> bool {
+        clear_selection()
+    }
+
+    /// Verifica presenza selezione attiva.
+    pub fn has_active_selection(&self) -> bool {
+        has_active_selection()
+    }
+
+    /// Restituisce la selezione attiva in formato JS.
+    pub fn get_selection(&self) -> Result<JsValue, JsValue> {
+        get_selection()
     }
 
     /// Serializza il documento in formato JSON.
