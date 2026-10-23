@@ -11,6 +11,8 @@ export interface LayoutOptions {
   onToolSelect?: (tool: string) => void;
   onCommand?: (commandId: string) => void;
   onOpenPsd?: () => void;
+  onSaveProject?: () => void;
+  onOpenProject?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onDeselect?: () => void;
@@ -25,10 +27,13 @@ export class DesktopShellLayout {
   public layersPanelBody!: HTMLDivElement;
   public inspectorPanelBody!: HTMLDivElement;
   public palette: CommandPalette;
+  public saveBtn: HTMLButtonElement;
+  public openProjectBtn: HTMLButtonElement;
   public openPsdBtn: HTMLButtonElement;
   public undoBtn: HTMLButtonElement;
   public redoBtn: HTMLButtonElement;
   public deselectBtn: HTMLButtonElement;
+  public autosaveIndicator: HTMLSpanElement;
 
   private currentMode: WorkspaceMode = 'quick';
   private activeTool = 'brush';
@@ -108,12 +113,35 @@ export class DesktopShellLayout {
       if (options.onRedo) options.onRedo();
     });
 
+    this.saveBtn = document.createElement('button');
+    this.saveBtn.id = 'save-project-btn';
+    this.saveBtn.className = 'pz-btn pz-btn-primary';
+    this.saveBtn.style.padding = '5px 12px';
+    this.saveBtn.style.fontSize = '12px';
+    this.saveBtn.innerHTML = '<span>💾 Salva</span>';
+    this.saveBtn.title = 'Salva Progetto .pizzico (Ctrl+S)';
+    this.saveBtn.addEventListener('click', () => {
+      if (options.onSaveProject) options.onSaveProject();
+    });
+
+    this.openProjectBtn = document.createElement('button');
+    this.openProjectBtn.id = 'open-project-btn';
+    this.openProjectBtn.className = 'pz-btn pz-btn-secondary';
+    this.openProjectBtn.style.padding = '5px 12px';
+    this.openProjectBtn.style.fontSize = '12px';
+    this.openProjectBtn.innerHTML = '<span>📁 Apri Progetto</span>';
+    this.openProjectBtn.title = 'Apri Progetto .pizzico (Ctrl+O)';
+    this.openProjectBtn.addEventListener('click', () => {
+      if (options.onOpenProject) options.onOpenProject();
+    });
+
     this.openPsdBtn = document.createElement('button');
     this.openPsdBtn.id = 'open-psd-btn';
-    this.openPsdBtn.className = 'pz-btn pz-btn-primary';
+    this.openPsdBtn.className = 'pz-btn pz-btn-secondary';
     this.openPsdBtn.style.padding = '5px 12px';
     this.openPsdBtn.style.fontSize = '12px';
     this.openPsdBtn.innerHTML = '<span>📂 Apri PSD</span>';
+    this.openPsdBtn.title = 'Apri file Adobe Photoshop PSD/PSB';
     this.openPsdBtn.addEventListener('click', () => {
       if (options.onOpenPsd) options.onOpenPsd();
     });
@@ -140,6 +168,8 @@ export class DesktopShellLayout {
     topRight.appendChild(this.undoBtn);
     topRight.appendChild(this.redoBtn);
     topRight.appendChild(this.deselectBtn);
+    topRight.appendChild(this.saveBtn);
+    topRight.appendChild(this.openProjectBtn);
     topRight.appendChild(this.openPsdBtn);
     topRight.appendChild(cmdPaletteBtn);
 
@@ -226,10 +256,26 @@ export class DesktopShellLayout {
     // 5. Status Bar
     const statusBar = document.createElement('footer');
     statusBar.className = 'pz-bottom-status-bar';
-    statusBar.innerHTML = `
-      <div>1200 × 800 px · 100% · sRGB · WebGPU Attivo</div>
-      <div>Pizzico v0.1.0 · Offline-First · Zero IA v1</div>
-    `;
+
+    const statusLeft = document.createElement('div');
+    statusLeft.textContent = '1200 × 800 px · 100% · sRGB · WebGPU Attivo';
+
+    const statusRight = document.createElement('div');
+    statusRight.style.cssText = 'display: flex; gap: 16px; align-items: center;';
+
+    this.autosaveIndicator = document.createElement('span');
+    this.autosaveIndicator.id = 'autosave-indicator';
+    this.autosaveIndicator.style.cssText = 'color: #38bdf8; font-size: 11px;';
+    this.autosaveIndicator.textContent = 'Autosave attivo';
+
+    const brandSpan = document.createElement('span');
+    brandSpan.textContent = 'Pizzico v0.1.0 · Offline-First · Zero IA v1';
+
+    statusRight.appendChild(this.autosaveIndicator);
+    statusRight.appendChild(brandSpan);
+
+    statusBar.appendChild(statusLeft);
+    statusBar.appendChild(statusRight);
 
     // 6. Assemble
     this.root.appendChild(topBar);
@@ -266,5 +312,12 @@ export class DesktopShellLayout {
         btn.classList.remove('pz-active');
       }
     });
+  }
+
+  public updateAutosaveIndicator(text: string, color = '#38bdf8') {
+    if (this.autosaveIndicator) {
+      this.autosaveIndicator.textContent = text;
+      this.autosaveIndicator.style.color = color;
+    }
   }
 }

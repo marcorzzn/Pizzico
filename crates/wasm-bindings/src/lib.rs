@@ -316,6 +316,34 @@ pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
     Ok(())
 }
 
+/// Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
+/// nel formato container compresso nativo `.pizzico` (ZIP).
+#[wasm_bindgen]
+pub fn save_project() -> Result<Vec<u8>, JsValue> {
+    with_active_document(|doc| {
+        pizzico_io_native::serialize_document(doc)
+            .map_err(|e| JsValue::from_str(&format!("Errore salvataggio progetto .pizzico: {}", e)))
+    })
+}
+
+/// Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
+/// resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+#[wasm_bindgen]
+pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
+    let imported_doc = pizzico_io_native::deserialize_document(bytes)
+        .map_err(|e| JsValue::from_str(&format!("Errore caricamento progetto .pizzico: {}", e)))?;
+
+    with_active_document_mut(|doc| {
+        *doc = imported_doc;
+    });
+
+    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
+    ACTIVE_MOVE.with(|m| *m.borrow_mut() = None);
+
+    Ok(())
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Brush Engine & Undo/Redo Bridge (§6.1, §10 Fase 1)
 // ──────────────────────────────────────────────────────────────────────────────

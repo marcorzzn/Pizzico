@@ -28,5 +28,5 @@ pub use history::{
     AddLayerCommand, Command, History, HistoryStack, MoveLayerCommand, RemoveLayerCommand,
     SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
 };
-pub use layer::{Layer, LayerContent, LayerId, LayerKind};
+pub use layer::{Layer, LayerContent, LayerId, LayerKind, Transform2D};
 pub use selection::RectSelection;

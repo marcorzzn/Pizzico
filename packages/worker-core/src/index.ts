@@ -63,6 +63,8 @@ export {
   clear_selection,
   has_active_selection,
   get_selection,
+  save_project,
+  load_project,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

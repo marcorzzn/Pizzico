@@ -652,6 +652,20 @@ export function is_dirty() {
 }
 
 /**
+ * Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
+ * resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+ * @param {Uint8Array} bytes
+ */
+export function load_project(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.load_project(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
  * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
  * e segnala la necessità di un nuovo frame di compositing WebGPU.
  * @param {Uint8Array} bytes
@@ -702,6 +716,21 @@ export function redo() {
 export function remove_layer(id) {
     const ret = wasm.remove_layer(id);
     return ret !== 0;
+}
+
+/**
+ * Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
+ * nel formato container compresso nativo `.pizzico` (ZIP).
+ * @returns {Uint8Array}
+ */
+export function save_project() {
+    const ret = wasm.save_project();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
 }
 
 /**
@@ -948,12 +977,12 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 55, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 187, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 5, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 6, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_);
             return ret;
         },

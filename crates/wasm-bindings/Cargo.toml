@@ -18,6 +18,7 @@ pizzico-core   = { path = "../core" }
 pizzico-render = { path = "../render" }
 pizzico-commands = { path = "../commands" }
 pizzico-io-psd = { path = "../io-psd" }
+pizzico-io-native = { path = "../io-native" }
 pizzico-raster = { path = "../raster" }
 
 # WASM / JS bridge

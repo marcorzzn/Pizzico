@@ -286,6 +286,12 @@ export function init_webgpu(canvas_id: string): Promise<void>;
 export function is_dirty(): boolean;
 
 /**
+ * Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
+ * resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+ */
+export function load_project(bytes: Uint8Array): void;
+
+/**
  * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
  * e segnala la necessità di un nuovo frame di compositing WebGPU.
  */
@@ -310,6 +316,12 @@ export function redo(): boolean;
  * Rimuove il livello specificato dal documento attivo.
  */
 export function remove_layer(id: number): boolean;
+
+/**
+ * Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
+ * nel formato container compresso nativo `.pizzico` (ZIP).
+ */
+export function save_project(): Uint8Array;
 
 /**
  * Seleziona il livello specificato come livello attivo nel documento.
@@ -376,6 +388,7 @@ export interface InitOutput {
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;
     readonly is_dirty: () => number;
+    readonly load_project: (a: number, b: number) => [number, number];
     readonly load_psd_bytes: (a: number, b: number) => [number, number];
     readonly move_active_layer: (a: number, b: number) => number;
     readonly pizzico_version: () => number;
@@ -417,6 +430,7 @@ export interface InitOutput {
     readonly pizzicoengine_width: (a: number) => number;
     readonly redo: () => number;
     readonly remove_layer: (a: number) => number;
+    readonly save_project: () => [number, number, number, number];
     readonly select_layer: (a: number) => void;
     readonly set_dirty: (a: number) => void;
     readonly set_layer_opacity: (a: number, b: number) => void;

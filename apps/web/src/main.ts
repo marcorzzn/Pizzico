@@ -55,7 +55,10 @@ import {
   clear_selection,
   has_active_selection,
   get_selection,
+  save_project,
+  load_project,
 } from '@pizzico/worker-core';
+import { saveAutosave, loadAutosave, clearAutosave } from './storage';
 
 console.log('🍕 Pizzico Engine initializing…');
 
@@ -93,6 +96,8 @@ const shell = new DesktopShellLayout({
   },
   onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
   onOpenPsd: () => fileInput.click(),
+  onSaveProject: () => handleSaveProject(),
+  onOpenProject: () => projectFileInput.click(),
   onUndo: () => handleUndo(),
   onRedo: () => handleRedo(),
   onDeselect: () => handleDeselect(),
@@ -105,7 +110,7 @@ const toastContainer = document.createElement('div');
 toastContainer.className = 'pz-toast-container';
 document.body.appendChild(toastContainer);
 
-function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
+function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
   const toast = document.createElement('div');
   toast.className = `pz-toast pz-toast-${type}`;
   toast.textContent = message;
@@ -202,6 +207,7 @@ function handleUndo() {
     syncSelectionUi();
     renderLayersPanel();
     updateInspector();
+    scheduleAutosave();
     showToast('↶ Azione annullata (Undo)', 'success');
   } else {
     showToast('Nessuna azione da annullare', 'warning');
@@ -216,13 +222,150 @@ function handleRedo() {
     syncSelectionUi();
     renderLayersPanel();
     updateInspector();
+    scheduleAutosave();
     showToast('↷ Azione ripristinata (Redo)', 'success');
   } else {
     showToast('Nessuna azione da ripristinare', 'warning');
   }
 }
 
-// Scorciatoie da tastiera (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Ctrl+D, V, M, B, E)
+// ── Sistema di Autosave con Debounce 2s (OPFS / IndexedDB) (§3.1, §10 Step H) ──
+
+let autosaveTimer: any = null;
+
+function scheduleAutosave() {
+  if (!wasmReady) return;
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+
+  autosaveTimer = setTimeout(async () => {
+    try {
+      const bytes = save_project();
+      if (!bytes || bytes.length === 0) return;
+      const target = await saveAutosave(bytes);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      shell.updateAutosaveIndicator(`Salvato automaticamente ${timeStr} (${target.toUpperCase()})`, '#38bdf8');
+      console.log(`[Autosave] ✅ Progetto salvato in ${target.toUpperCase()} (${bytes.length} bytes, ${timeStr})`);
+    } catch (err) {
+      console.warn('[Autosave] ⚠️ Errore salvataggio automatico:', err);
+      shell.updateAutosaveIndicator('Autosave fallito', '#f87171');
+    }
+  }, 2000);
+}
+
+// ── Salvataggio & Apertura File Progetto .pizzico (§10 Step H) ─────────────────
+
+function handleSaveProject() {
+  if (!wasmReady) {
+    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    return;
+  }
+  try {
+    const bytes = save_project();
+    const docMeta = get_document_metadata();
+    const rawTitle = docMeta?.title ? docMeta.title.trim().replace(/[^a-zA-Z0-9_\-]/g, '_') : 'progetto';
+    const fileName = `${rawTitle}.pizzico`;
+
+    const blob = new Blob([bytes as any], { type: 'application/x-pizzico' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const sizeKb = (bytes.length / 1024).toFixed(1);
+    showToast(`💾 Progetto salvato su disco: "${fileName}" (${sizeKb} KB)`, 'success');
+    scheduleAutosave();
+  } catch (err) {
+    console.error('[Save Project] ❌ Errore salvataggio file .pizzico:', err);
+    showToast(`❌ Errore salvataggio progetto: ${err}`, 'error');
+  }
+}
+
+async function handleOpenProjectFile(file: File): Promise<void> {
+  if (!wasmReady) {
+    showToast('⚠️ Engine grafico WASM non ancora pronto', 'warning');
+    return;
+  }
+
+  showLoadingSpinner(`Apertura progetto Pizzico: "${file.name}"…`);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    load_project(bytes);
+
+    syncHistoryUi();
+    syncSelectionUi();
+    renderLayersPanel();
+    updateInspector();
+    hideLoadingSpinner();
+
+    const docMeta = get_document_metadata();
+    showToast(
+      `📁 Progetto aperto: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
+      'success'
+    );
+    scheduleAutosave();
+  } catch (err) {
+    hideLoadingSpinner();
+    console.error('[Open Project] ❌ Errore apertura file .pizzico:', err);
+    showToast(`❌ Errore apertura progetto: ${err}`, 'error');
+  }
+}
+
+// Banner interattivo per il ripristino all'avvio (§10 Step H)
+function showRestorePrompt(onRestore: () => void, onDiscard: () => void) {
+  const banner = document.createElement('div');
+  banner.id = 'pz-restore-banner';
+  banner.style.cssText = `
+    position: fixed;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26, 27, 31, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid #38bdf8;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 1000;
+    color: #fff;
+    font-size: 13px;
+    animation: pz-fade-in 0.25s ease-out;
+  `;
+  banner.innerHTML = `
+    <span style="font-size: 20px;">💾</span>
+    <div>
+      <div style="font-weight: 600; color: #fff;">Progetto precedente trovato</div>
+      <div style="font-size: 11px; color: var(--pz-text-muted, #94a3b8);">È presente una sessione di lavoro salvata localmente. Vuoi ripristinarla?</div>
+    </div>
+    <div style="display: flex; gap: 8px; margin-left: 8px;">
+      <button id="restore-confirm-btn" class="pz-btn pz-btn-primary" style="padding: 5px 12px; font-size: 12px;">Sì, Ripristina</button>
+      <button id="restore-discard-btn" class="pz-btn pz-btn-secondary" style="padding: 5px 10px; font-size: 12px;">No</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  banner.querySelector('#restore-confirm-btn')?.addEventListener('click', () => {
+    banner.remove();
+    onRestore();
+  });
+  banner.querySelector('#restore-discard-btn')?.addEventListener('click', () => {
+    banner.remove();
+    onDiscard();
+  });
+}
+
+// Scorciatoie da tastiera (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Ctrl+D, Ctrl+S, Ctrl+O, V, M, B, E)
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
     e.preventDefault();
@@ -237,6 +380,12 @@ window.addEventListener('keydown', (e) => {
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
     e.preventDefault();
     handleDeselect();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    handleSaveProject();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    projectFileInput.click();
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     if (e.key.toLowerCase() === 'v') {
       shell.setActiveTool('move');
@@ -262,7 +411,20 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// ── 6. I/O File PSD: Input & Drag-and-Drop (§6.5) ──────────────────────────────
+// ── 6. I/O File: Progetti .pizzico e PSD/PSB (§6.5, §10 Step H) ────────────────
+
+const projectFileInput = document.createElement('input');
+projectFileInput.type = 'file';
+projectFileInput.accept = '.pizzico';
+projectFileInput.style.display = 'none';
+document.body.appendChild(projectFileInput);
+
+projectFileInput.addEventListener('change', async (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  await handleOpenProjectFile(file);
+  projectFileInput.value = '';
+});
 
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
@@ -557,6 +719,7 @@ const handlePointerUp = (e: PointerEvent) => {
       syncHistoryUi();
       renderLayersPanel();
       updateInspector();
+      scheduleAutosave();
     }
     updateCanvasCursor();
   } else if (isSelecting && selStartDoc) {
@@ -577,11 +740,13 @@ const handlePointerUp = (e: PointerEvent) => {
       syncSelectionUi();
     }
     updateInspector();
+    scheduleAutosave();
   } else if (isDrawing) {
     isDrawing = false;
     lastDocPoint = null;
     end_stroke();
     syncHistoryUi();
+    scheduleAutosave();
   }
 };
 
@@ -604,6 +769,7 @@ window.addEventListener('resize', () => syncSelectionUi());
   );
   end_stroke();
   syncHistoryUi();
+  scheduleAutosave();
 };
 (window as any).__moveActiveLayer = (dx: number, dy: number) => {
   begin_move_layer();
@@ -612,11 +778,13 @@ window.addEventListener('resize', () => syncSelectionUi());
   syncHistoryUi();
   renderLayersPanel();
   updateInspector();
+  scheduleAutosave();
 };
 (window as any).__setSelection = (x: number, y: number, w: number, h: number) => {
   set_selection(x, y, w, h);
   syncSelectionUi();
   updateInspector();
+  scheduleAutosave();
 };
 (window as any).__clearSelection = () => handleDeselect();
 (window as any).__getSelection = () => get_selection();
@@ -624,6 +792,20 @@ window.addEventListener('resize', () => syncSelectionUi());
 (window as any).__redo = () => handleRedo();
 (window as any).__getHistory = () => get_history_info();
 (window as any).__getCompositeBuffer = () => get_composite_buffer();
+(window as any).__saveProject = () => save_project();
+(window as any).__loadProject = (bytes: Uint8Array) => {
+  load_project(bytes);
+  syncHistoryUi();
+  syncSelectionUi();
+  renderLayersPanel();
+  updateInspector();
+};
+(window as any).__getAutosave = () => loadAutosave();
+(window as any).__saveAutosaveNow = async () => {
+  const bytes = save_project();
+  return await saveAutosave(bytes);
+};
+(window as any).__clearAutosave = () => clearAutosave();
 
 // ── 8. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 
@@ -649,6 +831,7 @@ const addEmptyBtn = new Button({
     syncHistoryUi();
     renderLayersPanel();
     updateInspector();
+    scheduleAutosave();
   },
 });
 layersHeaderContainer.appendChild(addEmptyBtn.element);
@@ -666,6 +849,7 @@ addRedBtn.addEventListener('click', () => {
   syncHistoryUi();
   renderLayersPanel();
   updateInspector();
+  scheduleAutosave();
 });
 
 const addBlueBtn = document.createElement('button');
@@ -679,6 +863,7 @@ addBlueBtn.addEventListener('click', () => {
   syncHistoryUi();
   renderLayersPanel();
   updateInspector();
+  scheduleAutosave();
 });
 
 const resetBtn = document.createElement('button');
@@ -692,6 +877,7 @@ resetBtn.addEventListener('click', () => {
   syncHistoryUi();
   renderLayersPanel();
   updateInspector();
+  scheduleAutosave();
 });
 
 quickBtnsRow.appendChild(addRedBtn);
@@ -750,17 +936,20 @@ function renderLayersPanel() {
         syncHistoryUi();
         renderLayersPanel();
         updateInspector();
+        scheduleAutosave();
       },
       onOpacityChange: (id, opacity) => {
         set_layer_opacity(id, opacity);
         syncHistoryUi();
         syncInspectorOpacity(opacity);
+        scheduleAutosave();
       },
       onDelete: (id) => {
         remove_layer(id);
         syncHistoryUi();
         renderLayersPanel();
         updateInspector();
+        scheduleAutosave();
       },
     });
 
@@ -1079,6 +1268,7 @@ function updateInspector() {
     syncHistoryUi();
     renderLayersPanel();
     updateInspector();
+    scheduleAutosave();
   });
   actionsRow.appendChild(visBtn);
 
@@ -1091,6 +1281,7 @@ function updateInspector() {
     syncHistoryUi();
     renderLayersPanel();
     updateInspector();
+    scheduleAutosave();
   });
   actionsRow.appendChild(delBtn);
 
@@ -1103,11 +1294,47 @@ function updateInspector() {
   await setupWasm();
 
   if (wasmReady) {
+    // 1. Verifica se esiste un salvataggio automatico precedente in OPFS o IndexedDB (§10 Step H)
     try {
-      await (window as any).__loadSamplePsd();
-      console.log('[Boot] ✅ sample-01.psd precaricato automaticamente');
+      const autosaveData = await loadAutosave();
+      if (autosaveData && autosaveData.bytes.length > 0) {
+        showRestorePrompt(
+          () => {
+            try {
+              load_project(autosaveData.bytes);
+              syncHistoryUi();
+              syncSelectionUi();
+              renderLayersPanel();
+              updateInspector();
+              showToast(`✅ Progetto ripristinato da ${autosaveData.source.toUpperCase()}`, 'success');
+              shell.updateAutosaveIndicator(`Ripristinato (${autosaveData.source.toUpperCase()})`, '#38bdf8');
+            } catch (err) {
+              console.error('[Boot] Errore ripristino autosave:', err);
+              showToast('❌ Errore nel ripristino del salvataggio automatico', 'error');
+            }
+          },
+          async () => {
+            await clearAutosave();
+            try {
+              await (window as any).__loadSamplePsd();
+              console.log('[Boot] ✅ sample-01.psd precaricato dopo aver scartato autosave');
+            } catch (e) {
+              console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
+            }
+            showToast('Nuovo progetto demo avviato', 'info');
+          }
+        );
+      } else {
+        // Nessun autosave presente: carica sample-01.psd come progetto iniziale
+        try {
+          await (window as any).__loadSamplePsd();
+          console.log('[Boot] ✅ sample-01.psd precaricato automaticamente');
+        } catch (e) {
+          console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
+        }
+      }
     } catch (e) {
-      console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
+      console.warn('[Boot] Verifica autosave non riuscita:', e);
     }
 
     try {
