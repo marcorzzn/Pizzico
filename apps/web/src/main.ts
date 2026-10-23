@@ -57,6 +57,9 @@ import {
   get_selection,
   save_project,
   load_project,
+  export_as_png,
+  export_as_jpeg,
+  export_as_webp,
 } from '@pizzico/worker-core';
 import { saveAutosave, loadAutosave, clearAutosave } from './storage';
 
@@ -98,6 +101,9 @@ const shell = new DesktopShellLayout({
   onOpenPsd: () => fileInput.click(),
   onSaveProject: () => handleSaveProject(),
   onOpenProject: () => projectFileInput.click(),
+  onExportPng: () => handleExportPng(),
+  onExportJpeg: (q) => handleExportJpeg(q),
+  onExportWebp: (q) => handleExportWebp(q),
   onUndo: () => handleUndo(),
   onRedo: () => handleRedo(),
   onDeselect: () => handleDeselect(),
@@ -316,6 +322,106 @@ async function handleOpenProjectFile(file: File): Promise<void> {
     console.error('[Open Project] ❌ Errore apertura file .pizzico:', err);
     showToast(`❌ Errore apertura progetto: ${err}`, 'error');
   }
+}
+
+// ── Export Immagini Raster (§9 Export/Interop, §10 Fase 1 Step I) ─────────────
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function getSanitizedDocTitle(): string {
+  try {
+    const meta = get_document_metadata();
+    if (meta && meta.title && meta.title.trim()) {
+      return meta.title.trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+    }
+  } catch (e) {}
+  return 'pizzico_export';
+}
+
+function handleExportPng() {
+  if (!wasmReady) {
+    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    return;
+  }
+  showLoadingSpinner('Generazione immagine PNG…');
+  setTimeout(() => {
+    try {
+      const bytes = export_as_png();
+      const title = getSanitizedDocTitle();
+      const filename = `${title}.png`;
+      const blob = new Blob([bytes as any], { type: 'image/png' });
+      downloadBlob(blob, filename);
+      hideLoadingSpinner();
+      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+    } catch (err) {
+      hideLoadingSpinner();
+      console.error('[Export PNG] Errore:', err);
+      showToast('❌ Errore durante l\'esportazione PNG', 'error');
+    }
+  }, 30);
+}
+
+function handleExportJpeg(quality: number = 90) {
+  if (!wasmReady) {
+    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    return;
+  }
+  showLoadingSpinner(`Generazione immagine JPEG (q=${quality})…`);
+  setTimeout(() => {
+    try {
+      const bytes = export_as_jpeg(quality);
+      const title = getSanitizedDocTitle();
+      const filename = `${title}.jpg`;
+      const blob = new Blob([bytes as any], { type: 'image/jpeg' });
+      downloadBlob(blob, filename);
+      hideLoadingSpinner();
+      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+    } catch (err) {
+      hideLoadingSpinner();
+      console.error('[Export JPEG] Errore:', err);
+      showToast('❌ Errore durante l\'esportazione JPEG', 'error');
+    }
+  }, 30);
+}
+
+function handleExportWebp(quality: number = 90) {
+  if (!wasmReady) {
+    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    return;
+  }
+  showLoadingSpinner(`Generazione immagine WebP (q=${quality})…`);
+  setTimeout(() => {
+    try {
+      const bytes = export_as_webp(quality);
+      const title = getSanitizedDocTitle();
+      const filename = `${title}.webp`;
+      const blob = new Blob([bytes as any], { type: 'image/webp' });
+      downloadBlob(blob, filename);
+      hideLoadingSpinner();
+      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+    } catch (err) {
+      hideLoadingSpinner();
+      console.error('[Export WebP] Errore:', err);
+      showToast('❌ Errore durante l\'esportazione WebP', 'error');
+    }
+  }, 30);
 }
 
 // Banner interattivo per il ripristino all'avvio (§10 Step H)
@@ -806,6 +912,12 @@ window.addEventListener('resize', () => syncSelectionUi());
   return await saveAutosave(bytes);
 };
 (window as any).__clearAutosave = () => clearAutosave();
+(window as any).__exportPng = () => handleExportPng();
+(window as any).__exportJpeg = (q?: number) => handleExportJpeg(q);
+(window as any).__exportWebp = (q?: number) => handleExportWebp(q);
+(window as any).__exportPngBytes = () => export_as_png();
+(window as any).__exportJpegBytes = (q: number = 90) => export_as_jpeg(q);
+(window as any).__exportWebpBytes = (q: number = 90) => export_as_webp(q);
 
 // ── 8. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 

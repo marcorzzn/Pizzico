@@ -13,6 +13,9 @@ export interface LayoutOptions {
   onOpenPsd?: () => void;
   onSaveProject?: () => void;
   onOpenProject?: () => void;
+  onExportPng?: () => void;
+  onExportJpeg?: (quality: number) => void;
+  onExportWebp?: (quality: number) => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onDeselect?: () => void;
@@ -29,6 +32,8 @@ export class DesktopShellLayout {
   public palette: CommandPalette;
   public saveBtn: HTMLButtonElement;
   public openProjectBtn: HTMLButtonElement;
+  public exportBtn: HTMLButtonElement;
+  public exportDropdown: HTMLDivElement;
   public openPsdBtn: HTMLButtonElement;
   public undoBtn: HTMLButtonElement;
   public redoBtn: HTMLButtonElement;
@@ -135,6 +140,113 @@ export class DesktopShellLayout {
       if (options.onOpenProject) options.onOpenProject();
     });
 
+    this.exportBtn = document.createElement('button');
+    this.exportBtn.id = 'export-btn';
+    this.exportBtn.className = 'pz-btn pz-btn-secondary';
+    this.exportBtn.style.padding = '5px 12px';
+    this.exportBtn.style.fontSize = '12px';
+    this.exportBtn.innerHTML = '<span>📤 Esporta ▾</span>';
+    this.exportBtn.title = 'Esporta immagine renderizzata (PNG, JPEG, WebP)';
+
+    this.exportDropdown = document.createElement('div');
+    this.exportDropdown.id = 'export-dropdown';
+    this.exportDropdown.className = 'pz-export-dropdown';
+    this.exportDropdown.style.display = 'none';
+
+    this.exportDropdown.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 13px; color: #f8fafc;">📤 Esporta Immagine</span>
+        <button id="export-close-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">✕</button>
+      </div>
+
+      <!-- PNG Item -->
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>PNG</span>
+          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">Lossless · Alpha</span>
+        </div>
+        <div class="pz-export-item-desc">Grafica raster a 32-bit con canale alpha trasparente.</div>
+        <button id="export-png-btn" class="pz-btn pz-btn-primary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica PNG</button>
+      </div>
+
+      <!-- JPEG Item -->
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>JPEG</span>
+          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(251,191,36,0.15); color: #fbbf24;">Compresso</span>
+        </div>
+        <div class="pz-export-item-desc">Formato standard per fotografie. Aree trasparenti rese bianche.</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 2px;">
+          <span>Qualità:</span>
+          <span id="export-jpeg-quality-val" style="font-weight: 600; color: #e2e8f0;">90%</span>
+        </div>
+        <input type="range" id="export-jpeg-quality" min="1" max="100" value="90" style="width: 100%; accent-color: #38bdf8; cursor: pointer;" />
+        <button id="export-jpeg-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica JPEG</button>
+      </div>
+
+      <!-- WebP Item -->
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>WebP</span>
+          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(52,211,153,0.15); color: #34d399;">Moderno · Leggero</span>
+        </div>
+        <div class="pz-export-item-desc">Pure-Rust lossless ad altissima efficienza con trasparenza.</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 2px;">
+          <span>Qualità:</span>
+          <span id="export-webp-quality-val" style="font-weight: 600; color: #e2e8f0;">90%</span>
+        </div>
+        <input type="range" id="export-webp-quality" min="1" max="100" value="90" style="width: 100%; accent-color: #34d399; cursor: pointer;" />
+        <button id="export-webp-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica WebP</button>
+      </div>
+    `;
+
+    this.root.appendChild(this.exportDropdown);
+
+    this.exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = this.exportDropdown.style.display === 'none';
+      this.exportDropdown.style.display = isHidden ? 'flex' : 'none';
+    });
+
+    this.exportDropdown.querySelector('#export-close-btn')?.addEventListener('click', () => {
+      this.exportDropdown.style.display = 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!this.exportDropdown.contains(e.target as Node) && e.target !== this.exportBtn && !this.exportBtn.contains(e.target as Node)) {
+        this.exportDropdown.style.display = 'none';
+      }
+    });
+
+    const jpegSlider = this.exportDropdown.querySelector('#export-jpeg-quality') as HTMLInputElement;
+    const jpegVal = this.exportDropdown.querySelector('#export-jpeg-quality-val') as HTMLSpanElement;
+    jpegSlider?.addEventListener('input', () => {
+      if (jpegVal) jpegVal.textContent = `${jpegSlider.value}%`;
+    });
+
+    const webpSlider = this.exportDropdown.querySelector('#export-webp-quality') as HTMLInputElement;
+    const webpVal = this.exportDropdown.querySelector('#export-webp-quality-val') as HTMLSpanElement;
+    webpSlider?.addEventListener('input', () => {
+      if (webpVal) webpVal.textContent = `${webpSlider.value}%`;
+    });
+
+    this.exportDropdown.querySelector('#export-png-btn')?.addEventListener('click', () => {
+      this.exportDropdown.style.display = 'none';
+      if (options.onExportPng) options.onExportPng();
+    });
+
+    this.exportDropdown.querySelector('#export-jpeg-btn')?.addEventListener('click', () => {
+      this.exportDropdown.style.display = 'none';
+      const q = parseInt(jpegSlider?.value || '90', 10);
+      if (options.onExportJpeg) options.onExportJpeg(q);
+    });
+
+    this.exportDropdown.querySelector('#export-webp-btn')?.addEventListener('click', () => {
+      this.exportDropdown.style.display = 'none';
+      const q = parseInt(webpSlider?.value || '90', 10);
+      if (options.onExportWebp) options.onExportWebp(q);
+    });
+
     this.openPsdBtn = document.createElement('button');
     this.openPsdBtn.id = 'open-psd-btn';
     this.openPsdBtn.className = 'pz-btn pz-btn-secondary';
@@ -170,6 +282,7 @@ export class DesktopShellLayout {
     topRight.appendChild(this.deselectBtn);
     topRight.appendChild(this.saveBtn);
     topRight.appendChild(this.openProjectBtn);
+    topRight.appendChild(this.exportBtn);
     topRight.appendChild(this.openPsdBtn);
     topRight.appendChild(cmdPaletteBtn);
 

@@ -17,3 +17,4 @@ serde_json.workspace = true
 thiserror.workspace = true
 log.workspace = true
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }

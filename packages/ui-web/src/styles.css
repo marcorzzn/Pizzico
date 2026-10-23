@@ -554,3 +554,57 @@ body, html {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* Export Dropdown Menu (§9 Export/Interop) */
+.pz-export-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 180px;
+  width: 290px;
+  background: #18191e;
+  border: 1px solid #33363f;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: pz-dropdown-fade 0.15s ease-out;
+}
+
+@keyframes pz-dropdown-fade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pz-export-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.15s ease;
+}
+
+.pz-export-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.pz-export-item-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pz-export-item-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}

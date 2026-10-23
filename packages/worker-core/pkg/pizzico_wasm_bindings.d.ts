@@ -52,6 +52,18 @@ export class PizzicoEngine {
      */
     eraser_stroke(from_x: number, from_y: number, to_x: number, to_y: number, radius: number, hardness: number, opacity: number): boolean;
     /**
+     * Esporta in formato JPEG con qualità specificata (1-100).
+     */
+    export_as_jpeg(quality: number): Uint8Array;
+    /**
+     * Esporta in formato PNG (lossless con alpha).
+     */
+    export_as_png(): Uint8Array;
+    /**
+     * Esporta in formato WebP (pure-Rust lossless con alpha).
+     */
+    export_as_webp(quality: number): Uint8Array;
+    /**
      * ID del livello attivo.
      */
     get_active_layer_id(): number | undefined;
@@ -219,6 +231,22 @@ export function end_stroke(): boolean;
 export function eraser_stroke(from_x: number, from_y: number, to_x: number, to_y: number, radius: number, hardness: number, opacity: number): boolean;
 
 /**
+ * Esporta l'immagine renderizzata del documento corrente in formato JPEG con qualità 1-100.
+ * Le aree trasparenti vengono composte su sfondo bianco (#FFFFFF).
+ */
+export function export_as_jpeg(quality: number): Uint8Array;
+
+/**
+ * Esporta l'immagine renderizzata del documento corrente in formato PNG (lossless con canale alpha).
+ */
+export function export_as_png(): Uint8Array;
+
+/**
+ * Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+ */
+export function export_as_webp(quality: number): Uint8Array;
+
+/**
  * Restituisce l'ID del livello attualmente selezionato (se presente).
  */
 export function get_active_layer_id(): number | undefined;
@@ -375,6 +403,9 @@ export interface InitOutput {
     readonly end_move_layer: () => number;
     readonly end_stroke: () => number;
     readonly eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly export_as_jpeg: (a: number) => [number, number, number, number];
+    readonly export_as_png: () => [number, number, number, number];
+    readonly export_as_webp: (a: number) => [number, number, number, number];
     readonly get_active_layer_id: () => number;
     readonly get_active_layer_offset: () => any;
     readonly get_composite_buffer: () => [number, number];
@@ -403,6 +434,9 @@ export interface InitOutput {
     readonly pizzicoengine_end_move_layer: (a: number) => number;
     readonly pizzicoengine_end_stroke: (a: number) => number;
     readonly pizzicoengine_eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly pizzicoengine_export_as_jpeg: (a: number, b: number) => [number, number, number, number];
+    readonly pizzicoengine_export_as_png: (a: number) => [number, number, number, number];
+    readonly pizzicoengine_export_as_webp: (a: number, b: number) => [number, number, number, number];
     readonly pizzicoengine_get_active_layer_id: (a: number) => number;
     readonly pizzicoengine_get_active_layer_offset: (a: number) => any;
     readonly pizzicoengine_get_document_json: (a: number) => [number, number, number, number];

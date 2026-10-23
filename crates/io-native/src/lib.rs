@@ -21,6 +21,9 @@ use std::io::{Cursor, Read, Write};
 use thiserror::Error;
 use zip::write::SimpleFileOptions;
 
+pub mod export;
+pub use export::*;
+
 /// Errori restituiti dalle operazioni di I/O del formato nativo `.pizzico`.
 #[derive(Error, Debug)]
 pub enum NativeIoError {

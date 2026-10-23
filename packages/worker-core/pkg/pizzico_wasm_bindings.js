@@ -128,6 +128,47 @@ export class PizzicoEngine {
         return ret !== 0;
     }
     /**
+     * Esporta in formato JPEG con qualità specificata (1-100).
+     * @param {number} quality
+     * @returns {Uint8Array}
+     */
+    export_as_jpeg(quality) {
+        const ret = wasm.pizzicoengine_export_as_jpeg(this.__wbg_ptr, quality);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * Esporta in formato PNG (lossless con alpha).
+     * @returns {Uint8Array}
+     */
+    export_as_png() {
+        const ret = wasm.pizzicoengine_export_as_png(this.__wbg_ptr);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * Esporta in formato WebP (pure-Rust lossless con alpha).
+     * @param {number} quality
+     * @returns {Uint8Array}
+     */
+    export_as_webp(quality) {
+        const ret = wasm.pizzicoengine_export_as_webp(this.__wbg_ptr, quality);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * ID del livello attivo.
      * @returns {number | undefined}
      */
@@ -513,6 +554,51 @@ export function end_stroke() {
 export function eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity) {
     const ret = wasm.eraser_stroke(from_x, from_y, to_x, to_y, radius, hardness, opacity);
     return ret !== 0;
+}
+
+/**
+ * Esporta l'immagine renderizzata del documento corrente in formato JPEG con qualità 1-100.
+ * Le aree trasparenti vengono composte su sfondo bianco (#FFFFFF).
+ * @param {number} quality
+ * @returns {Uint8Array}
+ */
+export function export_as_jpeg(quality) {
+    const ret = wasm.export_as_jpeg(quality);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Esporta l'immagine renderizzata del documento corrente in formato PNG (lossless con canale alpha).
+ * @returns {Uint8Array}
+ */
+export function export_as_png() {
+    const ret = wasm.export_as_png();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+ * @param {number} quality
+ * @returns {Uint8Array}
+ */
+export function export_as_webp(quality) {
+    const ret = wasm.export_as_webp(quality);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
 }
 
 /**
@@ -977,12 +1063,12 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 187, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 241, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 6, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 7, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_);
             return ret;
         },

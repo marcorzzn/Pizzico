@@ -344,6 +344,34 @@ pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
     Ok(())
 }
 
+/// Esporta l'immagine renderizzata del documento corrente in formato PNG (lossless con canale alpha).
+#[wasm_bindgen]
+pub fn export_as_png() -> Result<Vec<u8>, JsValue> {
+    with_active_document(|doc| {
+        pizzico_io_native::export_png(doc)
+            .map_err(|e| JsValue::from_str(&format!("Errore esportazione PNG: {}", e)))
+    })
+}
+
+/// Esporta l'immagine renderizzata del documento corrente in formato JPEG con qualità 1-100.
+/// Le aree trasparenti vengono composte su sfondo bianco (#FFFFFF).
+#[wasm_bindgen]
+pub fn export_as_jpeg(quality: u8) -> Result<Vec<u8>, JsValue> {
+    with_active_document(|doc| {
+        pizzico_io_native::export_jpeg(doc, quality)
+            .map_err(|e| JsValue::from_str(&format!("Errore esportazione JPEG: {}", e)))
+    })
+}
+
+/// Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+#[wasm_bindgen]
+pub fn export_as_webp(quality: u8) -> Result<Vec<u8>, JsValue> {
+    with_active_document(|doc| {
+        pizzico_io_native::export_webp(doc, quality)
+            .map_err(|e| JsValue::from_str(&format!("Errore esportazione WebP: {}", e)))
+    })
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Brush Engine & Undo/Redo Bridge (§6.1, §10 Fase 1)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1029,6 +1057,21 @@ impl PizzicoEngine {
             serde_json::to_string(doc)
                 .map_err(|e| JsValue::from_str(&format!("Errore serializzazione documento: {}", e)))
         })
+    }
+
+    /// Esporta in formato PNG (lossless con alpha).
+    pub fn export_as_png(&self) -> Result<Vec<u8>, JsValue> {
+        export_as_png()
+    }
+
+    /// Esporta in formato JPEG con qualità specificata (1-100).
+    pub fn export_as_jpeg(&self, quality: u8) -> Result<Vec<u8>, JsValue> {
+        export_as_jpeg(quality)
+    }
+
+    /// Esporta in formato WebP (pure-Rust lossless con alpha).
+    pub fn export_as_webp(&self, quality: u8) -> Result<Vec<u8>, JsValue> {
+        export_as_webp(quality)
     }
 }
 

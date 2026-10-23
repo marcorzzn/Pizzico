@@ -65,6 +65,9 @@ export {
   get_selection,
   save_project,
   load_project,
+  export_as_png,
+  export_as_jpeg,
+  export_as_webp,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';
