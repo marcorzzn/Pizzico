@@ -8,7 +8,9 @@ packages:
   - 'tools/*'
 
 allowBuilds:
-  esbuild: true
+  '@swc/core': true
+  esbuild: set this to true or false
 
 onlyBuiltDependencies:
   - esbuild
+  - '@swc/core'

@@ -12,18 +12,26 @@
 //! vengono ri-generati ogni volta che si esegue `wasm-pack build`.
 
 import initWasmInternal from '../pkg/pizzico_wasm_bindings';
+import wasmUrl from '../pkg/pizzico_wasm_bindings_bg.wasm?url';
 
 export async function initWasm(moduleOrPath?: any): Promise<any> {
   if (moduleOrPath !== undefined) {
     return initWasmInternal(moduleOrPath);
   }
-  if (typeof window !== 'undefined') {
-    const res = await fetch('/pizzico_wasm_bindings_bg.wasm?t=' + Date.now());
-    const bytes = await res.arrayBuffer();
-    return initWasmInternal({ module_or_path: bytes });
+  try {
+    return await initWasmInternal({ module_or_path: wasmUrl });
+  } catch (err) {
+    if (typeof window !== 'undefined') {
+      const res = await fetch(wasmUrl);
+      const bytes = await res.arrayBuffer();
+      return initWasmInternal({ module_or_path: bytes });
+    }
+    throw err;
   }
-  return initWasmInternal();
 }
+
+export { wasmUrl };
+
 
 export {
   add,

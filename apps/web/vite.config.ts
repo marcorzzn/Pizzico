@@ -3,8 +3,14 @@
 // Licenza: MIT OR Apache-2.0
 
 import { defineConfig } from 'vite';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
+  plugins: [
+    wasm(),
+    topLevelAwait(),
+  ],
   server: {
     host: 'localhost',
     port: 5173,
