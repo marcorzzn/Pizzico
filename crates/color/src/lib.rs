@@ -35,5 +35,8 @@ pub use perceptual::{
 };
 pub use spaces::{convert_color, ColorSpace, RgbSpace, ADOBE_RGB, DISPLAY_P3, PROPHOTO, REC2020, SRGB, WORKING};
 pub use spline::{Lut1, MonotoneCurve};
-pub use transfer::{decode_srgb8, encode_srgb8, gamma_to_linear, hlg_decode, hlg_encode, linear_to_gamma, pq_decode, pq_encode};
+pub use transfer::{
+    decode_srgb8, encode_srgb8, gamma_to_linear, hlg_decode, hlg_encode, linear_to_gamma,
+    linear_to_srgb, pq_decode, pq_encode, srgb_to_linear,
+};
 
