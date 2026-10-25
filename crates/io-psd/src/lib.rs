@@ -22,6 +22,7 @@ pub mod image_resources;
 pub mod layer_records;
 pub mod parser;
 pub mod rle;
+pub mod writer;
 
 pub use builder::{generate_synthetic_psd, SyntheticLayer};
 pub use color_mode::PsdColorModeData;
@@ -31,6 +32,7 @@ pub use image_resources::{ImageResourceBlock, PsdImageResources};
 pub use layer_records::{PsdChannelInfo, PsdLayerRecord};
 pub use parser::{parse_psd, parse_psd_detailed, PsdParseResult};
 pub use rle::{compress_packbits, decompress_packbits};
+pub use writer::{export_psd, PsdBuilder, WriterLayerSpec};
 
 use pizzico_core::Document;
 
@@ -40,3 +42,4 @@ use pizzico_core::Document;
 pub fn import_psd(bytes: &[u8]) -> Result<Document, PsdError> {
     parse_psd(bytes)
 }
+

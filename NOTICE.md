@@ -16,8 +16,9 @@ Questo prodotto include software e concetti ingegneristici derivati o ispirati d
 ## 1. Riferimenti Ingegneristici Open Source
 
 - **PhotoCraft / PhotoSuite** (`storytold/photocraft`)
-  - Licenza: MIT / Apache-2.0 dual license
+  - Licenza: MIT / Apache-2.0 dual license (Copyright (c) 2024-2026 PhotoCraft contributors)
   - Ruolo: Ispirazione concettuale per il mapping di layer e compositing su canvas WebGPU/WASM (nessuna copia di codice proprietario, clean room §7).
+  - Codec PSD Writer (`crates/io-psd/src/writer/`): Adattamento clean-room di strutture dati e algoritmi di scrittura PSD/PSB da `photocraft-psd` (`builder.rs`, `records.rs`, `resources.rs`), con mapping dei tipi di Pizzico (`Document`, `Layer`), blend modes, risoluzione ResolutionInfo (DPI) e compositing reale. Data: 2026-10-25.
 - **VectorCraft**
   - Licenza: MIT / Apache-2.0 dual license
   - Ruolo: Riferimento concettuale per pipeline e strutture dati vettoriali.

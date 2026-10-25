@@ -159,3 +159,13 @@ Sia $b$ un byte interpretato come intero con segno a 8 bit (`i8`):
 3. **$b = -128$ (`0x80`)**: Valore no-op (ignorato / saltato).
 
 La decodifica termina quando il buffer di output raggiunge la dimensione attesa di una scansione ($width$ pixel).
+
+---
+
+## 4. Vettoriali in PSD export
+
+In conformità alle decisioni architetturali del Manifesto (§5.4, §6.5):
+- **Strategia adottata (Opzione A)**: I layer vettoriali (`LayerKind::Vector`) vengono rasterizzati in RGBA8 prima della scrittura binaria nel file PSD.
+- **Motivazione tecnica**: Il formato PSD per vettoriali nativi richiede blocchi proprietari (`vscg`, `path`, `TySh`) con coordinate e curve Bézier chiuse proprietarie Adobe che risultano fuori dallo scope della Fase 1 (editor raster).
+- **Interoperabilità**: La rasterizzazione preventiva in RGBA8 garantisce che il file PSD prodotto da Pizzico sia immediatamente valido, visualizzabile ed editabile su Photopea, Photoshop, GIMP e Illustrator senza corruzione o rigetto. Il supporto vettoriale nativo in PSD verrà rivalutato nella Fase 2.
+
