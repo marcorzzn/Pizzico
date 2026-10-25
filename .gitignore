@@ -58,3 +58,6 @@ docs/_legacy/*
 # Public exports & test assets
 apps/web/public/exports/
 apps/web/public/*.psd
+
+# Progetti da aggregare (audit esterno, mai committare)
+progetti da aggregare/
