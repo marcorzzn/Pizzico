@@ -23,7 +23,10 @@ target/
 Cargo.lock
 crates/**/pkg/
 packages/**/pkg/
+!packages/worker-core/pkg/
 *.wasm
+!apps/web/public/pizzico_wasm_bindings_bg.wasm
+!packages/worker-core/pkg/pizzico_wasm_bindings_bg.wasm
 
 # Tauri
 apps/tauri/src-tauri/target/

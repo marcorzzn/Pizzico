@@ -151,3 +151,10 @@ Pizzico is dual-licensed under:
 - **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
 
 All documentation is licensed under **Creative Commons Attribution 4.0 International (CC-BY-4.0)**.
+
+---
+
+## Live Demo
+
+Try Pizzico now: [https://pizzico.pages.dev/](https://pizzico.pages.dev/)  
+Works offline after first load. Import a PSD to get started.
