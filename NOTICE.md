@@ -19,6 +19,12 @@ Questo prodotto include software e concetti ingegneristici derivati o ispirati d
   - Licenza: MIT / Apache-2.0 dual license (Copyright (c) 2024-2026 PhotoCraft contributors)
   - Ruolo: Ispirazione concettuale per il mapping di layer e compositing su canvas WebGPU/WASM (nessuna copia di codice proprietario, clean room §7).
   - Codec PSD Writer (`crates/io-psd/src/writer/`): Adattamento clean-room di strutture dati e algoritmi di scrittura PSD/PSB da `photocraft-psd` (`builder.rs`, `records.rs`, `resources.rs`), con mapping dei tipi di Pizzico (`Document`, `Layer`), blend modes, risoluzione ResolutionInfo (DPI) e compositing reale. Data: 2026-10-25.
+- **LightCraft** (`storytold/lightcraft`)
+  - Licenza: MIT / Apache-2.0 dual license (Copyright (c) 2024-2026 LightCraft contributors)
+  - Ruolo: Algoritmi di color science e gestione del colore (`crates/color/`): spazi colore radiometrici e gamut primari (sRGB, Display P3, Rec.2020, ProPhoto, Adobe RGB), adattamento cromatico Bradford D50/D65, funzioni di trasferimento EOTF/OETF (sRGB, Rec.709, PQ ST.2084, HLG, Gamma puro), spazi percettivi uniformi OkLab/OkLCh, stima temperatura colore correlata CCT e bilanciamento del bianco, spline cubiche monotone (Fritsch-Carlson) e gestione profili ICC v4 display-class matrix/TRC. Data: 2026-10-25.
+- **`moxcms`**
+  - Licenza: MIT OR Apache-2.0 (Copyright (c) Radzivon Bartoshyk)
+  - Ruolo: Motore puro Rust per il parsing, serializzazione e applicazione di profili colore ICC (ICC.1:2010), privo di runtime C o legami FFI, compatibile al 100% con compilazione WebAssembly `wasm32-unknown-unknown` (`crates/color/src/icc.rs`).
 - **VectorCraft**
   - Licenza: MIT / Apache-2.0 dual license
   - Ruolo: Riferimento concettuale per pipeline e strutture dati vettoriali.
@@ -136,6 +142,28 @@ Ogni algoritmo implementato in Pizzico è tracciabile a uno dei seguenti paper s
     - Yin Li, Jian Sun, Chi-Keung Tang, Heung-Yeung Shum.  
       *Lazy Snapping*.  
       ACM TOG (SIGGRAPH 2004).
+21. **Perceptually Uniform Color Space (OkLab / OkLCh)**
+    - Björn Ottosson.  
+      *A perceptual color space for image processing*.  
+      Published online (2020), URL: https://bottosson.github.io/posts/oklab/
+22. **Correlated Color Temperature (CCT) and Duv Tint**
+    - Yoshi Ohno.  
+      *Practical Use and Calculation of CCT and Duv*.  
+      LEUKOS (Journal of the Illuminating Engineering Society of North America), 2013, 10(1):47-55.
+    - A. R. Robertson.  
+      *Computation of Correlated Color Temperature and Distribution Temperature*.  
+      Journal of the Optical Society of America (JOSA), 1968, 58(11):1528-1535.
+    - D. Y. Kim et al.  
+      *Color temperature tuning based on Robertson's method*.  
+      Optics Express 2002.
+23. **Monotone Piecewise Cubic Interpolation**
+    - F. N. Fritsch, R. E. Carlson.  
+      *Monotone Piecewise Cubic Interpolation*.  
+      SIAM Journal on Numerical Analysis, 1980, 17(2):238–246.
+24. **ICC Color Management Specification**
+    - International Color Consortium (ICC).  
+      *Specification ICC.1:2010 (Profile version 4.3.0.0): Image technology colour management — Architecture, profile format, and data structure*.  
+      ISO 15076-1:2010.
 
 ---
 
