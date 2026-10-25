@@ -1,9 +1,3 @@
-<!--
-Pizzico — README.md
-Riferimento manifesto: §1, §2, §10
-Licenza: MIT OR Apache-2.0
--->
-
 <p align="center">
   <img src="./packages/ui-kit/tokens/logo.svg" alt="Pizzico Logo" width="128" height="128" />
 </p>
@@ -11,135 +5,149 @@ Licenza: MIT OR Apache-2.0
 <h1 align="center">Pizzico</h1>
 
 <p align="center">
-  <strong>Laboratorio di Ingegneria del Software Creativo</strong><br />
-  Editor grafico professionale ibrido (raster + vettoriale), offline-first, gratuito e fondato su letteratura scientifica verificabile.
+  <strong>A professional, offline-first graphics editor for the web and mobile, built in Rust + WebAssembly.</strong><br />
+  <em>No AI, no cloud dependencies, no subscription. 100% free and open-source.</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/pizzico/pizzico/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/CI-Passing-brightgreen?style=flat-square" alt="CI Status" /></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml"><img src="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+  <a href="https://pizzico.pages.dev"><img src="https://img.shields.io/badge/Live_Demo-pizzico.pages.dev-success?style=flat-square&logo=cloudflare" alt="Live Demo" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=flat-square" alt="License: MIT / Apache-2.0" /></a>
   <a href="./NOTICE.md"><img src="https://img.shields.io/badge/Papers-20%2B%20Peer--Reviewed-purple?style=flat-square" alt="Scientific Citations" /></a>
   <a href="./docs/clean-room/methodology.md"><img src="https://img.shields.io/badge/Clean%20Room-Strict-teal?style=flat-square" alt="Clean Room Verified" /></a>
 </p>
 
 ---
 
-## 1. Identità del Progetto (§1)
+## Overview
 
-**Pizzico** è un editor grafico ibrido per web e mobile (PWA + APK Tauri 2), ideato come **laboratorio aperto di ingegneria del software creativo**.  
-Non è un clone di prodotti commerciali: ricrea le funzionalità più potenti e desiderate in versioni **matematicamente rigorose** e documentate, implementate in **Rust / WebAssembly** con accelerazione **WebGPU** e degradazione a WebGL2.
+**Pizzico** is a high-performance raster and vector graphics editor designed from the ground up to run locally in your browser and on mobile devices. Powered by a pure-Rust core compiled to WebAssembly with WebGPU hardware acceleration, Pizzico delivers desktop-grade editing with zero cloud lock-in.
 
-- **Offline-First**: il primo caricamento scarica l'infrastruttura; dopodiché ogni operazione funziona senza connettività tramite OPFS e IndexedDB.
-- **Nessuna dipendenza da IA in v1**: nessuna chiamata API a pagamento, nessun modello cloud opaco. Le operazioni "AI-like" (rimozione sfondo, inpainting, content-aware) sono risolte con algoritmi deterministici classici (PatchMatch, Poisson, Graph Cut, PDE del 4° ordine).
-- **Zero Costi**: infrastruttura serverless su Cloudflare Pages (free tier) con header COOP/COEP per multithreading `SharedArrayBuffer` nativo.
-- **Clean Room Assoluto**: metodologia documentata in `docs/clean-room/` con divieto di reverse engineering illegittimo di codice proprietario.
-
----
-
-## 2. Architettura del Repository (§4)
-
-```
-pizzico/
-├── Cargo.toml                        # Workspace Rust root
-├── package.json                      # Workspace pnpm root
-├── pnpm-workspace.yaml               # Configurazione monorepo TypeScript
-├── LICENSE                           # Dual MIT / Apache-2.0
-├── NOTICE.md                         # Attribuzioni paper e software open source
-│
-├── crates/                           # Motore Core in Rust (compilato in WASM)
-│   ├── core/                         # Documento, livelli polimorfici, storia, undo/redo
-│   ├── raster/                       # Filtri Halide-style, blending non-lineare, compositing
-│   ├── vector/                       # Curve Bézier, κ-curves, espansione stroke, booleane
-│   ├── color/                        # Spazi colore, OpenColorIO (OCIO), 3D LUT
-│   ├── io-psd/                       # Parser/scrittore PSD/PSB secondo spec ufficiale Adobe
-│   ├── io-native/                    # Formato serializzato .pizzico (ZIP + JSON + binary)
-│   ├── io-svg/                       # Parser e serializer SVG
-│   ├── text/                         # Text shaping professionale basato su rustybuzz (HarfBuzz)
-│   ├── render/                       # Backend WebGPU (wgpu) con fallback WebGL2 e CPU
-│   ├── selection/                    # Maschere, Magic Wand, Graph Cut multilivello
-│   ├── inpainting/                   # PatchMatch, Poisson Seamless Cloning, PDE 4th-order
-│   ├── commands/                     # Registro unificato comandi (~700 API invocabili)
-│   └── wasm-bindings/                # Interfaccia TypeScript ↔ WASM con shared memory
-│
-├── packages/                         # Shell e UI Kit TypeScript (SolidJS/Svelte)
-│   ├── ui-kit/                       # Design system adattivo, token, primitive di input
-│   ├── ui-web/                       # Shell responsive per desktop e PWA
-│   ├── ui-mobile/                    # Shell mobile touch-first con bottom sheets
-│   ├── worker-core/                  # Web Worker per esecuzione WASM non-bloccante
-│   ├── command-palette/              # Palette comandi contestuale (⌘K)
-│   └── shared/                       # Tipi e interfacce condivise tra moduli
-│
-├── apps/
-│   ├── web/                          # Applicazione Web PWA con Service Worker e OPFS
-│   └── tauri/                        # Shell nativa Tauri 2 per Android e iOS
-│
-├── tools/                            # Tooling interno di build e benchmark
-│   ├── benchmark/                    # Benchmark suite su corpus di immagini e PSD reali
-│   ├── clean-room-log/               # Registro tracciamento consultazione paper e spec
-│   └── design-tokens/                # Generatore CSS variables dai token TypeScript
-│
-├── tests/
-│   ├── psd-corpus/                   # Suite di regressione su file PSD di test
-│   ├── e2e/                          # Test end-to-end con Playwright
-│   └── benchmarks/                   # Misurazioni prestazionali a garanzia dei 60 FPS
-│
-└── docs/
-    ├── ADR/                          # Architectural Decision Records
-    ├── clean-room/                   # Metodologia e log di isolamento
-    ├── algorithms/                   # Schede di dettaglio per ogni paper implementato
-    └── ui/                           # Principi scientifici di Human-Computer Interaction
-```
+- **Offline-First & Local Storage**: Loads instantly from cache and saves your work locally via the Origin Private File System (OPFS) and IndexedDB.
+- **Full Photoshop PSD Compatibility**: Full import and export of Adobe Photoshop PSD files with layers, blend modes, and opacity, independently verified with Adobe Photoshop and Photopea.
+- **Deterministic & Scientific**: No opaque AI API calls or paid cloud inference. Advanced features use verified, peer-reviewed computer science literature.
+- **Zero Cost & Free**: Dual-licensed under MIT and Apache-2.0.
 
 ---
 
-## 3. Fondamenti Scientifici (§5, §6)
+## Showcase
 
-Ogni algoritmo e ogni componente di interfaccia è tracciabile a una pubblicazione accademica o standard pubblico:
+<p align="center">
+  <img src="docs/assets/photopea-validation.png" alt="Photopea PSD Validation" width="85%" />
+  <br />
+  <em>Adobe Photoshop PSD Export: Verified in Photopea with preserved layer hierarchy, blend modes, and opacity.</em>
+</p>
 
-- **HCI & UI Design**:
-  - *Cognitive Load Theory* (Sweller, 1988)
-  - *Legge di Hick-Hyman* (Hick, 1952; Hyman, 1953)
-  - *Legge di Fitts* (Fitts, 1954)
-  - *Progressive Disclosure a 3 Livelli* (Nielsen, 2006)
-- **Raster & Inpainting**:
-  - *PatchMatch* (Barnes et al., SIGGRAPH 2009)
-  - *Healing Brush 4th-order PDE* (Georgiev, 2004)
-  - *Poisson Image Editing* (Di Martino et al., IPOL 2016)
-  - *Halide Pipeline Scheduling* (Ragan-Kelley et al., PLDI 2013)
-  - *O(1) Median Filter* (Perreault & Hébert, IEEE TIP 2007)
-- **Vettori & Tipografia**:
-  - *κ-Curves* (Miura et al., The Visual Computer 2021)
-  - *Euler Spiral Stroke Expansion* (Levien & Uguray, PACMCGIT 2024)
-  - *Exact Boolean Arrangement* (Berberich et al., ESA 2002)
-  - *HarfBuzz Typography Shaping* (`rustybuzz`)
-
-Vedere [`NOTICE.md`](./NOTICE.md) e la cartella [`docs/algorithms/`](./docs/algorithms/) per formule, schemi e dettagli.
+<p align="center">
+  <img src="docs/assets/feature-selection.png" alt="Layer Management and Selection" width="48%" />
+  <img src="docs/assets/feature-export.png" alt="Multi-format Export Pipeline" width="48%" />
+</p>
 
 ---
 
-## 4. Requisiti e Sviluppo Locale
+## Features
 
-### Prerequisiti
+- **PSD Codec**: Import and export layered `.psd` files (PackBits RLE compression, tagged blocks `luni`, `lyid`, `lsct`).
+- **Layer Engine**: Full raster and vector layer stack with 24 blend modes, opacity, visibility toggles, and reordering.
+- **High-Performance Brush**: Pressure-sensitive, anti-aliased continuous strokes running at 60 FPS.
+- **Undo / Redo History**: Bounding-box-optimized atomic undo/redo with instant memory rollback.
+- **Precision Selection**: Rectangular selection marquee with clipping mask constraints.
+- **Multi-Format Export**: Export to PNG, JPEG, WebP, and layered PSD.
+- **Persistence**: Automatic background saving using the Origin Private File System (OPFS) and IndexedDB fallback.
+- **WebGPU Rendering**: Compute-shader compositing with graceful WebGL2 and Canvas fallback.
+- **PWA & Mobile Ready**: Progressive Web App installable on any modern desktop or smartphone.
+
+---
+
+## Quick Start
+
+### Online Demo
+Try Pizzico directly in your browser without installation:
+👉 **[https://pizzico.pages.dev](https://pizzico.pages.dev)**
+
+### Local Development
+
+#### Prerequisites
 - **Node.js** >= 20.x
 - **pnpm** >= 9.x
-- **Rust** >= 1.78 con target `wasm32-unknown-unknown`
-- **wasm-pack** per la generazione dei binding WASM
+- **Rust** >= 1.78 with the `wasm32-unknown-unknown` target
+- **wasm-pack**: `cargo install wasm-pack`
 
-### Avvio
+#### Clone and Run
 ```bash
-# Installa dipendenze del monorepo
+# Clone the repository
+git clone https://github.com/marcorzzn/Pizzico.git
+cd Pizzico
+
+# Install workspace dependencies
 pnpm install
 
-# Compila il core Rust in WebAssembly
+# Build the Rust core to WebAssembly
 pnpm build:wasm
 
-# Avvia il server di sviluppo web locale
+# Start the local development server
 pnpm dev
 ```
 
+Open `http://localhost:5173` in your browser.
+
 ---
 
-## 5. Licenza (§8)
+## Architecture
 
-Questo progetto è rilasciato con doppia licenza **MIT OR Apache-2.0**.  
-La documentazione è rilasciata sotto licenza **CC-BY-4.0**.
+Pizzico employs a modular clean-room architecture separating the memory-safe computational core from the web shell:
+
+```mermaid
+graph TD
+    subgraph UI ["Frontend Shell (TypeScript + Vite)"]
+        UI_Web["apps/web (PWA Shell)"]
+        UI_Components["packages/ui-web (UI Components)"]
+        Worker["packages/worker-core (Web Worker)"]
+    end
+
+    subgraph WASM ["WebAssembly Bridge"]
+        Bindings["crates/wasm-bindings"]
+    end
+
+    subgraph Core ["Rust Core Engine"]
+        Core_Doc["pizzico-core (Document, Layers, History)"]
+        Raster["pizzico-raster (Compositing & Blending)"]
+        PSD["pizzico-io-psd (Adobe PSD Parser & Writer)"]
+        Color["pizzico-color (Color Spaces & LUTs)"]
+        Render["pizzico-render (WebGPU Pipeline)"]
+    end
+
+    UI_Web --> UI_Components
+    UI_Components --> Worker
+    Worker --> Bindings
+    Bindings --> Core_Doc
+    Core_Doc --> Raster
+    Core_Doc --> PSD
+    Core_Doc --> Color
+    Core_Doc --> Render
+```
+
+---
+
+## Documentation
+
+- **[Architectural Decision Records (ADR)](docs/ADR/)**: Design choices, tradeoffs, and system evolution.
+- **[Algorithm References](docs/algorithms/)**: Mathematical specifications and paper citations for every algorithm.
+- **[Milestone Progress](docs/milestones/)**: Phase milestones, verification criteria, and test logs.
+- **[Clean-Room Methodology](docs/clean-room/methodology.md)**: Intellectual property isolation and provenance tracking.
+
+---
+
+## Contributing
+
+We welcome contributions! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, commit conventions, testing requirements, and submission processes.
+
+---
+
+## License
+
+Pizzico is dual-licensed under:
+- **MIT License** ([LICENSE-MIT](LICENSE) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+- **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
+
+All documentation is licensed under **Creative Commons Attribution 4.0 International (CC-BY-4.0)**.
