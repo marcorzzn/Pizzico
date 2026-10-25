@@ -60,6 +60,7 @@ import {
   export_as_png,
   export_as_jpeg,
   export_as_webp,
+  export_as_psd,
 } from '@pizzico/worker-core';
 import { saveAutosave, loadAutosave, clearAutosave } from './storage';
 
@@ -104,6 +105,7 @@ const shell = new DesktopShellLayout({
   onExportPng: () => handleExportPng(),
   onExportJpeg: (q) => handleExportJpeg(q),
   onExportWebp: (q) => handleExportWebp(q),
+  onExportPsd: () => handleExportPsd(),
   onUndo: () => handleUndo(),
   onRedo: () => handleRedo(),
   onDeselect: () => handleDeselect(),
@@ -423,6 +425,30 @@ function handleExportWebp(quality: number = 90) {
     }
   }, 30);
 }
+
+function handleExportPsd() {
+  if (!wasmReady) {
+    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    return;
+  }
+  showLoadingSpinner('Generazione file Adobe PSD multilivello…');
+  setTimeout(() => {
+    try {
+      const bytes = export_as_psd();
+      const title = getSanitizedDocTitle();
+      const filename = `${title}.psd`;
+      const blob = new Blob([bytes as any], { type: 'image/vnd.adobe.photoshop' });
+      downloadBlob(blob, filename);
+      hideLoadingSpinner();
+      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+    } catch (err) {
+      hideLoadingSpinner();
+      console.error('[Export PSD] Errore:', err);
+      showToast('❌ Errore durante l\'esportazione PSD: ' + err, 'error');
+    }
+  }, 30);
+}
+
 
 // Banner interattivo per il ripristino all'avvio (§10 Step H)
 function showRestorePrompt(onRestore: () => void, onDiscard: () => void) {
@@ -915,9 +941,11 @@ window.addEventListener('resize', () => syncSelectionUi());
 (window as any).__exportPng = () => handleExportPng();
 (window as any).__exportJpeg = (q?: number) => handleExportJpeg(q);
 (window as any).__exportWebp = (q?: number) => handleExportWebp(q);
+(window as any).__exportPsd = () => handleExportPsd();
 (window as any).__exportPngBytes = () => export_as_png();
 (window as any).__exportJpegBytes = (q: number = 90) => export_as_jpeg(q);
 (window as any).__exportWebpBytes = (q: number = 90) => export_as_webp(q);
+(window as any).__exportPsdBytes = () => export_as_psd();
 
 // ── 8. Gestione e Render Dinamico del Pannello Livelli (§5.3, §5.4) ───────────
 

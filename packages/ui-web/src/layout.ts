@@ -16,6 +16,7 @@ export interface LayoutOptions {
   onExportPng?: () => void;
   onExportJpeg?: (quality: number) => void;
   onExportWebp?: (quality: number) => void;
+  onExportPsd?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onDeselect?: () => void;
@@ -198,6 +199,16 @@ export class DesktopShellLayout {
         <input type="range" id="export-webp-quality" min="1" max="100" value="90" style="width: 100%; accent-color: #34d399; cursor: pointer;" />
         <button id="export-webp-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica WebP</button>
       </div>
+
+      <!-- PSD Item -->
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>PSD (Adobe Photoshop)</span>
+          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">Multilivello</span>
+        </div>
+        <div class="pz-export-item-desc">Formato Adobe PSD multilivello conforme Photopea/Photoshop con canali RLE e composito.</div>
+        <button id="export-psd-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica PSD</button>
+      </div>
     `;
 
     this.root.appendChild(this.exportDropdown);
@@ -245,6 +256,11 @@ export class DesktopShellLayout {
       this.exportDropdown.style.display = 'none';
       const q = parseInt(webpSlider?.value || '90', 10);
       if (options.onExportWebp) options.onExportWebp(q);
+    });
+
+    this.exportDropdown.querySelector('#export-psd-btn')?.addEventListener('click', () => {
+      this.exportDropdown.style.display = 'none';
+      if (options.onExportPsd) options.onExportPsd();
     });
 
     this.openPsdBtn = document.createElement('button');

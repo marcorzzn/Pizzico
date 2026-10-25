@@ -372,6 +372,16 @@ pub fn export_as_webp(quality: u8) -> Result<Vec<u8>, JsValue> {
     })
 }
 
+/// Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+#[wasm_bindgen]
+pub fn export_as_psd() -> Result<Vec<u8>, JsValue> {
+    with_active_document(|doc| {
+        pizzico_io_psd::export_psd(doc)
+            .map_err(|e| JsValue::from_str(&format!("Errore esportazione PSD: {}", e)))
+    })
+}
+
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Brush Engine & Undo/Redo Bridge (§6.1, §10 Fase 1)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1072,6 +1082,11 @@ impl PizzicoEngine {
     /// Esporta in formato WebP (pure-Rust lossless con alpha).
     pub fn export_as_webp(&self, quality: u8) -> Result<Vec<u8>, JsValue> {
         export_as_webp(quality)
+    }
+
+    /// Esporta l'intero documento in formato PSD multilivello.
+    pub fn export_as_psd(&self) -> Result<Vec<u8>, JsValue> {
+        export_as_psd()
     }
 }
 

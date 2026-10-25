@@ -60,6 +60,10 @@ export class PizzicoEngine {
      */
     export_as_png(): Uint8Array;
     /**
+     * Esporta l'intero documento in formato PSD multilivello.
+     */
+    export_as_psd(): Uint8Array;
+    /**
      * Esporta in formato WebP (pure-Rust lossless con alpha).
      */
     export_as_webp(quality: number): Uint8Array;
@@ -242,6 +246,11 @@ export function export_as_jpeg(quality: number): Uint8Array;
 export function export_as_png(): Uint8Array;
 
 /**
+ * Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+ */
+export function export_as_psd(): Uint8Array;
+
+/**
  * Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
  */
 export function export_as_webp(quality: number): Uint8Array;
@@ -405,6 +414,7 @@ export interface InitOutput {
     readonly eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly export_as_jpeg: (a: number) => [number, number, number, number];
     readonly export_as_png: () => [number, number, number, number];
+    readonly export_as_psd: () => [number, number, number, number];
     readonly export_as_webp: (a: number) => [number, number, number, number];
     readonly get_active_layer_id: () => number;
     readonly get_active_layer_offset: () => any;
@@ -436,6 +446,7 @@ export interface InitOutput {
     readonly pizzicoengine_eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly pizzicoengine_export_as_jpeg: (a: number, b: number) => [number, number, number, number];
     readonly pizzicoengine_export_as_png: (a: number) => [number, number, number, number];
+    readonly pizzicoengine_export_as_psd: (a: number) => [number, number, number, number];
     readonly pizzicoengine_export_as_webp: (a: number, b: number) => [number, number, number, number];
     readonly pizzicoengine_get_active_layer_id: (a: number) => number;
     readonly pizzicoengine_get_active_layer_offset: (a: number) => any;

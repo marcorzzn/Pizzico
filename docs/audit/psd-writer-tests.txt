@@ -1,0 +1,47 @@
+   Compiling pizzico-io-psd v0.1.0 (C:\Progetti\Pizzico\crates\io-psd)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.43s
+     Running unittests src\lib.rs (target\debug\deps\pizzico_io_psd-352a7793e88c9327.exe)
+
+running 12 tests
+test color_mode::tests::test_parse_empty_color_mode_data ... ok
+test color_mode::tests::test_parse_indexed_palette ... ok
+test header::tests::test_reject_invalid_signature ... ok
+test header::tests::test_parse_valid_header ... ok
+test header::tests::test_reject_unsupported_version ... ok
+test header::tests::test_roundtrip_write_parse ... ok
+test image_resources::tests::test_parse_empty_resources ... ok
+test image_resources::tests::test_roundtrip_resource_block ... ok
+test rle::tests::test_packbits_repeat ... ok
+test rle::tests::test_packbits_literal_copy ... ok
+test layer_records::tests::test_layer_record_roundtrip ... ok
+test rle::tests::test_packbits_roundtrip ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\integration_tests.rs (target\debug\deps\integration_tests-728b889eeb516b8c.exe)
+
+running 5 tests
+test test_decompress_rle ... ok
+test test_parse_header ... ok
+test test_parse_layers ... ok
+test test_import_full_psd_into_document ... ok
+test test_corpus_sample_01 ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+
+     Running tests\writer_tests.rs (target\debug\deps\writer_tests-582570af80e20370.exe)
+
+running 4 tests
+test test_rle_encoder_roundtrip ... ok
+test test_padding_correctness ... ok
+test test_serialize_minimal_document ... ok
+test test_roundtrip_sample_01 ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.70s
+
+   Doc-tests pizzico_io_psd
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

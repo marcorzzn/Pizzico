@@ -68,6 +68,7 @@ export {
   export_as_png,
   export_as_jpeg,
   export_as_webp,
+  export_as_psd,
 } from '../pkg/pizzico_wasm_bindings';
 
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';

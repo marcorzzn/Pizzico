@@ -155,6 +155,19 @@ export class PizzicoEngine {
         return v1;
     }
     /**
+     * Esporta l'intero documento in formato PSD multilivello.
+     * @returns {Uint8Array}
+     */
+    export_as_psd() {
+        const ret = wasm.pizzicoengine_export_as_psd(this.__wbg_ptr);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * Esporta in formato WebP (pure-Rust lossless con alpha).
      * @param {number} quality
      * @returns {Uint8Array}
@@ -578,6 +591,20 @@ export function export_as_jpeg(quality) {
  */
 export function export_as_png() {
     const ret = wasm.export_as_png();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+ * @returns {Uint8Array}
+ */
+export function export_as_psd() {
+    const ret = wasm.export_as_psd();
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
@@ -1063,7 +1090,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 241, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 242, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
