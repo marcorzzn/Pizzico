@@ -296,3 +296,25 @@ di ottimizzazione, non un porting.
 Questa sessione non ha modificato nulla: nessun file di codice, nessuna installazione.
 L'unico file prodotto è questo documento. I due errori Cargo riportati sono testuali, non
 parafrasati, e si riproducono con i comandi indicati.
+
+---
+
+## 6. Decisioni prese al termine della ricognizione
+
+Due scelte fatte dal committente alla chiusura di questa sessione. Sono vincolanti per
+l'apertura della Fase 7.
+
+1. **Si parte dal blocco B, non da A.** Prima rendere il crate compilabile per l'host
+   (`build.rs`, `lib.rs` con `crate-type` mobile, icone raster, `capabilities/`, schema
+   ufficiale, e la decisione workspace con `[workspace]` vuoto per non rompere la CI).
+   Motivo: non richiede la toolchain Android, quindi si verifica subito con `cargo check` su
+   Windows. L'installazione della toolchain (blocco A) resta a carico del committente e può
+   avvenire in parallelo senza bloccare.
+2. **La verifica funzionale si farà su dispositivo reale**, non solo su emulatore. Motivo:
+   è l'unico modo per rispondere alla domanda aperta — «il fallback Canvas2D regge un
+   documento reale su WebView Android?» — che è anche l'unica che può invalidare
+   l'architettura e non solo la pianificazione.
+
+Restano aperte, da decidere più avanti: distribuzione su Google Play o solo GitHub Releases
+(cambia requisiti di firma e split per ABI) e se il pannello da 280px diventi un bottom
+sheet o resti un pannello ridimensionato su schermi stretti.
