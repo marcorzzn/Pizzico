@@ -71,6 +71,9 @@ apps/web/public/*.psd
 # Progetti da aggregare (audit esterno, mai committare)
 progetti da aggregare/
 
+# Banco di prova locale (esperimenti A/B, non fa parte del prodotto)
+scratch/
+
 # Archivio personale di analisi — MAI committare (contiene materiale locale)
 _archivio-personale/
 **/*.apk
