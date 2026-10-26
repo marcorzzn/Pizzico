@@ -4,10 +4,12 @@
 
 name: Release Signed APK (Tauri 2)
 
+# The APK build is not implemented yet: the "Build Android APK" step below is
+# still a placeholder, and android-actions/setup-android@v3 fails on current
+# runner images (it looks for the removed legacy 'tools' SDK package).
+# This workflow must therefore NOT run automatically on tags, otherwise every
+# release produces a red run. Trigger it manually once the build works.
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
