@@ -26,8 +26,8 @@ use wasm_bindgen::prelude::*;
 
 use pizzico_commands::CommandRegistry;
 use pizzico_core::{
-    AddLayerCommand, Command, Document, History, Layer, LayerKind, MoveLayerCommand,
-    RemoveLayerCommand, SetOpacityCommand, SetVisibilityCommand, StrokeCommand,
+    Command, Document, LayerKind, MoveLayerCommand, RemoveLayerCommand, SetOpacityCommand,
+    SetVisibilityCommand, StrokeCommand,
 };
 use pizzico_raster::brush::{BoundingBox, Brush};
 
@@ -57,12 +57,31 @@ thread_local! {
     /// accedono tramite `with_active_document(_mut)`.
     static BACKEND: RefCell<Box<dyn crate::engine::EngineBackend>> =
         RefCell::new(Box::new(crate::engine::legacy::LegacyBackend::new()));
-    static ACTIVE_HISTORY: RefCell<History> = RefCell::new(History::new(50));
     static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
     static ACTIVE_MOVE: RefCell<Option<ActiveMoveState>> = RefCell::new(None);
 }
 
 static DOCUMENT_DIRTY: AtomicBool = AtomicBool::new(true);
+
+/// Esegue una closure con il backend in sola lettura.
+fn with_backend<R>(f: impl FnOnce(&dyn crate::engine::EngineBackend) -> R) -> R {
+    BACKEND.with(|cell| f(&**cell.borrow()))
+}
+
+/// Esegue una closure con il backend modificabile.
+fn with_backend_mut<R>(f: impl FnOnce(&mut dyn crate::engine::EngineBackend) -> R) -> R {
+    BACKEND.with(|cell| f(&mut **cell.borrow_mut()))
+}
+
+/// Accoda alla history del backend un comando già applicato al documento.
+fn push_command_via_backend(cmd: Box<dyn pizzico_core::history::Command>) {
+    with_backend_mut(|b| b.push_command(cmd));
+}
+
+/// Svuota la history del backend.
+fn clear_history_via_backend() {
+    with_backend_mut(|b| b.clear_history());
+}
 
 /// Indica se il documento è stato modificato dall'ultimo frame di rendering.
 pub fn is_document_dirty() -> bool {
@@ -145,7 +164,7 @@ pub fn create_document(width: u32, height: u32) {
     // Il documento è ricreato dal backend scelto: la funzione non conosce più né
     // `Document::new_empty` né il tipo concreto del motore.
     BACKEND.with(|cell| cell.borrow_mut().create_document(width, height));
-    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    clear_history_via_backend();
     ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
     set_document_dirty(true);
 }
@@ -160,13 +179,9 @@ pub fn add_raster_layer(name: &str, width: u32, height: u32, color: &[u8]) -> u6
         [255, 255, 255, 255]
     };
 
-    with_active_document_mut(|doc| {
-        let id = doc.allocate_layer_id();
-        let layer = Layer::new_raster_color(id, name, width, height, col);
-        let cmd = Box::new(AddLayerCommand::new(layer));
-        ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
-        doc.add_layer(Layer::new_raster_color(id, name, width, height, col))
-    })
+    // La funzione delega al backend: era l'unico punto con due prestiti annidati
+    // (documento + history). Ora è il backend a occuparsi di entrambi, in modo atomico.
+    with_backend_mut(|b| b.add_raster_layer(name, width, height, col))
 }
 
 /// Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
@@ -242,7 +257,7 @@ pub fn set_layer_opacity(id: u32, opacity: f32) {
         doc.set_layer_opacity(id_u64, opacity);
     });
     let cmd = Box::new(SetOpacityCommand::new(id_u64, old_opacity, opacity));
-    ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+    push_command_via_backend(cmd);
 }
 
 /// Imposta la visibilità del livello specificato e marca il documento dirty.
@@ -254,7 +269,7 @@ pub fn set_layer_visibility(id: u32, visible: bool) {
         doc.set_layer_visibility(id_u64, visible);
     });
     let cmd = Box::new(SetVisibilityCommand::new(id_u64, old_vis, visible));
-    ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+    push_command_via_backend(cmd);
 }
 
 /// Seleziona il livello specificato come livello attivo nel documento.
@@ -273,7 +288,7 @@ pub fn remove_layer(id: u32) -> bool {
     let success = with_active_document_mut(|doc| doc.remove_layer(id_u64).is_some());
     if success {
         if let Some(cmd) = cmd_opt {
-            ACTIVE_HISTORY.with(|h| h.borrow_mut().push(Box::new(cmd)));
+            push_command_via_backend(Box::new(cmd));
         }
     }
     success
@@ -333,7 +348,7 @@ pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
         *doc = imported_doc;
     });
 
-    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    clear_history_via_backend();
     ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
 
     Ok(())
@@ -360,7 +375,7 @@ pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
         *doc = imported_doc;
     });
 
-    ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+    clear_history_via_backend();
     ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
     ACTIVE_MOVE.with(|m| *m.borrow_mut() = None);
 
@@ -654,7 +669,7 @@ pub fn end_stroke() -> bool {
         });
 
         if let Some(cmd) = cmd_opt {
-            ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+            push_command_via_backend(cmd);
             set_document_dirty(true);
             return true;
         }
@@ -665,37 +680,33 @@ pub fn end_stroke() -> bool {
 /// Annulla (Undo) l'ultima operazione effettuata nel documento.
 #[wasm_bindgen]
 pub fn undo() -> bool {
-    ACTIVE_HISTORY.with(|h| {
-        let res = with_active_document_mut(|doc| h.borrow_mut().undo(doc));
-        if res {
-            set_document_dirty(true);
-        }
-        res
-    })
+    let res = with_backend_mut(|b| b.history_undo());
+    if res {
+        set_document_dirty(true);
+    }
+    res
 }
 
 /// Ripristina (Redo) l'ultima operazione precedentemente annullata.
 #[wasm_bindgen]
 pub fn redo() -> bool {
-    ACTIVE_HISTORY.with(|h| {
-        let res = with_active_document_mut(|doc| h.borrow_mut().redo(doc));
-        if res {
-            set_document_dirty(true);
-        }
-        res
-    })
+    let res = with_backend_mut(|b| b.history_redo());
+    if res {
+        set_document_dirty(true);
+    }
+    res
 }
 
 /// Verifica se è presente almeno un'operazione annullabile nella cronologia.
 #[wasm_bindgen]
 pub fn can_undo() -> bool {
-    ACTIVE_HISTORY.with(|h| h.borrow().can_undo())
+    with_backend(|b| b.history_can_undo())
 }
 
 /// Verifica se è presente almeno un'operazione ripristinabile nella cronologia.
 #[wasm_bindgen]
 pub fn can_redo() -> bool {
-    ACTIVE_HISTORY.with(|h| h.borrow().can_redo())
+    with_backend(|b| b.history_can_redo())
 }
 
 /// DTO serializzabile per lo stato corrente del sistema di cronologia (Undo/Redo).
@@ -714,15 +725,13 @@ pub struct HistoryInfoDto {
 /// Restituisce lo stato corrente della History in formato oggetto JS `{ canUndo, canRedo, undoCount, redoCount }`.
 #[wasm_bindgen]
 pub fn get_history_info() -> Result<JsValue, JsValue> {
-    let dto = ACTIVE_HISTORY.with(|h| {
-        let hist = h.borrow();
-        HistoryInfoDto {
-            can_undo: hist.can_undo(),
-            can_redo: hist.can_redo(),
-            undo_count: hist.undo_count(),
-            redo_count: hist.redo_count(),
-        }
-    });
+    let info = with_backend(|b| b.history_info());
+    let dto = HistoryInfoDto {
+        can_undo: info.can_undo,
+        can_redo: info.can_redo,
+        undo_count: info.undo_count,
+        redo_count: info.redo_count,
+    };
 
     let json_str = serde_json::to_string(&dto)
         .map_err(|e| JsValue::from_str(&format!("Errore serializzazione info history: {}", e)))?;
@@ -800,7 +809,7 @@ pub fn end_move_layer() -> bool {
                     move_state.initial_offset,
                     final_offset,
                 ));
-                ACTIVE_HISTORY.with(|h| h.borrow_mut().push(cmd));
+                push_command_via_backend(cmd);
                 set_document_dirty(true);
                 return true;
             }
@@ -888,7 +897,7 @@ impl PizzicoEngine {
         with_active_document_mut(|doc| {
             *doc = Document::new(width, height, title);
         });
-        ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
+        clear_history_via_backend();
         ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
         Self {
             registry: CommandRegistry::new(),

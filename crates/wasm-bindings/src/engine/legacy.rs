@@ -184,6 +184,48 @@ impl EngineBackend for LegacyBackend {
         }
     }
 
+    fn history_can_undo(&self) -> bool {
+        self.history.can_undo()
+    }
+
+    fn history_can_redo(&self) -> bool {
+        self.history.can_redo()
+    }
+
+    fn history_undo(&mut self) -> bool {
+        let fatto = self.history.undo(&mut self.document);
+        if fatto {
+            self.dirty = true;
+        }
+        fatto
+    }
+
+    fn history_redo(&mut self) -> bool {
+        let fatto = self.history.redo(&mut self.document);
+        if fatto {
+            self.dirty = true;
+        }
+        fatto
+    }
+
+    fn history_info(&self) -> HistoryMeta {
+        HistoryMeta {
+            can_undo: self.history.can_undo(),
+            can_redo: self.history.can_redo(),
+            undo_count: self.history.undo_count(),
+            redo_count: self.history.redo_count(),
+        }
+    }
+
+    fn push_command(&mut self, cmd: Box<dyn pizzico_core::history::Command>) {
+        self.history.push(cmd);
+        self.dirty = true;
+    }
+
+    fn clear_history(&mut self) {
+        self.history.clear();
+    }
+
     fn is_dirty(&self) -> bool {
         self.dirty
     }

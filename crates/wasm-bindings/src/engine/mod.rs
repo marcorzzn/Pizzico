@@ -107,6 +107,22 @@ pub trait EngineBackend {
     fn has_selection(&self) -> bool;
     fn selection(&self) -> Option<(u32, u32, u32, u32)>;
 
+    // ── History ──────────────────────────────────────────────────────────────
+    //
+    // La history appartiene al backend, non al bridge: i comandi devono essere
+    // applicati al documento che il backend possiede, altrimenti si creano due
+    // storici che divergono.
+
+    fn history_can_undo(&self) -> bool;
+    fn history_can_redo(&self) -> bool;
+    fn history_undo(&mut self) -> bool;
+    fn history_redo(&mut self) -> bool;
+    fn history_info(&self) -> HistoryMeta;
+    /// Accoda un comando già applicato al documento.
+    fn push_command(&mut self, cmd: Box<dyn pizzico_core::history::Command>);
+    /// Svuota la history (nuovo documento, caricamento progetto/PSD).
+    fn clear_history(&mut self);
+
     // ── Stato ────────────────────────────────────────────────────────────────
 
     fn is_dirty(&self) -> bool;
