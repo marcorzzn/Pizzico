@@ -15,6 +15,19 @@ Questo prodotto include software e concetti ingegneristici derivati o ispirati d
 
 ## 1. Riferimenti Ingegneristici Open Source
 
+- **Pizzart** (`marcorzzn/pizzart`)
+  - Licenza: **MIT** — Copyright (c) 2025 Marco Razzano. Testo integrale in `docs/pizzart/LICENSE`.
+  - Ruolo: **codice incorporato**, non solo ispirazione. Il motore in `crates/engine/` è
+    derivato dal repository Pizzart al commit `cc5f419`, trapiantato il 2026-10-26 e
+    rinominato `pizzico-engine-*` (Fase 1 della fusione). Copre: documento, layer e
+    gruppi, maschere, selezione (rettangolo, ellisse, lasso con AA 4×4), 12 blend modes
+    con parità CPU/GPU, history con undo/redo, motore di disegno (pressione, tilt,
+    Catmull-Rom, dirty rect), renderer wgpu con compositing e pipeline effetti,
+    motore testo su cosmic-text, export PNG/JPEG/WebP.
+  - Test inclusi nel trapianto: 222 unitari e di integrazione, verdi al 2026-10-26.
+  - Documentazione d'origine copiata in `docs/pizzart/` (ARCHITECTURE, DEVLOG,
+    FASE_1_CHIUSA, FASE_2_SPEC, REPORT_UI).
+
 - **PhotoCraft / PhotoSuite** (`storytold/photocraft`)
   - Licenza: MIT / Apache-2.0 dual license (Copyright (c) 2024-2026 PhotoCraft contributors)
   - Ruolo: Ispirazione concettuale per il mapping di layer e compositing su canvas WebGPU/WASM (nessuna copia di codice proprietario, clean room §7).
