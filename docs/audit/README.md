@@ -16,6 +16,7 @@ records, not living documents.
 | [fase-4-2-3-1.md](fase-4-2-3-1.md) | Outcome of Phase 4.2.3.1: layer metadata and selection routed through the backend. |
 | [gruppo-2-analisi.md](gruppo-2-analisi.md) | Analysis of the legacy stroke pipeline, including the 16 residual points. |
 | [gruppo-2-handoff.md](gruppo-2-handoff.md) | Executable handoff note for finishing the stroke pipeline on the v2 backend. |
+| [fase-7-ricognizione.md](fase-7-ricognizione.md) | Phase 7 reconnaissance: state of `apps/tauri`, missing Android toolchain, risks and a revised estimate. |
 
 Supporting evidence in this directory:
 
