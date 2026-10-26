@@ -17,6 +17,13 @@ members = [
     "crates/inpainting",
     "crates/commands",
     "crates/wasm-bindings",
+    # Motore trapiantato da Pizzart (Fase 1). Additivo: i crate legacy restano
+    # in vita fino al Gate G5 (parità misurata) e vengono ritirati solo in Fase 8.
+    "crates/engine/core",
+    "crates/engine/draw",
+    "crates/engine/text",
+    "crates/engine/render",
+    "crates/engine/io",
 ]
 resolver = "2"
 
