@@ -1221,6 +1221,9 @@ function updateInspector() {
         ${docMeta.width} × ${docMeta.height} px · ${docMeta.layerCount} livelli
       </div>
     `;
+    // La barra di stato mostra il documento reale, non un valore fisso.
+    // Lo zoom resta 100% finché non esiste un controllo zoom (6d).
+    shell.updateStatusBar(`${docMeta.width} × ${docMeta.height} px`, '100%');
   }
 
   // 2. Proprietà Strumento Attivo

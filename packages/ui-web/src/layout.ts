@@ -128,6 +128,8 @@ export class DesktopShellLayout {
 
   private activeTool = 'brush';
   private currentMode: WorkspaceMode = 'quick';
+  private statusDimensions!: HTMLSpanElement;
+  private statusZoom!: HTMLSpanElement;
   private toolButtons = new Map<string, HTMLButtonElement>();
   private toolHint!: HTMLSpanElement;
   private menus: HTMLDivElement[] = [];
@@ -356,15 +358,36 @@ export class DesktopShellLayout {
 
     const statusLeft = document.createElement('div');
     statusLeft.className = 'pz-status-group';
-    statusLeft.innerHTML = `
-      <span class="pz-status-item">1200 × 800 px</span>
-      <span class="pz-status-sep">·</span>
-      <span class="pz-status-item">100%</span>
-      <span class="pz-status-sep">·</span>
-      <span class="pz-status-item">sRGB</span>
-      <span class="pz-status-sep">·</span>
-      <span class="pz-status-item">WebGPU attivo</span>
-    `;
+
+    // Dimensioni e zoom sono dinamici: valori statici mentivano sul documento
+    // aperto (un PSD 800×600 veniva annunciato come 1200×800).
+    const buildStatusItem = (text: string): HTMLSpanElement => {
+      const span = document.createElement('span');
+      span.className = 'pz-status-item';
+      span.textContent = text;
+      return span;
+    };
+    const buildStatusSeparator = (): HTMLSpanElement => {
+      const span = document.createElement('span');
+      span.className = 'pz-status-sep';
+      span.textContent = '·';
+      return span;
+    };
+
+    this.statusDimensions = buildStatusItem('nessun documento');
+    this.statusZoom = buildStatusItem('100%');
+    const statusColor = buildStatusItem('sRGB');
+    const statusEngine = buildStatusItem('WebGPU attivo');
+
+    statusLeft.append(
+      this.statusDimensions,
+      buildStatusSeparator(),
+      this.statusZoom,
+      buildStatusSeparator(),
+      statusColor,
+      buildStatusSeparator(),
+      statusEngine
+    );
 
     const statusRight = document.createElement('div');
     statusRight.className = 'pz-status-group';
@@ -439,6 +462,12 @@ export class DesktopShellLayout {
       btn.setAttribute('aria-pressed', String(isActive));
     });
     this.syncToolHint();
+  }
+
+  /** Aggiorna dimensioni e zoom nella barra di stato. */
+  public updateStatusBar(dimensions: string, zoom: string) {
+    if (this.statusDimensions) this.statusDimensions.textContent = dimensions;
+    if (this.statusZoom) this.statusZoom.textContent = zoom;
   }
 
   public updateAutosaveIndicator(text: string, color?: string) {
