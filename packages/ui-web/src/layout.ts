@@ -75,16 +75,6 @@ interface ToolDefinition {
   hint: string;
 }
 
-/**
- * Colori che main.ts passa ancora inline a updateAutosaveIndicator.
- * La mappatura sparisce quando main.ts verrà rifattorizzato (Fase 6c/6d).
- */
-const LEGACY_COLOR_TO_TOKEN: Record<string, string> = {
-  '#38bdf8': 'var(--pz-accent)',
-  '#f87171': 'var(--pz-error)',
-  '#ef4444': 'var(--pz-error)',
-};
-
 const TOOLS: ToolDefinition[] = [
   { id: 'move', title: 'Sposta livello (V)', icon: MoveIcon, hint: 'trascina per spostare il livello' },
   {
@@ -474,7 +464,7 @@ export class DesktopShellLayout {
     if (!this.autosaveIndicator) return;
     this.autosaveIndicator.textContent = text;
     if (!color) return;
-    this.autosaveIndicator.style.color = LEGACY_COLOR_TO_TOKEN[color.toLowerCase()] ?? color;
+    this.autosaveIndicator.style.color = color;
   }
 
   // ── Costruzione: elementi e menu ───────────────────────────────────────────
