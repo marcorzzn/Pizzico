@@ -190,19 +190,19 @@ pub fn add_raster_layer(name: &str, width: u32, height: u32, color: &[u8]) -> u6
 /// Restituisce il buffer RGBA 8-bit calcolato fondendo tutti i livelli visibili del documento.
 #[wasm_bindgen]
 pub fn get_composite_buffer() -> Vec<u8> {
-    with_active_document(|doc| pizzico_core::composite_layers(doc))
+    with_backend(|b| b.composite())
 }
 
 /// Restituisce le dimensioni correnti del documento attivo come array `[width, height]`.
 #[wasm_bindgen]
 pub fn get_document_dimensions() -> Vec<u32> {
-    with_active_document(|doc| vec![doc.width, doc.height])
+    with_backend(|b| vec![b.width(), b.height()])
 }
 
 /// Restituisce il numero di livelli presenti nel documento attivo.
 #[wasm_bindgen]
 pub fn get_layer_count() -> usize {
-    with_active_document(|doc| doc.layer_count())
+    with_backend(|b| b.layer_count())
 }
 
 /// DTO serializzabile per i metadati di un singolo livello.
@@ -282,7 +282,7 @@ pub fn remove_layer(id: u32) -> bool {
 /// Restituisce l'ID del livello attualmente selezionato (se presente).
 #[wasm_bindgen]
 pub fn get_active_layer_id() -> Option<u32> {
-    with_active_document(|doc| doc.active_layer_id.map(|id| id as u32))
+    with_backend(|b| b.active_layer_id().map(|id| id as u32))
 }
 
 /// Verifica se il documento attivo necessita di un nuovo rendering WebGPU.
@@ -894,7 +894,7 @@ impl PizzicoEngine {
 
     /// Numero di livelli presenti nel documento.
     pub fn layer_count(&self) -> usize {
-        with_active_document(|doc| doc.layer_count())
+        with_backend(|b| b.layer_count())
     }
 
     /// Flag dirty del documento.

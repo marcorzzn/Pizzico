@@ -26,6 +26,10 @@ target/
 crates/**/pkg/
 packages/**/pkg/
 !packages/worker-core/pkg/
+# Artefatti di verifica della Fase 4 (build wasm-pack dei due backend): non versionati.
+# Si rigenerano con i comandi in docs/audit/fase-4-2-2.md.
+packages/worker-core/pkg-legacy/
+packages/worker-core/pkg-v2/
 *.wasm
 !apps/web/public/pizzico_wasm_bindings_bg.wasm
 !packages/worker-core/pkg/pizzico_wasm_bindings_bg.wasm
