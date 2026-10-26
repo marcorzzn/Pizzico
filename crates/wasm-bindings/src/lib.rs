@@ -317,8 +317,14 @@ pub fn get_document_metadata() -> Result<JsValue, JsValue> {
 
 /// Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
 /// e segnala la necessità di un nuovo frame di compositing WebGPU.
+/// @deprecated not supported in engine-v2 - usa il backend legacy.
+#[allow(unreachable_code)]
 #[wasm_bindgen]
 pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
+    #[cfg(feature = "engine-v2")]
+    let _ = bytes;
+    #[cfg(feature = "engine-v2")]
+    return Err(JsValue::from_str("PSD import not supported in engine-v2"));
     let imported_doc = pizzico_io_psd::import_psd(bytes)
         .map_err(|e| JsValue::from_str(&format!("Errore importazione file PSD: {}", e)))?;
 
@@ -334,8 +340,12 @@ pub fn load_psd_bytes(bytes: &[u8]) -> Result<(), JsValue> {
 
 /// Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
 /// nel formato container compresso nativo `.pizzico` (ZIP).
+/// @deprecated not supported in engine-v2 - usa il backend legacy.
+#[allow(unreachable_code)]
 #[wasm_bindgen]
 pub fn save_project() -> Result<Vec<u8>, JsValue> {
+    #[cfg(feature = "engine-v2")]
+    return Err(JsValue::from_str("Project save not supported in engine-v2"));
     with_active_document(|doc| {
         pizzico_io_native::serialize_document(doc)
             .map_err(|e| JsValue::from_str(&format!("Errore salvataggio progetto .pizzico: {}", e)))
@@ -344,8 +354,14 @@ pub fn save_project() -> Result<Vec<u8>, JsValue> {
 
 /// Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
 /// resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+/// @deprecated not supported in engine-v2 - usa il backend legacy.
+#[allow(unreachable_code)]
 #[wasm_bindgen]
 pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
+    #[cfg(feature = "engine-v2")]
+    let _ = bytes;
+    #[cfg(feature = "engine-v2")]
+    return Err(JsValue::from_str("Project load not supported in engine-v2"));
     let imported_doc = pizzico_io_native::deserialize_document(bytes)
         .map_err(|e| JsValue::from_str(&format!("Errore caricamento progetto .pizzico: {}", e)))?;
 
@@ -388,8 +404,12 @@ pub fn export_as_webp(quality: u8) -> Result<Vec<u8>, JsValue> {
 }
 
 /// Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+/// @deprecated not supported in engine-v2 - usa il backend legacy.
+#[allow(unreachable_code)]
 #[wasm_bindgen]
 pub fn export_as_psd() -> Result<Vec<u8>, JsValue> {
+    #[cfg(feature = "engine-v2")]
+    return Err(JsValue::from_str("PSD export not supported in engine-v2"));
     with_active_document(|doc| {
         pizzico_io_psd::export_psd(doc)
             .map_err(|e| JsValue::from_str(&format!("Errore esportazione PSD: {}", e)))
