@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml"><img src="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
   <a href="https://pizzico.pages.dev"><img src="https://img.shields.io/badge/Live_Demo-pizzico.pages.dev-success?style=flat-square&logo=cloudflare" alt="Live Demo" /></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=flat-square" alt="License: MIT / Apache-2.0" /></a>
+  <a href="./LICENSE-MIT"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=flat-square" alt="License: MIT / Apache-2.0" /></a>
   <a href="./NOTICE.md"><img src="https://img.shields.io/badge/Papers-20%2B%20Peer--Reviewed-purple?style=flat-square" alt="Scientific Citations" /></a>
   <a href="./docs/clean-room/methodology.md"><img src="https://img.shields.io/badge/Clean%20Room-Strict-teal?style=flat-square" alt="Clean Room Verified" /></a>
 </p>
