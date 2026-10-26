@@ -159,6 +159,11 @@
     "source": "https://unpkg.com/lucide-static@1.61.0/icons/sparkles.svg",
     "sha256": "5ff7dc6557dbe5068a18feb080df81e090eb0a495fa1a05e3abd8179ba53c52d"
   },
+  "image": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/image.svg",
+    "sha256": "eb8267cf5cd811745284486e5494d022c37c0fb7cfc3e0c3c543675c3268db13"
+  },
   "check": {
     "lucideVersion": "1.61.0",
     "source": "https://unpkg.com/lucide-static@1.61.0/icons/check.svg",

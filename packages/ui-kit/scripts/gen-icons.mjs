@@ -59,6 +59,7 @@ const ICONS = [
   ['command', 'CommandIcon'],
   ['sun', 'SunIcon'],
   ['sparkles', 'SparklesIcon'],
+  ['image', 'ImageIcon'],
   // Stato
   ['check', 'CheckIcon'],
   ['x', 'XIcon'],

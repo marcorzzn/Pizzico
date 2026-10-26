@@ -516,6 +516,25 @@ html {
   gap: var(--pz-space-sm);
 }
 
+.pz-color-value {
+  font-size: var(--pz-font-size-small);
+  color: var(--pz-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le icone SVG dentro i controlli non devono aggiungere spazio di linea */
+.pz-layer-vis-btn svg,
+.pz-layer-del-btn svg,
+.pz-layer-type-icon svg,
+.pz-tool-btn svg,
+.pz-menu-btn svg,
+.pz-menu-item-icon svg,
+.pz-export-close svg,
+.pz-panel-toggle svg,
+.pz-btn-icon svg {
+  display: block;
+}
+
 .pz-color-preview {
   width: 22px;
   height: 22px;
