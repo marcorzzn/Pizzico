@@ -25,10 +25,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use wasm_bindgen::prelude::*;
 
 use pizzico_commands::CommandRegistry;
-use pizzico_core::{
-    Command, Document, LayerKind, MoveLayerCommand, RemoveLayerCommand, SetOpacityCommand,
-    SetVisibilityCommand, StrokeCommand,
-};
+use pizzico_core::{Command, Document, LayerKind, MoveLayerCommand, StrokeCommand};
 use pizzico_raster::brush::{BoundingBox, Brush};
 
 pub mod engine;
@@ -251,25 +248,15 @@ pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
 /// Imposta l'opacità del livello specificato (0.0 - 1.0) e marca il documento dirty.
 #[wasm_bindgen]
 pub fn set_layer_opacity(id: u32, opacity: f32) {
-    let id_u64 = id as u64;
-    let old_opacity = with_active_document(|doc| doc.get_layer(id_u64).map(|l| l.opacity)).unwrap_or(1.0);
-    with_active_document_mut(|doc| {
-        doc.set_layer_opacity(id_u64, opacity);
-    });
-    let cmd = Box::new(SetOpacityCommand::new(id_u64, old_opacity, opacity));
-    push_command_via_backend(cmd);
+    with_backend_mut(|b| b.set_layer_opacity(id as u64, opacity));
 }
 
 /// Imposta la visibilità del livello specificato e marca il documento dirty.
 #[wasm_bindgen]
 pub fn set_layer_visibility(id: u32, visible: bool) {
-    let id_u64 = id as u64;
-    let old_vis = with_active_document(|doc| doc.get_layer(id_u64).map(|l| l.visible)).unwrap_or(true);
-    with_active_document_mut(|doc| {
-        doc.set_layer_visibility(id_u64, visible);
-    });
-    let cmd = Box::new(SetVisibilityCommand::new(id_u64, old_vis, visible));
-    push_command_via_backend(cmd);
+    // Il backend applica la modifica e accoda il proprio comando: il bridge non
+    // costruisce più comandi legacy (prerequisito per il backend v2).
+    with_backend_mut(|b| b.set_layer_visibility(id as u64, visible));
 }
 
 /// Seleziona il livello specificato come livello attivo nel documento.
@@ -283,15 +270,7 @@ pub fn select_layer(id: u32) {
 /// Rimuove il livello specificato dal documento attivo.
 #[wasm_bindgen]
 pub fn remove_layer(id: u32) -> bool {
-    let id_u64 = id as u64;
-    let cmd_opt = with_active_document(|doc| RemoveLayerCommand::new(doc, id_u64));
-    let success = with_active_document_mut(|doc| doc.remove_layer(id_u64).is_some());
-    if success {
-        if let Some(cmd) = cmd_opt {
-            push_command_via_backend(Box::new(cmd));
-        }
-    }
-    success
+    with_backend_mut(|b| b.remove_layer(id as u64))
 }
 
 /// Restituisce l'ID del livello attualmente selezionato (se presente).
