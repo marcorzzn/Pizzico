@@ -21,6 +21,10 @@
 
 pub mod legacy;
 
+/// Backend v2 (motore trapiantato da Pizzart). Richiede la feature `engine-v2`.
+#[cfg(feature = "engine-v2")]
+pub mod v2;
+
 use pizzico_core::Document;
 
 /// Metadati di un layer, nella forma che il bridge serializza per la UI.

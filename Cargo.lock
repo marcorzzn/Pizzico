@@ -976,6 +976,7 @@ dependencies = [
  "log",
  "pizzico-commands",
  "pizzico-core",
+ "pizzico-engine-core",
  "pizzico-io-native",
  "pizzico-io-psd",
  "pizzico-raster",

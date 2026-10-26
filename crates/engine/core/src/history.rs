@@ -86,6 +86,20 @@ impl History {
         self.done.len()
     }
 
+    /// Svuota la history (nuovo documento, caricamento da file).
+    pub fn clear(&mut self) {
+        self.done.clear();
+        self.undone.clear();
+    }
+    /// Numero di comandi attualmente annullabili.
+    pub fn undo_count(&self) -> usize {
+        self.done.len()
+    }
+
+    /// Numero di comandi attualmente ripristinabili.
+    pub fn redo_count(&self) -> usize {
+        self.undone.len()
+    }
     pub fn is_empty(&self) -> bool {
         self.done.is_empty()
     }

@@ -46,14 +46,24 @@ struct ActiveMoveState {
     initial_offset: (i32, i32),
 }
 
+// Backend del motore.
+//
+// In Fase 4.1 era sempre il legacy. Dalla 4.2.2 la scelta è di compilazione:
+// `--features engine-v2` monta `V2Backend`, altrimenti resta `LegacyBackend`.
+// Nessuna delle due configurazioni cambia il contratto JS.
+#[cfg(not(feature = "engine-v2"))]
 thread_local! {
-    /// Backend del motore. In Fase 4.1 è sempre il backend legacy; la Fase 4.2
-    /// aggiunge `engine::v2::V2Backend` dietro la feature `engine-v2`.
-    ///
-    /// Lo stato del documento vive QUI, in un solo posto: le funzioni del bridge vi
-    /// accedono tramite `with_active_document(_mut)`.
     static BACKEND: RefCell<Box<dyn crate::engine::EngineBackend>> =
         RefCell::new(Box::new(crate::engine::legacy::LegacyBackend::new()));
+}
+
+#[cfg(feature = "engine-v2")]
+thread_local! {
+    static BACKEND: RefCell<Box<dyn crate::engine::EngineBackend>> =
+        RefCell::new(Box::new(crate::engine::v2::V2Backend::new()));
+}
+
+thread_local! {
     static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
     static ACTIVE_MOVE: RefCell<Option<ActiveMoveState>> = RefCell::new(None);
 }
