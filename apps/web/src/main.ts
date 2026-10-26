@@ -18,7 +18,25 @@
 
 import '@pizzico/ui-web/src/styles.css';
 import { DesktopShellLayout } from '@pizzico/ui-web';
-import { LayerRow, Button, Slider, createSlider, createColorPicker } from '@pizzico/ui-kit';
+import {
+  LayerRow,
+  Button,
+  Slider,
+  createSlider,
+  createColorPicker,
+  AlertCircleIcon,
+  BrushIcon,
+  CheckIcon,
+  EraserIcon,
+  EyeIcon,
+  EyeOffIcon,
+  FolderOpenIcon,
+  InfoIcon,
+  PlusIcon,
+  SaveIcon,
+  Trash2Icon,
+  XIcon,
+} from '@pizzico/ui-kit';
 import { LayerMetadata } from '@pizzico/shared';
 import {
   initWasm,
@@ -121,7 +139,23 @@ document.body.appendChild(toastContainer);
 function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
   const toast = document.createElement('div');
   toast.className = `pz-toast pz-toast-${type}`;
-  toast.textContent = message;
+
+  // L'icona dipende dal tipo: il colore del bordo da solo non basta come segnale.
+  const toastIcon =
+    type === 'success'
+      ? CheckIcon(16)
+      : type === 'info'
+        ? InfoIcon(16)
+        : AlertCircleIcon(16);
+
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'pz-toast-icon';
+  iconWrap.innerHTML = toastIcon;
+
+  const textWrap = document.createElement('span');
+  textWrap.textContent = message;
+
+  toast.append(iconWrap, textWrap);
   toastContainer.appendChild(toast);
 
   setTimeout(() => {
@@ -165,13 +199,13 @@ async function setupWasm(): Promise<void> {
     console.log(
       `[WASM Bridge] ✅ Modulo Rust inizializzato — version: ${v}, add(2,3) = ${add(2, 3)}`
     );
-    updateWasmStatusBadge(`WASM Rust v${v} pronto`, '#38bdf8');
+    updateWasmStatusBadge(`WASM Rust v${v} pronto`, 'var(--pz-accent)');
     syncHistoryUi();
     renderLayersPanel();
     updateInspector();
   } catch (err) {
     console.error('[WASM Bridge] ❌ Inizializzazione WASM fallita:', err);
-    updateWasmStatusBadge('Errore caricamento WASM', '#ef4444');
+    updateWasmStatusBadge('Errore caricamento WASM', 'var(--pz-error)');
   }
 }
 
@@ -216,7 +250,7 @@ function handleUndo() {
     renderLayersPanel();
     updateInspector();
     scheduleAutosave();
-    showToast('↶ Azione annullata (Undo)', 'success');
+    showToast('Azione annullata (Undo)', 'success');
   } else {
     showToast('Nessuna azione da annullare', 'warning');
   }
@@ -231,7 +265,7 @@ function handleRedo() {
     renderLayersPanel();
     updateInspector();
     scheduleAutosave();
-    showToast('↷ Azione ripristinata (Redo)', 'success');
+    showToast('Azione ripristinata (Redo)', 'success');
   } else {
     showToast('Nessuna azione da ripristinare', 'warning');
   }
@@ -252,11 +286,11 @@ function scheduleAutosave() {
       const target = await saveAutosave(bytes);
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-      shell.updateAutosaveIndicator(`Salvato automaticamente ${timeStr} (${target.toUpperCase()})`, '#38bdf8');
+      shell.updateAutosaveIndicator(`Salvato automaticamente ${timeStr} (${target.toUpperCase()})`, 'var(--pz-accent)');
       console.log(`[Autosave] ✅ Progetto salvato in ${target.toUpperCase()} (${bytes.length} bytes, ${timeStr})`);
     } catch (err) {
       console.warn('[Autosave] ⚠️ Errore salvataggio automatico:', err);
-      shell.updateAutosaveIndicator('Autosave fallito', '#f87171');
+      shell.updateAutosaveIndicator('Autosave fallito', 'var(--pz-error)');
     }
   }, 2000);
 }
@@ -265,7 +299,7 @@ function scheduleAutosave() {
 
 function handleSaveProject() {
   if (!wasmReady) {
-    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    showToast('Engine WASM non ancora pronto', 'warning');
     return;
   }
   try {
@@ -285,17 +319,17 @@ function handleSaveProject() {
     URL.revokeObjectURL(url);
 
     const sizeKb = (bytes.length / 1024).toFixed(1);
-    showToast(`💾 Progetto salvato su disco: "${fileName}" (${sizeKb} KB)`, 'success');
+    showToast(`Progetto salvato su disco: "${fileName}" (${sizeKb} KB)`, 'success');
     scheduleAutosave();
   } catch (err) {
     console.error('[Save Project] ❌ Errore salvataggio file .pizzico:', err);
-    showToast(`❌ Errore salvataggio progetto: ${err}`, 'error');
+    showToast(`Errore salvataggio progetto: ${err}`, 'error');
   }
 }
 
 async function handleOpenProjectFile(file: File): Promise<void> {
   if (!wasmReady) {
-    showToast('⚠️ Engine grafico WASM non ancora pronto', 'warning');
+    showToast('Engine grafico WASM non ancora pronto', 'warning');
     return;
   }
 
@@ -315,14 +349,14 @@ async function handleOpenProjectFile(file: File): Promise<void> {
 
     const docMeta = get_document_metadata();
     showToast(
-      `📁 Progetto aperto: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
+      `Progetto aperto: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
       'success'
     );
     scheduleAutosave();
   } catch (err) {
     hideLoadingSpinner();
     console.error('[Open Project] ❌ Errore apertura file .pizzico:', err);
-    showToast(`❌ Errore apertura progetto: ${err}`, 'error');
+    showToast(`Errore apertura progetto: ${err}`, 'error');
   }
 }
 
@@ -359,7 +393,7 @@ function getSanitizedDocTitle(): string {
 
 function handleExportPng() {
   if (!wasmReady) {
-    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    showToast('Engine WASM non ancora pronto', 'warning');
     return;
   }
   showLoadingSpinner('Generazione immagine PNG…');
@@ -371,18 +405,18 @@ function handleExportPng() {
       const blob = new Blob([bytes as any], { type: 'image/png' });
       downloadBlob(blob, filename);
       hideLoadingSpinner();
-      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+      showToast(`Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
     } catch (err) {
       hideLoadingSpinner();
       console.error('[Export PNG] Errore:', err);
-      showToast('❌ Errore durante l\'esportazione PNG', 'error');
+      showToast('Errore durante l\'esportazione PNG', 'error');
     }
   }, 30);
 }
 
 function handleExportJpeg(quality: number = 90) {
   if (!wasmReady) {
-    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    showToast('Engine WASM non ancora pronto', 'warning');
     return;
   }
   showLoadingSpinner(`Generazione immagine JPEG (q=${quality})…`);
@@ -394,18 +428,18 @@ function handleExportJpeg(quality: number = 90) {
       const blob = new Blob([bytes as any], { type: 'image/jpeg' });
       downloadBlob(blob, filename);
       hideLoadingSpinner();
-      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+      showToast(`Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
     } catch (err) {
       hideLoadingSpinner();
       console.error('[Export JPEG] Errore:', err);
-      showToast('❌ Errore durante l\'esportazione JPEG', 'error');
+      showToast('Errore durante l\'esportazione JPEG', 'error');
     }
   }, 30);
 }
 
 function handleExportWebp(quality: number = 90) {
   if (!wasmReady) {
-    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    showToast('Engine WASM non ancora pronto', 'warning');
     return;
   }
   showLoadingSpinner(`Generazione immagine WebP (q=${quality})…`);
@@ -417,18 +451,18 @@ function handleExportWebp(quality: number = 90) {
       const blob = new Blob([bytes as any], { type: 'image/webp' });
       downloadBlob(blob, filename);
       hideLoadingSpinner();
-      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+      showToast(`Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
     } catch (err) {
       hideLoadingSpinner();
       console.error('[Export WebP] Errore:', err);
-      showToast('❌ Errore durante l\'esportazione WebP', 'error');
+      showToast('Errore durante l\'esportazione WebP', 'error');
     }
   }, 30);
 }
 
 function handleExportPsd() {
   if (!wasmReady) {
-    showToast('⚠️ Engine WASM non ancora pronto', 'warning');
+    showToast('Engine WASM non ancora pronto', 'warning');
     return;
   }
   showLoadingSpinner('Generazione file Adobe PSD multilivello…');
@@ -440,11 +474,11 @@ function handleExportPsd() {
       const blob = new Blob([bytes as any], { type: 'image/vnd.adobe.photoshop' });
       downloadBlob(blob, filename);
       hideLoadingSpinner();
-      showToast(`✅ Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
+      showToast(`Esportato: ${filename} (${formatBytes(bytes.length)})`, 'success');
     } catch (err) {
       hideLoadingSpinner();
       console.error('[Export PSD] Errore:', err);
-      showToast('❌ Errore durante l\'esportazione PSD: ' + err, 'error');
+      showToast('Errore durante l\'esportazione PSD: ' + err, 'error');
     }
   }, 30);
 }
@@ -459,26 +493,26 @@ function showRestorePrompt(onRestore: () => void, onDiscard: () => void) {
     top: 54px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(26, 27, 31, 0.96);
+    background: var(--pz-bg-elevated);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid #38bdf8;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    border: 1px solid var(--pz-accent);
+    box-shadow: var(--pz-shadow-popover);
     border-radius: 8px;
     padding: 10px 18px;
     display: flex;
     align-items: center;
     gap: 16px;
     z-index: 1000;
-    color: #fff;
+    color: var(--pz-text-primary);
     font-size: 13px;
     animation: pz-fade-in 0.25s ease-out;
   `;
   banner.innerHTML = `
-    <span style="font-size: 20px;">💾</span>
+    <span style="color: var(--pz-text-primary);">${SaveIcon(20)}</span>
     <div>
-      <div style="font-weight: 600; color: #fff;">Progetto precedente trovato</div>
-      <div style="font-size: 11px; color: var(--pz-text-muted, #94a3b8);">È presente una sessione di lavoro salvata localmente. Vuoi ripristinarla?</div>
+      <div style="font-weight: 600; color: var(--pz-text-primary);">Progetto precedente trovato</div>
+      <div style="font-size: 11px; color: var(--pz-text-muted, var(--pz-text-muted));">È presente una sessione di lavoro salvata localmente. Vuoi ripristinarla?</div>
     </div>
     <div style="display: flex; gap: 8px; margin-left: 8px;">
       <button id="restore-confirm-btn" class="pz-btn pz-btn-primary" style="padding: 5px 12px; font-size: 12px;">Sì, Ripristina</button>
@@ -573,18 +607,18 @@ fileInput.addEventListener('change', async (e) => {
 
 async function handlePsdFile(file: File): Promise<void> {
   if (!wasmReady) {
-    showToast('⚠️ Engine grafico WASM non ancora pronto', 'warning');
+    showToast('Engine grafico WASM non ancora pronto', 'warning');
     return;
   }
 
   const isPsd = file.name.toLowerCase().endsWith('.psd') || file.name.toLowerCase().endsWith('.psb');
   if (!isPsd) {
-    showToast(`❌ Il file "${file.name}" non è un file PSD/PSB supportato`, 'error');
+    showToast(`Il file "${file.name}" non è un file PSD/PSB supportato`, 'error');
     return;
   }
 
   if (file.size > 20 * 1024 * 1024) {
-    showToast('⚠️ File grande (> 20 MB), il parsing potrebbe richiedere qualche secondo…', 'warning');
+    showToast('File grande (> 20 MB), il parsing potrebbe richiedere qualche secondo…', 'warning');
   }
 
   showLoadingSpinner(`Parsing Adobe PSD: "${file.name}"…`);
@@ -605,13 +639,13 @@ async function handlePsdFile(file: File): Promise<void> {
     hideLoadingSpinner();
 
     showToast(
-      `✅ Caricato: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
+      `Caricato: ${file.name} (${docMeta?.width ?? 800}×${docMeta?.height ?? 600} px, ${docMeta?.layerCount ?? 0} livelli)`,
       'success'
     );
   } catch (err) {
     hideLoadingSpinner();
     console.error('[PSD Import] ❌ Errore durante il parsing PSD:', err);
-    showToast(`❌ Errore parsing PSD: ${err}`, 'error');
+    showToast(`Errore parsing PSD: ${err}`, 'error');
   }
 }
 
@@ -623,7 +657,7 @@ function showDragOverlay() {
   dragOverlay = document.createElement('div');
   dragOverlay.className = 'pz-drag-overlay';
   dragOverlay.innerHTML = `
-    <div style="font-size: 36px;">📂</div>
+    <div style="color: var(--pz-text-secondary);">${FolderOpenIcon(32)}</div>
     <div class="pz-drag-overlay-text">Rilascia il file Photoshop (.PSD / .PSB) qui</div>
   `;
   shell.canvasContainer.style.position = 'relative';
@@ -956,12 +990,13 @@ layersHeaderContainer.style.cssText = `
   flex-direction: column;
   gap: 8px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  border-bottom: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
   margin-bottom: 8px;
 `;
 
 const addEmptyBtn = new Button({
-  label: '➕ Aggiungi Livello Vuoto',
+  label: 'Aggiungi Livello Vuoto',
+  icon: PlusIcon(16),
   variant: 'primary',
   onClick: () => {
     if (!wasmReady) return;
@@ -1107,11 +1142,11 @@ wasmStatusBox.id = 'wasm-bridge-status';
 wasmStatusBox.style.cssText = `
   margin-bottom: 12px;
   padding: 10px 12px;
-  background: rgba(79, 70, 229, 0.12);
-  border: 1px solid rgba(79, 70, 229, 0.35);
+  background: var(--pz-accent-subtle);
+  border: 1px solid var(--pz-accent-border);
   border-radius: 8px;
   font-size: 12px;
-  color: #c7d2fe;
+  color: var(--pz-text-primary);
 `;
 wasmStatusBox.innerHTML = `<strong>Rust Core Engine</strong><br><span id="wasm-result">In attesa WASM…</span>`;
 shell.inspectorPanelBody.appendChild(wasmStatusBox);
@@ -1122,8 +1157,8 @@ docMetaBox.id = 'doc-meta-status';
 docMetaBox.style.cssText = `
   margin-bottom: 12px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  background: var(--pz-surface-hover);
+  border: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
   border-radius: 8px;
   font-size: 12px;
   color: var(--pz-text-secondary);
@@ -1139,8 +1174,8 @@ brushPropsSection.style.cssText = `
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--pz-border-muted, rgba(255,255,255,0.1));
+  background: var(--pz-surface-hover);
+  border: 1px solid var(--pz-border-muted, var(--pz-border));
   border-radius: 8px;
   margin-bottom: 14px;
 `;
@@ -1154,8 +1189,8 @@ layerPropsSection.style.cssText = `
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--pz-border-muted, rgba(255,255,255,0.08));
+  background: var(--pz-surface-hover);
+  border: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
   border-radius: 8px;
   margin-bottom: 16px;
 `;
@@ -1181,9 +1216,9 @@ function updateInspector() {
   const docMeta = get_document_metadata();
   if (docMeta) {
     docMetaBox.innerHTML = `
-      <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${docMeta.title}</div>
+      <div style="font-weight: 600; color: var(--pz-text-primary); margin-bottom: 4px;">${docMeta.title}</div>
       <div style="font-size: 11px; color: var(--pz-text-muted);">
-        📐 ${docMeta.width} × ${docMeta.height} px · 🗂️ ${docMeta.layerCount} livelli
+        ${docMeta.width} × ${docMeta.height} px · ${docMeta.layerCount} livelli
       </div>
     `;
   }
@@ -1192,13 +1227,13 @@ function updateInspector() {
   if (currentTool === 'move') {
     brushPropsSection.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
-        <span>Strumento: ✥ Sposta</span>
-        <span style="font-size: 11px; color: #a855f7;">Move Tool (V)</span>
+        <span>Strumento: Sposta</span>
+        <span style="font-size: 11px; color: var(--pz-accent);">Move Tool (V)</span>
       </div>
       <div style="font-size: 12px; color: var(--pz-text-secondary); line-height: 1.4;">
         Trascina con il cursore sul canvas per riposizionare il livello attivo nel documento. Ogni spostamento genera un'azione Undo/Redo atomica.
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 6px 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 6px; color: #d8b4fe;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 6px 10px; background: var(--pz-accent-tint); border: 1px solid var(--pz-accent-border); border-radius: 6px; color: var(--pz-accent-hover);">
         <span>Coordinate offset:</span>
         <span style="font-weight: 600;">X: ${activeLayer?.offsetX ?? 0} px, Y: ${activeLayer?.offsetY ?? 0} px</span>
       </div>
@@ -1208,14 +1243,14 @@ function updateInspector() {
     const sel = hasSel ? get_selection() : null;
     brushPropsSection.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
-        <span>Strumento: ⬚ Selezione</span>
-        <span style="font-size: 11px; color: #06b6d4;">Marquee (M)</span>
+        <span>Strumento: Selezione</span>
+        <span style="font-size: 11px; color: var(--pz-accent);">Marquee (M)</span>
       </div>
       <div style="font-size: 12px; color: var(--pz-text-secondary); line-height: 1.4;">
         Trascina sul canvas per definire la selezione rettangolare. Il pennello disegna rigorosamente entro i bordi della selezione attiva.
       </div>
       ${hasSel && sel ? `
-        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; padding: 6px 10px; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 6px; color: #67e8f9;">
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; padding: 6px 10px; background: var(--pz-accent-tint); border: 1px solid var(--pz-accent-border); border-radius: 6px; color: var(--pz-accent-hover);">
           <div style="display: flex; justify-content: space-between;">
             <span>Dimensioni:</span>
             <span style="font-weight: 600;">${sel.width} × ${sel.height} px</span>
@@ -1225,8 +1260,8 @@ function updateInspector() {
             <span style="font-weight: 600;">X: ${sel.x}, Y: ${sel.y}</span>
           </div>
         </div>
-        <button id="inspector-deselect-btn" class="pz-btn pz-btn-secondary" style="font-size: 11px; padding: 5px 8px; width: 100%;">
-          ✕ Rimuovi Selezione (Ctrl+D)
+        <button id="inspector-deselect-btn" class="pz-btn pz-btn-secondary" style="font-size: 11px; padding: 5px 8px; width: 100%; gap: 6px;">
+          ${XIcon(16)} Rimuovi Selezione (Ctrl+D)
         </button>
       ` : `
         <div style="font-size: 11px; color: var(--pz-text-muted);">
@@ -1239,8 +1274,8 @@ function updateInspector() {
   } else {
     brushPropsSection.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
-        <span>Strumento: ${currentTool === 'eraser' ? '🧹 Gomma' : '🖌️ Pennello'}</span>
-        <span style="font-size: 11px; color: #38bdf8;">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">${currentTool === 'eraser' ? EraserIcon(16) : BrushIcon(16)}<span>Strumento: ${currentTool === 'eraser' ? 'Gomma' : 'Pennello'}</span></span>
+        <span style="font-size: 11px; color: var(--pz-accent);">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
       </div>
 
     `;
@@ -1293,7 +1328,7 @@ function updateInspector() {
 
     const colorRow = document.createElement('div');
     colorRow.style.cssText =
-      'display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);';
+      'display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--pz-surface-hover);';
 
     const colorLabel = document.createElement('span');
     colorLabel.className = 'pz-slider-title';
@@ -1347,8 +1382,8 @@ function updateInspector() {
   const nameBox = document.createElement('div');
   nameBox.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 13px;`;
   nameBox.innerHTML = `
-    <span style="font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${activeLayer.name}">${activeLayer.name}</span>
-    <span style="font-size: 11px; padding: 2px 6px; background: rgba(99,102,241,0.2); border-radius: 4px; color: #a5b4fc;">${activeLayer.kind} · ${activeLayer.blendMode}</span>
+    <span style="font-weight: 600; color: var(--pz-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${activeLayer.name}">${activeLayer.name}</span>
+    <span style="font-size: 11px; padding: 2px 6px; background: var(--pz-accent-subtle); border-radius: 4px; color: var(--pz-accent-hover);">${activeLayer.kind} · ${activeLayer.blendMode}</span>
   `;
   layerPropsSection.appendChild(nameBox);
 
@@ -1357,7 +1392,7 @@ function updateInspector() {
   posBox.style.cssText = `display: flex; justify-content: space-between; font-size: 12px; color: var(--pz-text-secondary);`;
   posBox.innerHTML = `
     <span>Posizione (Offset)</span>
-    <span style="font-variant-numeric: tabular-nums; color: #fff; font-weight: 500;">X: ${activeLayer.offsetX ?? 0} px, Y: ${activeLayer.offsetY ?? 0} px</span>
+    <span style="font-variant-numeric: tabular-nums; color: var(--pz-text-primary); font-weight: 500;">X: ${activeLayer.offsetX ?? 0} px, Y: ${activeLayer.offsetY ?? 0} px</span>
   `;
   layerPropsSection.appendChild(posBox);
 
@@ -1391,8 +1426,8 @@ function updateInspector() {
 
   const visBtn = document.createElement('button');
   visBtn.className = 'pz-btn pz-btn-secondary';
-  visBtn.style.cssText = `flex: 1; font-size: 11px; padding: 6px 10px; cursor: pointer;`;
-  visBtn.textContent = activeLayer.visible ? '👁️ Visibile' : '🕶️ Nascosto';
+  visBtn.style.cssText = `flex: 1; font-size: 11px; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;`;
+  visBtn.innerHTML = `${activeLayer.visible ? EyeIcon(16) : EyeOffIcon(16)}${activeLayer.visible ? 'Visibile' : 'Nascosto'}`;
   visBtn.addEventListener('click', () => {
     set_layer_visibility(activeLayer.id, !activeLayer.visible);
     syncHistoryUi();
@@ -1404,8 +1439,8 @@ function updateInspector() {
 
   const delBtn = document.createElement('button');
   delBtn.className = 'pz-btn pz-btn-secondary';
-  delBtn.style.cssText = `font-size: 11px; padding: 6px 10px; color: #f87171; cursor: pointer;`;
-  delBtn.textContent = '🗑️ Elimina';
+  delBtn.style.cssText = `font-size: 11px; padding: 6px 10px; color: var(--pz-error); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;`;
+  delBtn.innerHTML = `${Trash2Icon(16)}Elimina`;
   delBtn.addEventListener('click', () => {
     remove_layer(activeLayer.id);
     syncHistoryUi();
@@ -1436,11 +1471,11 @@ function updateInspector() {
               syncSelectionUi();
               renderLayersPanel();
               updateInspector();
-              showToast(`✅ Progetto ripristinato da ${autosaveData.source.toUpperCase()}`, 'success');
-              shell.updateAutosaveIndicator(`Ripristinato (${autosaveData.source.toUpperCase()})`, '#38bdf8');
+              showToast(`Progetto ripristinato da ${autosaveData.source.toUpperCase()}`, 'success');
+              shell.updateAutosaveIndicator(`Ripristinato (${autosaveData.source.toUpperCase()})`, 'var(--pz-accent)');
             } catch (err) {
               console.error('[Boot] Errore ripristino autosave:', err);
-              showToast('❌ Errore nel ripristino del salvataggio automatico', 'error');
+              showToast('Errore nel ripristino del salvataggio automatico', 'error');
             }
           },
           async () => {
@@ -1480,3 +1515,5 @@ function updateInspector() {
     }
   }
 })();
+
+

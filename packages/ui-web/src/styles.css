@@ -826,6 +826,28 @@ html {
   border-color: var(--pz-accent-border);
 }
 
+.pz-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.pz-toast-success .pz-toast-icon {
+  color: var(--pz-ok);
+}
+
+.pz-toast-error .pz-toast-icon {
+  color: var(--pz-error);
+}
+
+.pz-toast-warning .pz-toast-icon {
+  color: var(--pz-warning);
+}
+
+.pz-toast-info .pz-toast-icon {
+  color: var(--pz-accent);
+}
+
 @keyframes pz-slide-in {
   from {
     opacity: 0;
