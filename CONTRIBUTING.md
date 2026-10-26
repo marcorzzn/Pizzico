@@ -7,6 +7,9 @@ Pizzico is an open-source, offline-first graphics editor engineered in Rust and 
 
 ## Code of Conduct & Principles
 
+All participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+Please also read [SECURITY.md](SECURITY.md) before reporting a vulnerability.
+
 1. **Clean-Room Methodology**: Do not inspect, decompile, or copy proprietary code (e.g. Photoshop, Figma, or closed-source products). All implementations must be derived from public standards, official specifications (e.g. Adobe PSD spec), or peer-reviewed papers. See [docs/clean-room/methodology.md](docs/clean-room/methodology.md).
 2. **Deterministic & Scientific**: Version 1 focuses on robust, offline, deterministic mathematical algorithms. No proprietary cloud AI APIs or non-verifiable black boxes.
 3. **Memory Safety & Performance**: Rust code must maintain zero memory safety compromises. Avoid `unsafe` unless strictly justified and verified. Target 60 FPS performance budgets.
