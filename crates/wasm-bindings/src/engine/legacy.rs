@@ -174,13 +174,14 @@ impl EngineBackend for LegacyBackend {
         self.document.has_active_selection()
     }
 
-    fn selection(&self) -> Option<(u32, u32, u32, u32)> {
+    fn selection_meta(&self) -> super::SelectionMeta {
         let sel = &self.document.selection;
-        let (x, y, w, h) = (sel.x, sel.y, sel.width, sel.height);
-        if w == 0 || h == 0 {
-            None
-        } else {
-            Some((x, y, w, h))
+        super::SelectionMeta {
+            x: sel.x,
+            y: sel.y,
+            width: sel.width,
+            height: sel.height,
+            active: sel.active,
         }
     }
 
@@ -326,7 +327,7 @@ mod tests {
         assert!(!b.has_selection());
         b.set_selection(2, 2, 4, 4);
         assert!(b.has_selection());
-        assert_eq!(b.selection(), Some((2, 2, 4, 4)));
+        assert_eq!((b.selection_meta().x, b.selection_meta().width), (2, 4));
         b.clear_selection();
         assert!(!b.has_selection());
     }

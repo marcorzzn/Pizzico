@@ -211,8 +211,15 @@ impl EngineBackend for V2Backend {
         self.selection.is_some()
     }
 
-    fn selection(&self) -> Option<(u32, u32, u32, u32)> {
-        self.selection
+    fn selection_meta(&self) -> super::SelectionMeta {
+        let (x, y, width, height) = self.selection.unwrap_or((0, 0, 0, 0));
+        super::SelectionMeta {
+            x,
+            y,
+            width,
+            height,
+            active: self.selection.is_some(),
+        }
     }
 
     fn history_can_undo(&self) -> bool {
@@ -334,5 +341,28 @@ mod tests {
     fn v2_non_espone_il_documento_legacy() {
         let b = V2Backend::with_size(4, 4);
         assert!(b.legacy_document().is_none());
+    }
+    #[test]
+    fn metadati_e_selezione_hanno_la_forma_attesa_dalla_ui() {
+        // Il flusso della UI: crea documento, aggiungi layer, selezionalo, leggi i metadati.
+        let mut b = V2Backend::with_size(10, 10);
+        let id = b.add_raster_layer("sfondo", 10, 10, [1, 1, 1, 255]);
+        b.select_layer(id);
+
+        let meta = b.layers_metadata();
+        assert_eq!(meta.len(), 1);
+        assert_eq!(meta[0].id, id, "l'id pubblico deve tornare indietro");
+        assert_eq!(meta[0].name, "sfondo");
+        assert_eq!(b.active_layer_id(), Some(id));
+
+        assert!(!b.has_selection());
+        b.set_selection(2, 3, 4, 5);
+        let m = b.selection_meta();
+        assert!(m.active);
+        assert_eq!((m.x, m.y, m.width, m.height), (2, 3, 4, 5));
+
+        b.clear_selection();
+        assert!(!b.selection_meta().active);
+        assert_eq!(b.selection_meta().width, 0);
     }
 }

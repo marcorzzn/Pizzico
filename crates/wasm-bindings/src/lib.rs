@@ -225,23 +225,21 @@ pub struct LayerMetadataDto {
 /// Restituisce i metadati di tutti i livelli presenti nel documento attivo come array JS.
 #[wasm_bindgen]
 pub fn get_layers_metadata() -> Result<JsValue, JsValue> {
-    let dtos: Vec<LayerMetadataDto> = with_active_document(|doc| {
-        doc.layers
-            .iter()
-            .map(|l| LayerMetadataDto {
-                id: l.id,
-                name: l.name.clone(),
-                kind: match &l.kind {
-                    pizzico_core::LayerKind::Raster { .. } => "Raster".to_string(),
-                    pizzico_core::LayerKind::Vector { .. } => "Vector".to_string(),
-                    pizzico_core::LayerKind::Group { .. } => "Group".to_string(),
-                },
-                visible: l.visible,
-                locked: l.locked,
-                opacity: l.opacity,
-                blend_mode: format!("{:?}", l.blend_mode),
-                offset_x: l.transform.x,
-                offset_y: l.transform.y,
+    // I metadati vengono dal backend: il bridge non conosce più la struttura del
+    // documento, solo il contratto `LayerMeta`.
+    let dtos: Vec<LayerMetadataDto> = with_backend(|b| {
+        b.layers_metadata()
+            .into_iter()
+            .map(|m| LayerMetadataDto {
+                id: m.id,
+                name: m.name,
+                kind: m.kind,
+                visible: m.visible,
+                locked: m.locked,
+                opacity: m.opacity,
+                blend_mode: m.blend_mode,
+                offset_x: m.offset_x,
+                offset_y: m.offset_y,
             })
             .collect()
     });
@@ -820,9 +818,7 @@ pub fn get_active_layer_offset() -> JsValue {
 /// Imposta la selezione rettangolare attiva nel documento in coordinate logiche documento.
 #[wasm_bindgen]
 pub fn set_selection(x: u32, y: u32, width: u32, height: u32) -> bool {
-    with_active_document_mut(|doc| {
-        doc.set_selection(x, y, width, height);
-    });
+    with_backend_mut(|b| b.set_selection(x, y, width, height));
     set_document_dirty(true);
     true
 }
@@ -830,9 +826,7 @@ pub fn set_selection(x: u32, y: u32, width: u32, height: u32) -> bool {
 /// Rimuove la selezione attiva (deseleziona).
 #[wasm_bindgen]
 pub fn clear_selection() -> bool {
-    with_active_document_mut(|doc| {
-        doc.clear_selection();
-    });
+    with_backend_mut(|b| b.clear_selection());
     set_document_dirty(true);
     true
 }
@@ -840,13 +834,13 @@ pub fn clear_selection() -> bool {
 /// Restituisce true se è presente una selezione rettangolare attiva.
 #[wasm_bindgen]
 pub fn has_active_selection() -> bool {
-    with_active_document(|doc| doc.has_active_selection())
+    with_backend(|b| b.has_selection())
 }
 
 /// Restituisce la selezione corrente serializzata come oggetto JS, o null se inattiva.
 #[wasm_bindgen]
 pub fn get_selection() -> Result<JsValue, JsValue> {
-    let sel = with_active_document(|doc| doc.selection);
+    let sel = with_backend(|b| b.selection_meta());
     if sel.active {
         let json_str = serde_json::to_string(&sel)
             .map_err(|e| JsValue::from_str(&format!("Errore serializzazione selezione: {}", e)))?;

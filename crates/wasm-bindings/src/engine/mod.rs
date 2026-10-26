@@ -59,6 +59,18 @@ pub struct HistoryMeta {
     pub redo_count: usize,
 }
 
+/// Selezione rettangolare, nella forma esatta che il bridge serializza per la UI
+/// (`{ x, y, width, height, active }`). Deve combaciare con `pizzico_core::RectSelection`,
+/// perché la UI legge quei campi.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct SelectionMeta {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub active: bool,
+}
+
 /// Operazioni che il bridge richiede al motore.
 ///
 /// I metodi sono volutamente "semantici" (cosa fare) e non "strutturali" (come farlo):
@@ -109,7 +121,8 @@ pub trait EngineBackend {
     fn set_selection(&mut self, x: u32, y: u32, width: u32, height: u32);
     fn clear_selection(&mut self);
     fn has_selection(&self) -> bool;
-    fn selection(&self) -> Option<(u32, u32, u32, u32)>;
+    /// Selezione corrente, nella forma serializzata per la UI.
+    fn selection_meta(&self) -> SelectionMeta;
 
     // ── History ──────────────────────────────────────────────────────────────
     //
