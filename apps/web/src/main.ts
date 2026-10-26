@@ -82,7 +82,7 @@ import {
 } from '@pizzico/worker-core';
 import { saveAutosave, loadAutosave, clearAutosave } from './storage';
 
-console.log('🍕 Pizzico Engine initializing…');
+console.log('Pizzico Engine initializing…');
 
 // ── Stato Brush Tool e Disegno (§10 Fase 1) ──────────────────────────────────
 
@@ -197,14 +197,14 @@ async function setupWasm(): Promise<void> {
     wasmReady = true;
     const v = pizzico_version();
     console.log(
-      `[WASM Bridge] ✅ Modulo Rust inizializzato — version: ${v}, add(2,3) = ${add(2, 3)}`
+      `[WASM Bridge] Modulo Rust inizializzato — version: ${v}, add(2,3) = ${add(2, 3)}`
     );
     updateWasmStatusBadge(`WASM Rust v${v} pronto`, 'var(--pz-accent)');
     syncHistoryUi();
     renderLayersPanel();
     updateInspector();
   } catch (err) {
-    console.error('[WASM Bridge] ❌ Inizializzazione WASM fallita:', err);
+    console.error('[WASM Bridge] Inizializzazione WASM fallita:', err);
     updateWasmStatusBadge('Errore caricamento WASM', 'var(--pz-error)');
   }
 }
@@ -287,9 +287,9 @@ function scheduleAutosave() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
       shell.updateAutosaveIndicator(`Salvato automaticamente ${timeStr} (${target.toUpperCase()})`, 'var(--pz-accent)');
-      console.log(`[Autosave] ✅ Progetto salvato in ${target.toUpperCase()} (${bytes.length} bytes, ${timeStr})`);
+      console.log(`[Autosave] Progetto salvato in ${target.toUpperCase()} (${bytes.length} bytes, ${timeStr})`);
     } catch (err) {
-      console.warn('[Autosave] ⚠️ Errore salvataggio automatico:', err);
+      console.warn('[Autosave] Errore salvataggio automatico:', err);
       shell.updateAutosaveIndicator('Autosave fallito', 'var(--pz-error)');
     }
   }, 2000);
@@ -322,7 +322,7 @@ function handleSaveProject() {
     showToast(`Progetto salvato su disco: "${fileName}" (${sizeKb} KB)`, 'success');
     scheduleAutosave();
   } catch (err) {
-    console.error('[Save Project] ❌ Errore salvataggio file .pizzico:', err);
+    console.error('[Save Project] Errore salvataggio file .pizzico:', err);
     showToast(`Errore salvataggio progetto: ${err}`, 'error');
   }
 }
@@ -355,7 +355,7 @@ async function handleOpenProjectFile(file: File): Promise<void> {
     scheduleAutosave();
   } catch (err) {
     hideLoadingSpinner();
-    console.error('[Open Project] ❌ Errore apertura file .pizzico:', err);
+    console.error('[Open Project] Errore apertura file .pizzico:', err);
     showToast(`Errore apertura progetto: ${err}`, 'error');
   }
 }
@@ -631,7 +631,7 @@ async function handlePsdFile(file: File): Promise<void> {
     load_psd_bytes(bytes);
 
     const docMeta = get_document_metadata();
-    console.log('[PSD Import] ✅ Documento importato:', docMeta);
+    console.log('[PSD Import] Documento importato:', docMeta);
 
     syncHistoryUi();
     renderLayersPanel();
@@ -644,7 +644,7 @@ async function handlePsdFile(file: File): Promise<void> {
     );
   } catch (err) {
     hideLoadingSpinner();
-    console.error('[PSD Import] ❌ Errore durante il parsing PSD:', err);
+    console.error('[PSD Import] Errore durante il parsing PSD:', err);
     showToast(`Errore parsing PSD: ${err}`, 'error');
   }
 }
@@ -1482,7 +1482,7 @@ function updateInspector() {
             await clearAutosave();
             try {
               await (window as any).__loadSamplePsd();
-              console.log('[Boot] ✅ sample-01.psd precaricato dopo aver scartato autosave');
+              console.log('[Boot] sample-01.psd precaricato dopo aver scartato autosave');
             } catch (e) {
               console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
             }
@@ -1493,7 +1493,7 @@ function updateInspector() {
         // Nessun autosave presente: carica sample-01.psd come progetto iniziale
         try {
           await (window as any).__loadSamplePsd();
-          console.log('[Boot] ✅ sample-01.psd precaricato automaticamente');
+          console.log('[Boot] sample-01.psd precaricato automaticamente');
         } catch (e) {
           console.warn('[Boot] Precaricamento sample PSD non riuscito:', e);
         }
@@ -1504,9 +1504,9 @@ function updateInspector() {
 
     try {
       await init_webgpu('pizzico-canvas');
-      console.log('[WebGPU] ✅ Render loop Rust attivo — 60 FPS via RAF con dirty checking');
+      console.log('[WebGPU] Render loop Rust attivo — 60 FPS via RAF con dirty checking');
     } catch (err) {
-      console.warn('[WebGPU] ⚠️ Fallback a Canvas2D — WebGPU non disponibile:', err);
+      console.warn('[WebGPU] Fallback a Canvas2D — WebGPU non disponibile:', err);
       const ctx = shell.canvas.getContext('2d');
       if (ctx) {
         ctx.fillStyle = '#121316';
