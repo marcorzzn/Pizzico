@@ -6,9 +6,12 @@ code and should be optimised before committing.
 
 | File | Used by | Subject |
 | --- | --- | --- |
+| `screenshot-canvas.png` | Root README | The editor with a layered PSD open: canvas, tool strip in the top bar, layer panel (Phase 6 UI). |
+| `screenshot-inspector.png` | Root README | Context-aware inspector: tool settings and active layer properties. |
+| `screenshot-export.png` | Root README | Export panel offering PNG, JPEG, WebP and layered PSD. |
 | `photopea-validation.png` | Root README | A PSD exported by Pizzico, opened in Photopea with layers, blend modes, and opacity intact. |
-| `feature-selection.png` | Root README | Layer panel and rectangular selection. |
-| `feature-export.png` | Root README | Multi-format export pipeline. |
+| `feature-selection.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
+| `feature-export.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
 | `feature-persistence.png` | Docs | Autosave through OPFS and IndexedDB. |
 | `live-demo-working.png` | Docs | The deployed PWA running in a browser. |
 | `github-readme-showcase.png` | Docs | Showcase composition. |

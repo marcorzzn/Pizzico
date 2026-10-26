@@ -133,3 +133,36 @@ Select-String -Path packages\ui-kit\src\*.css,packages\ui-web\src\*.css `
 - Tema chiaro: **non previsto**. Se un giorno servirà, sarà una nuova decisione.
 - Layout mobile: la Fase 7 lo affronta; qui è solo fissato il vincolo delle aree di
   tocco a 44px.
+
+## 9. Decisioni prese durante l'implementazione
+
+Registrate qui perché sono state prese **mentre** si implementava, non prima. Restano
+vincolanti come le precedenti.
+
+1. **Un solo accento, applicato.** Le schede Move e Marquee usavano viola `#a855f7` e ciano
+   `#06b6d4`, due accenti che il §2 non prevede. Sono stati rimossi in favore di
+   `--pz-accent`: se un giorno servirà distinguere gli strumenti, sarà una decisione nuova,
+   non un residuo.
+2. **Il tema è il default, non un'opzione.** In 6a i token Pizzart erano un layer inerte
+   attivabile con `[data-theme="pizzart"]`; in 6b sono passati in `:root` e quel layer è
+   stato rimosso. Un tema spento che nessuno attiva è solo codice morto.
+3. **Alias v1 come ponte, con scadenza.** `--pz-bg-app`, `--pz-accent-primary`,
+   `--pz-font-sans` e simili puntano ai token Pizzart finché i componenti non saranno
+   riscritti. Non sono un secondo set di valori: sono un reindirizzamento da eliminare
+   (6c-c).
+4. **Icone generate, non scritte a mano.** Il modulo `ui-kit/src/icons` è prodotto da
+   Lucide v1.61.0 con un lock di digest (`icons.lock.json`). Aggiungere un'icona significa
+   aggiungere una riga al generatore, non digitare un path SVG.
+5. **I controlli dell'inspector sono componenti.** Slider e ColorPicker di `ui-kit` hanno
+   una factory (`createSlider`, `createColorPicker`) che avvolge la classe: gli ID restano
+   quelli attesi dal codice esistente, così un controllo può essere sostituito senza toccare
+   chi lo interroga.
+6. **Il tipo di un toast non è solo un colore.** Ogni toast porta un'icona coerente con il
+   tipo (Check, Info, AlertCircle): il colore del bordo non basta come segnale, e non basta
+   a chi non distingue i colori.
+7. **Zero emoji vale anche per i log.** Il §1 dice «in nessun contesto»: sono stati rimossi
+   anche i prefissi emoji dei `console.*`, che l'utente non vede. Regola semplice da
+   verificare batte eccezione ragionevole.
+8. **I valori non presenti nel documento sono derivati, e dichiarati.** `--pz-warning`,
+   `--pz-bg-elevated`, le ombre e le varianti alpha dell'accento non provengono da Pizzart
+   né da qui: sono calcolati dai token del §2 e marcati come derivati in `tokens.css`.

@@ -33,14 +33,22 @@
 ## Showcase
 
 <p align="center">
-  <img src="docs/assets/photopea-validation.png" alt="Photopea PSD Validation" width="85%" />
+  <img src="docs/assets/screenshot-canvas.png" alt="Pizzico editor with a layered PSD loaded and the layer panel on the right" width="88%" />
   <br />
-  <em>Adobe Photoshop PSD Export: Verified in Photopea with preserved layer hierarchy, blend modes, and opacity.</em>
+  <em>A layered PSD open in the editor: canvas, tool strip in the top bar, layer panel on the right.</em>
 </p>
 
 <p align="center">
-  <img src="docs/assets/feature-selection.png" alt="Layer Management and Selection" width="48%" />
-  <img src="docs/assets/feature-export.png" alt="Multi-format Export Pipeline" width="48%" />
+  <img src="docs/assets/screenshot-inspector.png" alt="Inspector showing tool settings and active layer properties" width="21%" />
+  <img src="docs/assets/screenshot-export.png" alt="Export panel with PNG, JPEG, WebP and layered PSD" width="64%" />
+  <br />
+  <em>Left: the context-aware inspector. Right: multi-format export, including layered PSD.</em>
+</p>
+
+<p align="center">
+  <img src="docs/assets/photopea-validation.png" alt="Photopea PSD Validation" width="85%" />
+  <br />
+  <em>Adobe Photoshop PSD Export: Verified in Photopea with preserved layer hierarchy, blend modes, and opacity.</em>
 </p>
 
 ---
@@ -55,7 +63,22 @@
 - **Multi-Format Export**: Export to PNG, JPEG, WebP, and layered PSD.
 - **Persistence**: Automatic background saving using the Origin Private File System (OPFS) and IndexedDB fallback.
 - **WebGPU Rendering**: Compute-shader compositing with graceful WebGL2 and Canvas fallback.
+- **Purpose-built interface**: dark theme, Lucide SVG icon set, no emoji anywhere, and a single accent colour reserved for state and focus.
 - **PWA & Mobile Ready**: Progressive Web App installable on any modern desktop or smartphone.
+
+---
+
+## Status
+
+| Area | State |
+| --- | --- |
+| Phase 1 — raster editor | Complete: brush, selection, layers, undo/redo, persistence, export. |
+| Phase 6 — interface redesign | Done through 6c-b (theme, shell, icon set, sliders, colour picker, inspector). **6c-c still open**: inspector card classes, removal of the v1 token aliases, wiring of the Effects and Masks sections. |
+| Engine v2 | In progress: the legacy stroke pipeline is not handed off yet. |
+| Phase 7 — Android (Tauri) | Not started. |
+
+The live demo tracks `master`: every push to the default branch is built and deployed to
+Cloudflare Pages.
 
 ---
 

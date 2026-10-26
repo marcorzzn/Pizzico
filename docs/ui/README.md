@@ -8,11 +8,14 @@ How the interface is reasoned about, and the decisions already taken.
 | [design-decisions.md](design-decisions.md) | Concrete decisions taken for the Phase 6 interface. |
 | [tokens.md](tokens.md) | Where the design values live, the two token layers, and how to verify them. |
 | [icons.md](icons.md) | The Lucide icon set, how it is generated, and how it is used. |
+| [fase-6-stato.md](fase-6-stato.md) | What Phase 6 has done so far, what is missing, and the known technical debt. |
+| [fase-6c-b-mappatura.md](fase-6c-b-mappatura.md) | Line-by-line map of `main.ts` used to replace its hand-built controls. |
 
 ## Current direction
 
-The interface is being designed for a dark theme, with a deliberate choice to
-avoid emoji in the product UI — a decision recorded during Phase 6 planning.
+The dark theme is now the interface, not a proposal: it is active in
+`tokens.css`. Emoji are gone from `ui-kit`, `ui-web` and `apps/web/src`, and the
+icon set is generated from Lucide rather than drawn by hand.
 
 ## Related material
 
