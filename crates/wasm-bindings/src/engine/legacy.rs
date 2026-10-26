@@ -217,7 +217,30 @@ impl EngineBackend for LegacyBackend {
         }
     }
 
-    fn push_command(&mut self, cmd: Box<dyn pizzico_core::history::Command>) {
+    fn commit_move(&mut self, layer_id: u64, from: (i32, i32), to: (i32, i32)) {
+        self.history
+            .push(Box::new(pizzico_core::MoveLayerCommand::new(layer_id, from, to)));
+        self.dirty = true;
+    }
+
+    fn commit_stroke(
+        &mut self,
+        layer_id: u64,
+        before: Vec<u8>,
+        after: Vec<u8>,
+        bbox: Option<(u32, u32, u32, u32)>,
+    ) {
+        let cmd: Box<dyn pizzico_core::history::Command> = match bbox {
+            Some((x, y, w, h)) => Box::new(pizzico_core::StrokeCommand::new_bounded(
+                layer_id,
+                (x, y, w, h),
+                before,
+                after,
+            )),
+            None => Box::new(pizzico_core::StrokeCommand::new_full(
+                layer_id, before, after,
+            )),
+        };
         self.history.push(cmd);
         self.dirty = true;
     }

@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use wasm_bindgen::prelude::*;
 
 use pizzico_commands::CommandRegistry;
-use pizzico_core::{Command, Document, LayerKind, MoveLayerCommand, StrokeCommand};
+use pizzico_core::{Document, LayerKind};
 use pizzico_raster::brush::{BoundingBox, Brush};
 
 pub mod engine;
@@ -70,10 +70,6 @@ fn with_backend_mut<R>(f: impl FnOnce(&mut dyn crate::engine::EngineBackend) -> 
     BACKEND.with(|cell| f(&mut **cell.borrow_mut()))
 }
 
-/// Accoda alla history del backend un comando già applicato al documento.
-fn push_command_via_backend(cmd: Box<dyn pizzico_core::history::Command>) {
-    with_backend_mut(|b| b.push_command(cmd));
-}
 
 /// Svuota la history del backend.
 fn clear_history_via_backend() {
@@ -596,7 +592,7 @@ pub fn eraser_stroke(
     }
 }
 
-/// Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
+/// Termina la sessione di tratto e registra un'unica modifica di pixel nella History.
 #[wasm_bindgen]
 pub fn end_stroke() -> bool {
     let stroke_opt = ACTIVE_STROKE.with(|s| s.borrow_mut().take());
@@ -605,50 +601,45 @@ pub fn end_stroke() -> bool {
         let before_pixels = stroke_state.before_pixels;
         let dirty_bbox = stroke_state.dirty_bbox;
 
-        let cmd_opt: Option<Box<dyn Command>> = with_active_document(|doc| {
-            if let Some(layer) = doc.get_layer(layer_id) {
-                if let LayerKind::Raster { width, pixels: current_pixels, .. } = &layer.kind {
-                    if let Some(bbox) = dirty_bbox {
-                        let doc_w = *width;
-                        let bx = bbox.min_x;
-                        let by = bbox.min_y;
-                        let bw = bbox.width;
-                        let bh = bbox.height;
+        // Il bridge estrae solo i DUE buffer e il rettangolo: il comando lo costruisce
+        // il backend, con i propri tipi. Nessun tipo di comando attraversa il confine.
+        let dati: Option<(Vec<u8>, Vec<u8>, Option<(u32, u32, u32, u32)>)> =
+            with_active_document(|doc| {
+                let layer = doc.get_layer(layer_id)?;
+                let LayerKind::Raster {
+                    width,
+                    pixels: current_pixels,
+                    ..
+                } = &layer.kind
+                else {
+                    return None;
+                };
 
+                match dirty_bbox {
+                    Some(bbox) => {
+                        let doc_w = *width;
+                        let (bx, by, bw, bh) =
+                            (bbox.min_x, bbox.min_y, bbox.width, bbox.height);
                         let mut before_patch = Vec::with_capacity((bw * bh * 4) as usize);
                         let mut after_patch = Vec::with_capacity((bw * bh * 4) as usize);
-
                         for row in 0..bh {
                             let offset = (((by + row) * doc_w + bx) * 4) as usize;
                             let len = (bw * 4) as usize;
-                            if offset + len <= before_pixels.len() && offset + len <= current_pixels.len() {
+                            if offset + len <= before_pixels.len()
+                                && offset + len <= current_pixels.len()
+                            {
                                 before_patch.extend_from_slice(&before_pixels[offset..offset + len]);
                                 after_patch.extend_from_slice(&current_pixels[offset..offset + len]);
                             }
                         }
-
-                        let cmd: Box<dyn Command> = Box::new(StrokeCommand::new_bounded(
-                            layer_id,
-                            (bx, by, bw, bh),
-                            before_patch,
-                            after_patch,
-                        ));
-                        return Some(cmd);
-                    } else {
-                        let cmd: Box<dyn Command> = Box::new(StrokeCommand::new_full(
-                            layer_id,
-                            before_pixels,
-                            current_pixels.clone(),
-                        ));
-                        return Some(cmd);
+                        Some((before_patch, after_patch, Some((bx, by, bw, bh))))
                     }
+                    None => Some((before_pixels, current_pixels.clone(), None)),
                 }
-            }
-            None
-        });
+            });
 
-        if let Some(cmd) = cmd_opt {
-            push_command_via_backend(cmd);
+        if let Some((before, after, bbox)) = dati {
+            with_backend_mut(|b| b.commit_stroke(layer_id, before, after, bbox));
             set_document_dirty(true);
             return true;
         }
@@ -783,12 +774,10 @@ pub fn end_move_layer() -> bool {
         });
         if let Some(final_offset) = final_offset_opt {
             if final_offset != move_state.initial_offset {
-                let cmd = Box::new(MoveLayerCommand::new(
-                    move_state.layer_id,
-                    move_state.initial_offset,
-                    final_offset,
-                ));
-                push_command_via_backend(cmd);
+                // Il backend registra il proprio comando: il bridge passa solo i dati.
+                with_backend_mut(|b| {
+                    b.commit_move(move_state.layer_id, move_state.initial_offset, final_offset)
+                });
                 set_document_dirty(true);
                 return true;
             }

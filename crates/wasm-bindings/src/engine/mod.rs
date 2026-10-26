@@ -118,8 +118,22 @@ pub trait EngineBackend {
     fn history_undo(&mut self) -> bool;
     fn history_redo(&mut self) -> bool;
     fn history_info(&self) -> HistoryMeta;
-    /// Accoda un comando già applicato al documento.
-    fn push_command(&mut self, cmd: Box<dyn pizzico_core::history::Command>);
+    /// Registra in history uno spostamento già applicato al documento.
+    ///
+    /// Il trait parla di **operazioni**, non di comandi: ogni backend crea il proprio
+    /// tipo di comando. Era il punto di attrito che rendeva impossibile un backend v2.
+    fn commit_move(&mut self, layer_id: u64, from: (i32, i32), to: (i32, i32));
+    /// Registra in history una modifica di pixel già applicata al documento.
+    ///
+    /// `bbox = None` significa "l'intero layer": `before` e `after` contengono allora
+    /// tutti i pixel. Con `bbox = Some((x, y, w, h))` contengono solo quel rettangolo.
+    fn commit_stroke(
+        &mut self,
+        layer_id: u64,
+        before: Vec<u8>,
+        after: Vec<u8>,
+        bbox: Option<(u32, u32, u32, u32)>,
+    );
     /// Svuota la history (nuovo documento, caricamento progetto/PSD).
     fn clear_history(&mut self);
 
