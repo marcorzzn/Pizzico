@@ -18,7 +18,7 @@
 
 import '@pizzico/ui-web/src/styles.css';
 import { DesktopShellLayout } from '@pizzico/ui-web';
-import { LayerRow, Button, createSlider, createColorPicker } from '@pizzico/ui-kit';
+import { LayerRow, Button, Slider, createSlider, createColorPicker } from '@pizzico/ui-kit';
 import { LayerMetadata } from '@pizzico/shared';
 import {
   initWasm,
@@ -1161,12 +1161,13 @@ layerPropsSection.style.cssText = `
 `;
 shell.inspectorPanelBody.appendChild(layerPropsSection);
 
+// Riferimento allo slider di opacità dell'inspector. updateInspector() ricostruisce
+// il proprio DOM a ogni chiamata, quindi il riferimento va riassegnato lì; serve a
+// syncInspectorOpacity(), che deve aggiornare input ed etichetta insieme.
+let inspectorOpacitySlider: Slider | null = null;
+
 function syncInspectorOpacity(opacity: number) {
-  const inspectorSlider = document.getElementById('inspector-opacity-input') as HTMLInputElement;
-  const inspectorVal = document.getElementById('inspector-opacity-val');
-  const pct = Math.round(opacity * 100);
-  if (inspectorSlider) inspectorSlider.value = String(pct);
-  if (inspectorVal) inspectorVal.textContent = `${pct}%`;
+  inspectorOpacitySlider?.setValue(Math.round(opacity * 100));
 }
 
 function updateInspector() {
@@ -1316,6 +1317,9 @@ function updateInspector() {
 
   // 3. Proprietà Livello Attivo
   layerPropsSection.innerHTML = '';
+  // Il DOM è appena stato svuotato: il riferimento precedente punterebbe a un
+  // nodo staccato. Va riazzerato prima di ricostruire, e riassegnato più sotto.
+  inspectorOpacitySlider = null;
 
   const header = document.createElement('div');
   header.style.cssText = `
@@ -1359,42 +1363,27 @@ function updateInspector() {
 
   // Controllo Opacità sincronizzato
   const opacityPct = Math.round(activeLayer.opacity * 100);
-  const opacityRow = document.createElement('div');
-  opacityRow.style.cssText = `display: flex; flex-direction: column; gap: 4px;`;
-  opacityRow.innerHTML = `
-    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--pz-text-secondary);">
-      <span>Opacità Livello</span>
-      <span id="inspector-opacity-val" style="font-variant-numeric: tabular-nums;">${opacityPct}%</span>
-    </div>
-  `;
+  inspectorOpacitySlider = new Slider({
+    id: 'inspector-opacity-input',
+    label: 'Opacità Livello',
+    min: 0,
+    max: 100,
+    value: opacityPct,
+    unit: '%',
+    onInput: (val) => {
+      set_layer_opacity(activeLayer.id, val / 100.0);
+      syncHistoryUi();
 
-  const slider = document.createElement('input');
-  slider.id = 'inspector-opacity-input';
-  slider.type = 'range';
-  slider.min = '0';
-  slider.max = '100';
-  slider.value = String(opacityPct);
-  slider.className = 'pz-slider-input';
-  slider.style.cssText = `width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;`;
-  slider.addEventListener('input', (e) => {
-    const val = Number((e.target as HTMLInputElement).value);
-    const valSpan = document.getElementById('inspector-opacity-val');
-    if (valSpan) valSpan.textContent = `${val}%`;
-
-    set_layer_opacity(activeLayer.id, val / 100.0);
-    syncHistoryUi();
-
-    const rowEl = document.querySelector(`.pz-layer-row[data-layer-id="${activeLayer.id}"]`);
-    if (rowEl) {
-      const rowSlider = rowEl.querySelector('.pz-layer-opacity-slider') as HTMLInputElement;
-      const rowVal = rowEl.querySelector('.pz-layer-opacity-val');
-      if (rowSlider) rowSlider.value = String(val);
-      if (rowVal) rowVal.textContent = `${val}%`;
-    }
+      const rowEl = document.querySelector(`.pz-layer-row[data-layer-id="${activeLayer.id}"]`);
+      if (rowEl) {
+        const rowSlider = rowEl.querySelector('.pz-layer-opacity-slider') as HTMLInputElement;
+        const rowVal = rowEl.querySelector('.pz-layer-opacity-val');
+        if (rowSlider) rowSlider.value = String(val);
+        if (rowVal) rowVal.textContent = `${val}%`;
+      }
+    },
   });
-
-  opacityRow.appendChild(slider);
-  layerPropsSection.appendChild(opacityRow);
+  layerPropsSection.appendChild(inspectorOpacitySlider.element);
 
   // Toggle visibilità ed eliminazione
   const actionsRow = document.createElement('div');
