@@ -64,3 +64,11 @@ apps/web/public/*.psd
 
 # Progetti da aggregare (audit esterno, mai committare)
 progetti da aggregare/
+
+# Archivio personale di analisi — MAI committare (contiene materiale locale)
+_archivio-personale/
+**/*.apk
+**/*.smali
+**/jadx_out/
+**/apktool_out/
+**/dex2jar_out/
