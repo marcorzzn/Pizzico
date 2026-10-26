@@ -20,7 +20,9 @@ out/
 
 # Rust / WASM
 target/
-Cargo.lock
+# Cargo.lock è VERSIONATO di proposito: questo è un workspace applicativo con
+# deploy web e APK, non una libreria. Il lockfile garantisce che CI e macchine
+# diverse risolvano le stesse versioni (decisione del 2026-10-26).
 crates/**/pkg/
 packages/**/pkg/
 !packages/worker-core/pkg/
