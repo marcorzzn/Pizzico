@@ -31,6 +31,7 @@ use pizzico_core::{
 };
 use pizzico_raster::brush::{BoundingBox, Brush};
 
+pub mod engine;
 pub mod gpu;
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -49,7 +50,13 @@ struct ActiveMoveState {
 }
 
 thread_local! {
-    static ACTIVE_DOCUMENT: RefCell<Document> = RefCell::new(Document::new(800, 600, "Pizzico Project"));
+    /// Backend del motore. In Fase 4.1 è sempre il backend legacy; la Fase 4.2
+    /// aggiunge `engine::v2::V2Backend` dietro la feature `engine-v2`.
+    ///
+    /// Lo stato del documento vive QUI, in un solo posto: le funzioni del bridge vi
+    /// accedono tramite `with_active_document(_mut)`.
+    static BACKEND: RefCell<Box<dyn crate::engine::EngineBackend>> =
+        RefCell::new(Box::new(crate::engine::legacy::LegacyBackend::new()));
     static ACTIVE_HISTORY: RefCell<History> = RefCell::new(History::new(50));
     static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
     static ACTIVE_MOVE: RefCell<Option<ActiveMoveState>> = RefCell::new(None);
@@ -68,11 +75,20 @@ pub fn set_document_dirty(dirty: bool) {
 }
 
 /// Esegue una closure con riferimento immutabile al documento attivo.
+///
+/// Passa dal backend: il documento non è più un `thread_local` a sé, ma lo stato
+/// interno del motore selezionato.
 pub fn with_active_document<F, R>(f: F) -> R
 where
     F: FnOnce(&Document) -> R,
 {
-    ACTIVE_DOCUMENT.with(|doc| f(&doc.borrow()))
+    BACKEND.with(|cell| {
+        let backend = cell.borrow();
+        let doc = backend
+            .legacy_document()
+            .expect("accesso legacy richiesto a un backend che non lo espone");
+        f(doc)
+    })
 }
 
 /// Esegue una closure con riferimento mutabile al documento attivo e segnala dirty.
@@ -80,8 +96,14 @@ pub fn with_active_document_mut<F, R>(f: F) -> R
 where
     F: FnOnce(&mut Document) -> R,
 {
-    ACTIVE_DOCUMENT.with(|doc| {
-        let r = f(&mut doc.borrow_mut());
+    BACKEND.with(|cell| {
+        let mut backend = cell.borrow_mut();
+        let r = {
+            let doc = backend
+                .legacy_document_mut()
+                .expect("accesso legacy richiesto a un backend che non lo espone");
+            f(doc)
+        };
         set_document_dirty(true);
         r
     })
@@ -120,11 +142,12 @@ pub fn pizzico_version() -> u32 {
 /// Crea o resetta il documento attivo con larghezza e altezza specificate.
 #[wasm_bindgen]
 pub fn create_document(width: u32, height: u32) {
-    with_active_document_mut(|doc| {
-        *doc = Document::new_empty(width, height);
-    });
+    // Il documento è ricreato dal backend scelto: la funzione non conosce più né
+    // `Document::new_empty` né il tipo concreto del motore.
+    BACKEND.with(|cell| cell.borrow_mut().create_document(width, height));
     ACTIVE_HISTORY.with(|h| h.borrow_mut().clear());
     ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
+    set_document_dirty(true);
 }
 
 /// Aggiunge un nuovo livello raster al documento attivo riempito con un colore RGBA uniforme.
