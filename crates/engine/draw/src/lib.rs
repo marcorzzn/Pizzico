@@ -370,6 +370,62 @@ impl Stroke {
         painted
     }
 
+    /// Compone il tratto in **sottrazione d'alpha** (gomma).
+    ///
+    /// dst.a = dst.a * (1 - src.a/255): il colore sotto non cambia, sparisce la
+    /// copertura. Restituisce il numero di pixel in cui l'alpha è diminuito.
+    pub fn render_eraser_over(&self, dst: &mut [u8], canvas_w: u32, canvas_h: u32) -> usize {
+        let src = self.render(canvas_w, canvas_h);
+        let mut toccati = 0;
+        for i in (0..dst.len().min(src.len())).step_by(4) {
+            let a = src[i + 3] as u32;
+            if a == 0 {
+                continue;
+            }
+            let prima = dst[i + 3];
+            let mantenuto = 255 - a;
+            dst[i + 3] = ((prima as u32 * mantenuto + 127) / 255) as u8;
+            if dst[i + 3] != prima {
+                toccati += 1;
+            }
+        }
+        toccati
+    }
+
+    /// Compone il tratto **solo dentro** il rettangolo di clip (x, y, w, h).
+    /// Fuori dal rettangolo dst resta invariato.
+    pub fn render_clipped_over(
+        &self,
+        dst: &mut [u8],
+        canvas_w: u32,
+        canvas_h: u32,
+        clip: (u32, u32, u32, u32),
+    ) -> usize {
+        let src = self.render(canvas_w, canvas_h);
+        let (cx, cy, cw, ch) = clip;
+        let mut painted = 0;
+        let x_end = cx.saturating_add(cw).min(canvas_w);
+        let y_end = cy.saturating_add(ch).min(canvas_h);
+        for y in cy..y_end {
+            for x in cx..x_end {
+                let i = (((y as usize) * canvas_w as usize) + x as usize) * 4;
+                if i + 4 > dst.len() || i + 4 > src.len() {
+                    continue;
+                }
+                if src[i + 3] == 0 {
+                    continue;
+                }
+                pizzico_engine_core::blend::blend_px(
+                    &mut dst[i..i + 4],
+                    &src[i..i + 4],
+                    self.brush.blend,
+                    1.0,
+                );
+                painted += 1;
+            }
+        }
+        painted
+    }
     fn rasterise_stamps(
         &self,
         stamps: &[Stamp],
