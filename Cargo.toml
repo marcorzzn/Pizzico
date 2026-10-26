@@ -24,6 +24,8 @@ members = [
     "crates/engine/text",
     "crates/engine/render",
     "crates/engine/io",
+    # Stato dell'editor portabile (Fase 3): nessuna GPU, nessun I/O.
+    "crates/session",
 ]
 resolver = "2"
 

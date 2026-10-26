@@ -1,0 +1,16 @@
+# Pizzico — crates/session/Cargo.toml
+# Licenza: MIT OR Apache-2.0
+#
+# Porting WASM-safe della semantica dell'editor (Fase 3).
+# Dipende SOLO da core e draw: niente GPU, niente filesystem.
+
+[package]
+name = "pizzico-session"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Stato dell'editor portabile (undo, opacità, maschere da selezione, tratti) senza I/O e senza GPU"
+
+[dependencies]
+pizzico-engine-core = { path = "../engine/core" }
+pizzico-engine-draw = { path = "../engine/draw" }

@@ -939,6 +939,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pizzico-session"
+version = "0.1.0"
+dependencies = [
+ "pizzico-engine-core",
+ "pizzico-engine-draw",
+]
+
+[[package]]
 name = "pizzico-text"
 version = "0.1.0"
 dependencies = [
