@@ -20,6 +20,9 @@ use pizzico_engine_core::{
     Document, Layer, LayerId, RemoveLayer, ReplacePixelCommand, SetOpacity, SetTransform, SetVisible,
 };
 
+use pizzico_engine_io::{encode, ExportFormat, ExportOptions};
+use pizzico_engine_render::RenderedImage;
+
 use super::{EngineBackend, HistoryMeta, LayerMeta};
 
 /// Backend basato su `pizzico-engine-core` (motore trapiantato).
@@ -77,6 +80,15 @@ impl V2Backend {
             .iter()
             .find(|(_, v)| **v == id)
             .map(|(k, _)| *k)
+    }
+
+    /// Composito del documento nella forma attesa da ngine-io.
+    fn rendered(&self) -> RenderedImage {
+        RenderedImage {
+            width: self.doc.width,
+            height: self.doc.height,
+            rgba: self.doc.composite(),
+        }
     }
 
     fn registra(&mut self, id: LayerId) -> u64 {
@@ -371,6 +383,38 @@ impl EngineBackend for V2Backend {
         self.doc.history.clear();
     }
 
+    fn export_as_png(&self) -> Result<Vec<u8>, String> {
+        let img = self.rendered();
+        encode(
+            &img,
+            ExportFormat::Png,
+            &ExportOptions {
+                background: None,
+                metadata: None,
+            },
+        )
+        .map_err(|e| e.to_string())
+    }
+
+    fn export_as_jpeg(&self, quality: u8) -> Result<Vec<u8>, String> {
+        let img = self.rendered();
+        // Replica della formula legacy: (r*a + 255*(255-a) + 127)/255 -> fondo bianco.
+        encode(
+            &img,
+            ExportFormat::Jpeg { quality },
+            &ExportOptions {
+                background: Some([255, 255, 255]),
+                metadata: None,
+            },
+        )
+        .map_err(|e| e.to_string())
+    }
+
+    fn export_as_webp(&self, _quality: u8) -> Result<Vec<u8>, String> {
+        // L'encoder WebP del crate image è solo lossless; il lossy richiede libwebp
+        // (codice C), che non compila per wasm32-unknown-unknown. Dichiarato, non finto.
+        Err("WebP export not supported in engine-v2. Use legacy backend or wait for libwebp/wasm support.".to_string())
+    }
     fn is_dirty(&self) -> bool {
         self.dirty
     }
@@ -442,6 +486,36 @@ mod tests {
         b.select_layer(id);
         assert!(b.begin_move_layer());
         assert!(!b.end_move_layer(), "nessun comando senza spostamento");
+    }
+    #[test]
+    fn export_png_e_jpeg_hanno_i_magic_bytes() {
+        let mut b = V2Backend::with_size(100, 100);
+        b.add_raster_layer("rosso", 100, 100, [255, 0, 0, 255]);
+
+        let png = b.export_as_png().expect("png");
+        assert_eq!(
+            &png[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+            "magic PNG"
+        );
+
+        let jpg = b.export_as_jpeg(90).expect("jpeg");
+        assert_eq!(&jpg[0..2], &[0xFF, 0xD8], "magic JPEG");
+
+        assert!(
+            b.export_as_webp(90).is_err(),
+            "WebP deve essere dichiarato non supportato, non finto"
+        );
+    }
+
+    #[test]
+    fn jpeg_su_trasparente_usa_il_fondo_bianco() {
+        let mut b = V2Backend::with_size(8, 8);
+        b.add_raster_layer("trasparente", 8, 8, [0, 0, 0, 0]);
+        let jpg = b
+            .export_as_jpeg(90)
+            .expect("il legacy compone su bianco: v2 deve fare lo stesso");
+        assert_eq!(&jpg[0..2], &[0xFF, 0xD8]);
     }
     #[test]
     fn v2_non_espone_il_documento_legacy() {

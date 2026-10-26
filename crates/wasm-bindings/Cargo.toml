@@ -23,6 +23,8 @@ pizzico-raster = { path = "../raster" }
 
 # Motore trapiantato da Pizzart (Fase 4.2). Opzionali: si attivano con `engine-v2`.
 pizzico-engine-core = { path = "../engine/core", optional = true }
+pizzico-engine-render = { path = "../engine/render", optional = true }
+pizzico-engine-io = { path = "../engine/io", optional = true }
 
 # WASM / JS bridge
 wasm-bindgen = { workspace = true }
@@ -49,7 +51,7 @@ default = []
 # Attiva il backend v2 (`pizzico-engine-core`) al posto del motore legacy.
 # Le funzioni che dipendono da formati legacy (PSD, .pizzico) restano escluse e
 # vanno dichiarate: vedi docs/audit/fase-4-2-2.md.
-engine-v2 = ["dep:pizzico-engine-core"]
+engine-v2 = ["dep:pizzico-engine-core", "dep:pizzico-engine-render", "dep:pizzico-engine-io"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-mutable-globals"]

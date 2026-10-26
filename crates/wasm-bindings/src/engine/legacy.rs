@@ -308,6 +308,18 @@ impl EngineBackend for LegacyBackend {
         self.history.clear();
     }
 
+    fn export_as_png(&self) -> Result<Vec<u8>, String> {
+        pizzico_io_native::export_png(&self.document).map_err(|e| e.to_string())
+    }
+
+    fn export_as_jpeg(&self, quality: u8) -> Result<Vec<u8>, String> {
+        // Il legacy compone la trasparenza su bianco dentro io-native.
+        pizzico_io_native::export_jpeg(&self.document, quality).map_err(|e| e.to_string())
+    }
+
+    fn export_as_webp(&self, quality: u8) -> Result<Vec<u8>, String> {
+        pizzico_io_native::export_webp(&self.document, quality).map_err(|e| e.to_string())
+    }
     fn is_dirty(&self) -> bool {
         self.dirty
     }
@@ -343,6 +355,25 @@ impl LegacyBackend {
 mod tests {
     use super::*;
 
+    #[test]
+    fn export_png_e_jpeg_hanno_i_magic_bytes() {
+        let mut b = LegacyBackend::with_size(100, 100);
+        b.add_raster_layer("rosso", 100, 100, [255, 0, 0, 255]);
+
+        let png = b.export_as_png().expect("png");
+        assert_eq!(
+            &png[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+            "magic PNG"
+        );
+
+        let jpg = b.export_as_jpeg(90).expect("jpeg");
+        assert_eq!(&jpg[0..2], &[0xFF, 0xD8], "magic JPEG");
+
+        let webp = b.export_as_webp(90).expect("webp legacy");
+        assert_eq!(&webp[0..4], b"RIFF", "magic RIFF");
+        assert_eq!(&webp[8..12], b"WEBP", "firma WEBP");
+    }
     #[test]
     fn il_backend_legacy_crea_documenti_e_layer() {
         let mut b = LegacyBackend::with_size(64, 48);

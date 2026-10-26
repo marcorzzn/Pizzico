@@ -378,29 +378,24 @@ pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
 /// Esporta l'immagine renderizzata del documento corrente in formato PNG (lossless con canale alpha).
 #[wasm_bindgen]
 pub fn export_as_png() -> Result<Vec<u8>, JsValue> {
-    with_active_document(|doc| {
-        pizzico_io_native::export_png(doc)
-            .map_err(|e| JsValue::from_str(&format!("Errore esportazione PNG: {}", e)))
-    })
+    with_backend(|b| b.export_as_png())
+        .map_err(|e| JsValue::from_str(&format!("Errore esportazione PNG: {}", e)))
 }
 
 /// Esporta l'immagine renderizzata del documento corrente in formato JPEG con qualità 1-100.
 /// Le aree trasparenti vengono composte su sfondo bianco (#FFFFFF).
 #[wasm_bindgen]
 pub fn export_as_jpeg(quality: u8) -> Result<Vec<u8>, JsValue> {
-    with_active_document(|doc| {
-        pizzico_io_native::export_jpeg(doc, quality)
-            .map_err(|e| JsValue::from_str(&format!("Errore esportazione JPEG: {}", e)))
-    })
+    with_backend(|b| b.export_as_jpeg(quality))
+        .map_err(|e| JsValue::from_str(&format!("Errore esportazione JPEG: {}", e)))
 }
 
-/// Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+/// Esporta l'immagine renderizzata del documento corrente in formato WebP (lossy, solo backend legacy).
+/// @deprecated not supported in engine-v2 - usa il backend legacy.
 #[wasm_bindgen]
 pub fn export_as_webp(quality: u8) -> Result<Vec<u8>, JsValue> {
-    with_active_document(|doc| {
-        pizzico_io_native::export_webp(doc, quality)
-            .map_err(|e| JsValue::from_str(&format!("Errore esportazione WebP: {}", e)))
-    })
+    with_backend(|b| b.export_as_webp(quality))
+        .map_err(|e| JsValue::from_str(&format!("Errore esportazione WebP: {}", e)))
 }
 
 /// Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).

@@ -116,6 +116,14 @@ pub trait EngineBackend {
     /// Buffer RGBA8 del documento compositato.
     fn composite(&self) -> Vec<u8>;
 
+    // ── Export ───────────────────────────────────────────────────────────────
+
+    /// PNG: conserva l'alpha.
+    fn export_as_png(&self) -> Result<Vec<u8>, String>;
+    /// JPEG: compone la trasparenza su bianco, come il motore legacy.
+    fn export_as_jpeg(&self, quality: u8) -> Result<Vec<u8>, String>;
+    /// WebP: solo il backend legacy lo supporta (lossy via crate image).
+    fn export_as_webp(&self, quality: u8) -> Result<Vec<u8>, String>;
     // ── Selezione ────────────────────────────────────────────────────────────
 
     fn set_selection(&mut self, x: u32, y: u32, width: u32, height: u32);
