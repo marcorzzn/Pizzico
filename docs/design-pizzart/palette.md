@@ -1,11 +1,16 @@
 # Palette — Pizzart UI
 
-> Fonte: ricerca di `Color32` in `pizzart/crates/ui/src/*.rs`.
+> Fonte: ricerca di `Color32` in `pizzart/crates/ui/src/*.rs`, **verificata contro gli
+> screenshot reali** in `docs/design-pizzart/screenshots/`.
 >
-> **Risultato onesto: Pizzart non ha una palette.** Usa il tema scuro predefinito di
-> egui e definisce **cinque** colori, tutti legati a funzioni specifiche. Chi si
-> aspetta un design system troverà invece il vuoto: è normale, Pizzart è un prototipo
-> funzionante, non un prodotto grafico.
+> **Risultato onesto: Pizzart non ha una palette.** Usa il tema predefinito di egui e
+> definisce **cinque** colori, tutti legati a funzioni specifiche.
+>
+> **Correzione rispetto alla prima stesura**: gli screenshot mostrano il tema
+> **chiaro** di egui (pannelli grigio chiaro, widget di sistema). La stesura
+> precedente diceva "tema scuro": era un'ipotesi sbagliata, smentita dall'evidenza.
+> Il canvas invece è scuro per scelta (`#1c1e22`), e questo produce il contrasto
+> chiaro/scuro visibile nelle schermate.
 
 ## Colori definiti nel codice
 

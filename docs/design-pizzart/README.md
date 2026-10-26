@@ -65,21 +65,38 @@ prima di cambiare strumento).
 
 ## 6. Screenshot
 
-**Non catturati.** In questo ambiente non c'è un display utilizzabile per avviare
-l'applicazione egui, e non è stato inventato nulla al posto loro.
+**Disponibili** in `screenshots/`, forniti dal committente il 2026-10-26:
 
-Per catturarli manualmente:
+| File | Cosa mostra |
+|---|---|
+| `01-pennello-e-pannelli.png` | strumento Pennello attivo, pannello destro completo (Strumento, Layer, Effetti, maschere), barra di stato |
+| `02-strumento-selezione.png` | strumento Seleziona attivo, pannello Strumento contestuale |
+| `03-menu-file.png` | menu `File` aperto (Apri, Salva, Salva con nome, Esporta PNG, Nuovo documento) |
 
-```powershell
-cd C:\Progetti\picsart-cl\pizzart
-cargo run -p pizzart-ui --release
-# poi: finestra completa con un documento, pannello Layer con 3+ layer,
-#      sezione Effetti, barra superiore
-```
+### Cosa aggiungono rispetto alla lettura del codice
 
-Salvare in `docs/design-pizzart/screenshots/`. Servono alla Fase 6 per confrontare
-la densità reale con quella che si ottiene in CSS: le proporzioni di egui non
-coincidono con quelle del DOM, e vedere lo schermo è l'unico modo per accorgersene.
+1. **Il tema è chiaro**, non scuro: pannelli grigio chiaro, widget di sistema, canvas
+   scuro. Smentisce l'ipotesi iniziale ("tema scuro di egui").
+2. Esiste una **barra dei menu** (`File`, `Modifica`, `Vista`) che nel codice si legge
+   come `TopBottomPanel::top("menu")` con bottoni: a schermo è un menu vero, con
+   tendina.
+3. Il centro della barra superiore mostra un **suggerimento contestuale** che cambia
+   con lo strumento («trascina per disegnare», «clicca un layer per selezionarlo»,
+   «trascina per selezionare, invio applica la maschera»).
+4. Gli strumenti hanno **lettere fra parentesi** (`Seleziona (S)`, `Pennello (B)`,
+   `Testo (T)`, `Selezione (R)`) e quello attivo è un **rettangolo pieno azzurro**.
+5. La barra di stato mostra **quattro informazioni** in fila: `1280×800`, `zoom 100%`,
+   `nessun layer selezionato`, nome della GPU. In basso a destra: `documento nuovo`.
+6. La sezione **Strumento** mostra una frase di stato incoerente con lo strumento
+   attivo («Il pennello è attivo con lo strumento Pennello (B)» mentre è attiva la
+   selezione): è un difetto reale, non un artefatto della cattura.
+7. I controlli sono **widget di sistema** (slider grigi con pallino, tendina con
+   freccia): non c'è styling proprio.
+
+### Cattura futura
+
+Serve ancora una schermata con un documento aperto e 3+ layer: le tre disponibili
+mostrano tutte il documento vuoto (0 layer, 0 gruppi).
 
 ## 7. Discrepanze fra report e codice
 
