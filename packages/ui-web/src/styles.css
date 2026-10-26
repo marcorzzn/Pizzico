@@ -384,6 +384,39 @@ html {
   line-height: 1.45;
 }
 
+/* Schede dell'inspector. Prima erano quattro stili inline quasi identici,
+   ognuno con le proprie differenze di padding e margine. */
+.pz-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pz-space-md);
+  padding: var(--pz-space-md);
+  margin-bottom: var(--pz-space-md);
+  background: var(--pz-surface-hover);
+  border: 1px solid var(--pz-border);
+  border-radius: var(--pz-radius-lg);
+  font-size: var(--pz-font-size-small);
+  color: var(--pz-text-secondary);
+}
+
+/* La scheda dello stato del motore è l'unica con la tinta d'accento. */
+.pz-card-accent {
+  background: var(--pz-accent-subtle);
+  border-color: var(--pz-accent-border);
+  color: var(--pz-text-primary);
+}
+
+.pz-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pz-space-sm);
+  font-weight: var(--pz-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pz-text-secondary);
+}
+
 /* ── Righe layer ─────────────────────────────────────────────────────────── */
 
 .pz-layer-row {
@@ -462,9 +495,6 @@ html {
 
 .pz-layer-opacity-slider {
   width: 54px;
-  height: 3px;
-  accent-color: var(--pz-accent);
-  cursor: pointer;
 }
 
 .pz-layer-opacity-val {
@@ -503,9 +533,62 @@ html {
 
 .pz-slider-range {
   width: 100%;
-  height: 3px;
-  accent-color: var(--pz-accent);
+}
+
+/* Range: track scuro, thumb in accento. Senza styling esplicito il tratto non
+   riempito resta chiaro e "stona" su tema scuro; `color-scheme: dark` non basta.
+   Nota: disattivando l'appearance nativo sparisce anche il riempimento accento
+   a sinistra del thumb, che qui non è previsto. */
+.pz-slider-range,
+.pz-layer-opacity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--pz-border-strong);
+  border-radius: var(--pz-radius-full);
+  outline: none;
   cursor: pointer;
+}
+
+.pz-slider-range::-webkit-slider-thumb,
+.pz-layer-opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pz-accent);
+  border: 2px solid var(--pz-bg-panel);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.pz-slider-range::-webkit-slider-thumb:hover,
+.pz-layer-opacity-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.pz-slider-range::-moz-range-track,
+.pz-layer-opacity-slider::-moz-range-track {
+  height: 4px;
+  background: var(--pz-border-strong);
+  border-radius: var(--pz-radius-full);
+}
+
+.pz-slider-range::-moz-range-thumb,
+.pz-layer-opacity-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pz-accent);
+  border: 2px solid var(--pz-bg-panel);
+  cursor: pointer;
+}
+
+.pz-slider-range:focus-visible,
+.pz-layer-opacity-slider:focus-visible {
+  outline: 2px solid var(--pz-accent);
+  outline-offset: 3px;
 }
 
 /* ── Color picker ────────────────────────────────────────────────────────── */

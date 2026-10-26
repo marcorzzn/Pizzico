@@ -990,7 +990,7 @@ layersHeaderContainer.style.cssText = `
   flex-direction: column;
   gap: 8px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
+  border-bottom: 1px solid var(--pz-border);
   margin-bottom: 8px;
 `;
 
@@ -1139,61 +1139,27 @@ shell.inspectorPanelBody.innerHTML = '';
 // Scheda Stato Engine WASM
 const wasmStatusBox = document.createElement('div');
 wasmStatusBox.id = 'wasm-bridge-status';
-wasmStatusBox.style.cssText = `
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background: var(--pz-accent-subtle);
-  border: 1px solid var(--pz-accent-border);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--pz-text-primary);
-`;
+wasmStatusBox.className = 'pz-card pz-card-accent';
 wasmStatusBox.innerHTML = `<strong>Rust Core Engine</strong><br><span id="wasm-result">In attesa WASM…</span>`;
 shell.inspectorPanelBody.appendChild(wasmStatusBox);
 
 // Scheda Metadati Documento Attivo
 const docMetaBox = document.createElement('div');
 docMetaBox.id = 'doc-meta-status';
-docMetaBox.style.cssText = `
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background: var(--pz-surface-hover);
-  border: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--pz-text-secondary);
-`;
+docMetaBox.className = 'pz-card';
 docMetaBox.innerHTML = `<strong>Documento</strong>: 800 × 600 px · 1 livello`;
 shell.inspectorPanelBody.appendChild(docMetaBox);
 
 // Scheda Proprietà Pennello / Strumento Attivo (§10 Fase 1)
 const brushPropsSection = document.createElement('div');
 brushPropsSection.id = 'brush-inspector';
-brushPropsSection.style.cssText = `
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  background: var(--pz-surface-hover);
-  border: 1px solid var(--pz-border-muted, var(--pz-border));
-  border-radius: 8px;
-  margin-bottom: 14px;
-`;
+brushPropsSection.className = 'pz-card';
 shell.inspectorPanelBody.appendChild(brushPropsSection);
 
 // Sezione contestuale: Proprietà del livello attivo
 const layerPropsSection = document.createElement('div');
 layerPropsSection.id = 'active-layer-inspector';
-layerPropsSection.style.cssText = `
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: var(--pz-surface-hover);
-  border: 1px solid var(--pz-border-muted, var(--pz-surface-hover));
-  border-radius: 8px;
-  margin-bottom: 16px;
-`;
+layerPropsSection.className = 'pz-card';
 shell.inspectorPanelBody.appendChild(layerPropsSection);
 
 // Riferimento allo slider di opacità dell'inspector. updateInspector() ricostruisce
@@ -1229,7 +1195,7 @@ function updateInspector() {
   // 2. Proprietà Strumento Attivo
   if (currentTool === 'move') {
     brushPropsSection.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+      <div class="pz-card-header">
         <span>Strumento: Sposta</span>
         <span style="font-size: 11px; color: var(--pz-accent);">Move Tool (V)</span>
       </div>
@@ -1245,7 +1211,7 @@ function updateInspector() {
     const hasSel = has_active_selection();
     const sel = hasSel ? get_selection() : null;
     brushPropsSection.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+      <div class="pz-card-header">
         <span>Strumento: Selezione</span>
         <span style="font-size: 11px; color: var(--pz-accent);">Marquee (M)</span>
       </div>
@@ -1276,7 +1242,7 @@ function updateInspector() {
     deselBtn?.addEventListener('click', handleDeselect);
   } else {
     brushPropsSection.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pz-text-secondary);">
+      <div class="pz-card-header">
         <span style="display: inline-flex; align-items: center; gap: 6px;">${currentTool === 'eraser' ? EraserIcon(16) : BrushIcon(16)}<span>Strumento: ${currentTool === 'eraser' ? 'Gomma' : 'Pennello'}</span></span>
         <span style="font-size: 11px; color: var(--pz-accent);">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
       </div>
@@ -1360,16 +1326,7 @@ function updateInspector() {
   inspectorOpacitySlider = null;
 
   const header = document.createElement('div');
-  header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pz-text-secondary);
-  `;
+  header.className = 'pz-card-header';
   header.textContent = 'Proprietà Livello';
   layerPropsSection.appendChild(header);
 
