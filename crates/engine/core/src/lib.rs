@@ -56,8 +56,8 @@ pub use compositor::composite;
 pub use document::Document;
 pub use error::LayerError;
 pub use history::{
-    AddLayer, Command, History, RemoveLayer, RenameLayer, SetBlendMode, SetLayerMask, SetOpacity,
-    SetTransform, SetVisible, ToggleMaskInverted,
+    AddLayer, Command, History, RemoveLayer, RenameLayer, ReplacePixelCommand, SetBlendMode,
+    SetLayerMask, SetOpacity, SetTransform, SetVisible, ToggleMaskInverted,
 };
 pub use image::PlacedImage;
 pub use layer::{Layer, LayerId};

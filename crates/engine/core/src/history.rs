@@ -1064,3 +1064,79 @@ mod tests {
         assert!(!doc.redo());
     }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ReplacePixelCommand — sostituzione di un rettangolo di pixel
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Sostituisce un rettangolo di pixel di un layer (o l'intero layer).
+///
+/// Serve ai tratti del pennello: il chiamante cattura i pixel **prima** e **dopo**
+/// e registra un solo comando, invece di uno per ogni stampo. Con `bbox = None`
+/// i buffer contengono l'intero layer; con `Some((x, y, w, h))` solo quel rettangolo,
+/// riga per riga.
+pub struct ReplacePixelCommand {
+    id: LayerId,
+    bbox: Option<(u32, u32, u32, u32)>,
+    before: Vec<u8>,
+    after: Vec<u8>,
+}
+
+impl ReplacePixelCommand {
+    /// Crea il comando. `before` e `after` devono avere la stessa lunghezza.
+    pub fn new(
+        id: LayerId,
+        bbox: Option<(u32, u32, u32, u32)>,
+        before: Vec<u8>,
+        after: Vec<u8>,
+    ) -> Self {
+        Self {
+            id,
+            bbox,
+            before,
+            after,
+        }
+    }
+
+    /// Scrive `data` nella regione descritta da `bbox`.
+    fn scrivi(doc: &mut Document, id: LayerId, bbox: Option<(u32, u32, u32, u32)>, data: &[u8]) {
+        let Some(layer) = doc.layer_mut(id) else {
+            return;
+        };
+        match bbox {
+            None => {
+                // Sostituzione integrale: la lunghezza è già quella del layer.
+                if data.len() == layer.pixels.len() {
+                    layer.pixels.copy_from_slice(data);
+                }
+            }
+            Some((x, y, bw, bh)) => {
+                let width = layer.width;
+                let len = (bw * 4) as usize;
+                for row in 0..bh {
+                    let dst = (((y + row) * width + x) * 4) as usize;
+                    let src = (row * bw * 4) as usize;
+                    if dst + len <= layer.pixels.len() && src + len <= data.len() {
+                        layer.pixels[dst..dst + len].copy_from_slice(&data[src..src + len]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Command for ReplacePixelCommand {
+    fn apply(&mut self, doc: &mut Document) {
+        let (id, bbox) = (self.id, self.bbox);
+        Self::scrivi(doc, id, bbox, &self.after);
+    }
+
+    fn undo(&mut self, doc: &mut Document) {
+        let (id, bbox) = (self.id, self.bbox);
+        Self::scrivi(doc, id, bbox, &self.before);
+    }
+
+    fn label(&self) -> &str {
+        "Modifica pixel"
+    }
+}
