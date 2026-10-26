@@ -124,6 +124,18 @@ pub trait EngineBackend {
     /// Selezione corrente, nella forma serializzata per la UI.
     fn selection_meta(&self) -> SelectionMeta;
 
+    // ── Spostamento layer ────────────────────────────────────────────────────
+
+    /// Memorizza l'offset iniziale del layer attivo.
+    fn begin_move_layer(&mut self) -> bool;
+    /// Porta il layer attivo all'offset assoluto indicato (senza history).
+    fn move_active_layer(&mut self, x: i32, y: i32) -> bool;
+    /// Trasla il layer attivo del delta indicato (senza history).
+    fn translate_active_layer(&mut self, dx: i32, dy: i32) -> bool;
+    /// Chiude lo spostamento e registra un solo comando, se l'offset è cambiato.
+    fn end_move_layer(&mut self) -> bool;
+    /// Offset corrente del layer attivo.
+    fn active_layer_offset(&self) -> Option<(i32, i32)>;
     // ── History ──────────────────────────────────────────────────────────────
     //
     // La history appartiene al backend, non al bridge: i comandi devono essere

@@ -41,10 +41,6 @@ struct ActiveStrokeState {
     dirty_bbox: Option<BoundingBox>,
 }
 
-struct ActiveMoveState {
-    layer_id: u64,
-    initial_offset: (i32, i32),
-}
 
 // Backend del motore.
 //
@@ -65,7 +61,6 @@ thread_local! {
 
 thread_local! {
     static ACTIVE_STROKE: RefCell<Option<ActiveStrokeState>> = RefCell::new(None);
-    static ACTIVE_MOVE: RefCell<Option<ActiveMoveState>> = RefCell::new(None);
 }
 
 static DOCUMENT_DIRTY: AtomicBool = AtomicBool::new(true);
@@ -360,7 +355,6 @@ pub fn load_project(bytes: &[u8]) -> Result<(), JsValue> {
 
     clear_history_via_backend();
     ACTIVE_STROKE.with(|s| *s.borrow_mut() = None);
-    ACTIVE_MOVE.with(|m| *m.borrow_mut() = None);
 
     Ok(())
 }
@@ -724,32 +718,13 @@ pub fn get_history_info() -> Result<JsValue, JsValue> {
 /// Registra la posizione iniziale per generare un unico `MoveLayerCommand` al rilascio del cursore.
 #[wasm_bindgen]
 pub fn begin_move_layer() -> bool {
-    with_active_document(|doc| {
-        if let Some(active_id) = doc.active_layer_id {
-            if let Some(layer) = doc.get_layer(active_id) {
-                let initial_offset = (layer.transform.x, layer.transform.y);
-                ACTIVE_MOVE.with(|m| {
-                    *m.borrow_mut() = Some(ActiveMoveState {
-                        layer_id: active_id,
-                        initial_offset,
-                    });
-                });
-                return true;
-            }
-        }
-        false
-    })
+    with_backend_mut(|b| b.begin_move_layer())
 }
 
 /// Imposta la posizione assoluta (x, y) del livello attivo e marca il documento dirty.
 #[wasm_bindgen]
 pub fn move_active_layer(x: i32, y: i32) -> bool {
-    let mut changed = false;
-    with_active_document_mut(|doc| {
-        if let Some(active_id) = doc.active_layer_id {
-            changed = doc.set_layer_offset(active_id, x, y);
-        }
-    });
+    let changed = with_backend_mut(|b| b.move_active_layer(x, y));
     if changed {
         set_document_dirty(true);
     }
@@ -759,12 +734,7 @@ pub fn move_active_layer(x: i32, y: i32) -> bool {
 /// Trasla il livello attivo del delta (dx, dy) e marca il documento dirty.
 #[wasm_bindgen]
 pub fn translate_active_layer(dx: i32, dy: i32) -> bool {
-    let mut changed = false;
-    with_active_document_mut(|doc| {
-        if let Some(active_id) = doc.active_layer_id {
-            changed = doc.translate_layer(active_id, dx, dy);
-        }
-    });
+    let changed = with_backend_mut(|b| b.translate_active_layer(dx, dy));
     if changed {
         set_document_dirty(true);
     }
@@ -775,31 +745,17 @@ pub fn translate_active_layer(dx: i32, dy: i32) -> bool {
 /// Se l'offset finale differisce da quello iniziale, registra un `MoveLayerCommand` nella History.
 #[wasm_bindgen]
 pub fn end_move_layer() -> bool {
-    let move_state_opt = ACTIVE_MOVE.with(|m| m.borrow_mut().take());
-    if let Some(move_state) = move_state_opt {
-        let final_offset_opt = with_active_document(|doc| {
-            doc.get_layer(move_state.layer_id).map(|l| (l.transform.x, l.transform.y))
-        });
-        if let Some(final_offset) = final_offset_opt {
-            if final_offset != move_state.initial_offset {
-                // Il backend registra il proprio comando: il bridge passa solo i dati.
-                with_backend_mut(|b| {
-                    b.commit_move(move_state.layer_id, move_state.initial_offset, final_offset)
-                });
-                set_document_dirty(true);
-                return true;
-            }
-        }
+    let chiuso = with_backend_mut(|b| b.end_move_layer());
+    if chiuso {
+        set_document_dirty(true);
     }
-    false
+    chiuso
 }
 
 /// Restituisce l'offset corrente `[x, y]` del livello attivo, oppure null.
 #[wasm_bindgen]
 pub fn get_active_layer_offset() -> JsValue {
-    let offset_opt = with_active_document(|doc| {
-        doc.get_active_layer().map(|l| (l.transform.x, l.transform.y))
-    });
+    let offset_opt = with_backend(|b| b.active_layer_offset());
     match offset_opt {
         Some((x, y)) => {
             let arr = js_sys::Array::new();

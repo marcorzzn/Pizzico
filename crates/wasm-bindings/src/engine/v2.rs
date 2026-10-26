@@ -30,6 +30,8 @@ pub struct V2Backend {
     ids: HashMap<u64, LayerId>,
     active: Option<u64>,
     selection: Option<(u32, u32, u32, u32)>,
+    /// Spostamento in corso: (id pubblico, offset iniziale).
+    move_state: Option<(u64, (i32, i32))>,
     dirty: bool,
     /// Ultimo errore non recuperabile: il trait restituisce `()`/`bool`, quindi
     /// l'errore viene conservato qui e letto dal bridge.
@@ -55,6 +57,7 @@ impl V2Backend {
             ids: HashMap::new(),
             active: None,
             selection: None,
+            move_state: None,
             dirty: true,
             last_error: None,
         }
@@ -105,6 +108,7 @@ impl EngineBackend for V2Backend {
         self.ids.clear();
         self.active = None;
         self.selection = None;
+        self.move_state = None;
         self.dirty = true;
     }
 
@@ -222,6 +226,79 @@ impl EngineBackend for V2Backend {
         }
     }
 
+    fn begin_move_layer(&mut self) -> bool {
+        let Some(public) = self.active else {
+            return false;
+        };
+        let Some(lid) = self.lid(public) else {
+            return false;
+        };
+        let Some(layer) = self.doc.layer(lid) else {
+            return false;
+        };
+        self.move_state = Some((public, (layer.transform.x as i32, layer.transform.y as i32)));
+        true
+    }
+
+    fn move_active_layer(&mut self, x: i32, y: i32) -> bool {
+        let Some(public) = self.active else {
+            return false;
+        };
+        let Some(lid) = self.lid(public) else {
+            return false;
+        };
+        let Some(layer) = self.doc.layer_mut(lid) else {
+            return false;
+        };
+        let cambiato = layer.transform.x as i32 != x || layer.transform.y as i32 != y;
+        layer.transform.x = x as f32;
+        layer.transform.y = y as f32;
+        if cambiato {
+            self.dirty = true;
+        }
+        cambiato
+    }
+
+    fn translate_active_layer(&mut self, dx: i32, dy: i32) -> bool {
+        let Some(public) = self.active else {
+            return false;
+        };
+        let Some(lid) = self.lid(public) else {
+            return false;
+        };
+        let Some(layer) = self.doc.layer_mut(lid) else {
+            return false;
+        };
+        layer.transform.x += dx as f32;
+        layer.transform.y += dy as f32;
+        self.dirty = true;
+        true
+    }
+
+    fn end_move_layer(&mut self) -> bool {
+        let Some((public, from)) = self.move_state.take() else {
+            return false;
+        };
+        let Some(lid) = self.lid(public) else {
+            return false;
+        };
+        let Some(layer) = self.doc.layer(lid) else {
+            return false;
+        };
+        let to = (layer.transform.x as i32, layer.transform.y as i32);
+        if to == from {
+            return false;
+        }
+        self.commit_move(public, from, to);
+        true
+    }
+
+    fn active_layer_offset(&self) -> Option<(i32, i32)> {
+        let public = self.active?;
+        let lid = self.lid(public)?;
+        let layer = self.doc.layer(lid)?;
+        Some((layer.transform.x as i32, layer.transform.y as i32))
+    }
     fn history_can_undo(&self) -> bool {
         self.doc.history.can_undo()
     }
@@ -337,6 +414,35 @@ mod tests {
         assert_eq!(b.composite().len(), 6 * 5 * 4);
     }
 
+    #[test]
+    fn spostamento_layer_e_undo() {
+        let mut b = V2Backend::with_size(32, 32);
+        let id = b.add_raster_layer("l", 32, 32, [1, 2, 3, 255]);
+        b.select_layer(id);
+
+        assert!(b.begin_move_layer());
+        assert!(b.move_active_layer(50, 40));
+        assert_eq!(b.active_layer_offset(), Some((50, 40)));
+
+        assert!(b.end_move_layer(), "lo spostamento va registrato");
+        assert_eq!(b.active_layer_offset(), Some((50, 40)));
+
+        assert!(b.history_undo(), "l'undo deve annullare lo spostamento");
+        assert_eq!(
+            b.active_layer_offset(),
+            Some((0, 0)),
+            "l'undo riporta l'offset iniziale"
+        );
+    }
+
+    #[test]
+    fn spostamento_senza_movimento_non_registra_nulla() {
+        let mut b = V2Backend::with_size(8, 8);
+        let id = b.add_raster_layer("l", 8, 8, [0, 0, 0, 255]);
+        b.select_layer(id);
+        assert!(b.begin_move_layer());
+        assert!(!b.end_move_layer(), "nessun comando senza spostamento");
+    }
     #[test]
     fn v2_non_espone_il_documento_legacy() {
         let b = V2Backend::with_size(4, 4);

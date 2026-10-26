@@ -15,6 +15,8 @@ pub struct LegacyBackend {
     document: Document,
     history: History,
     dirty: bool,
+    /// Offset iniziale dello spostamento in corso: (layer, (x, y)).
+    move_state: Option<(u64, (i32, i32))>,
 }
 
 impl Default for LegacyBackend {
@@ -30,6 +32,7 @@ impl LegacyBackend {
             document: Document::new(800, 600, "Pizzico Project"),
             history: History::new(50),
             dirty: true,
+            move_state: None,
         }
     }
 
@@ -39,6 +42,7 @@ impl LegacyBackend {
             document: Document::new_empty(width, height),
             history: History::new(50),
             dirty: true,
+            move_state: None,
         }
     }
 
@@ -87,6 +91,7 @@ impl EngineBackend for LegacyBackend {
     fn create_document(&mut self, width: u32, height: u32) {
         self.document = Document::new_empty(width, height);
         self.history.clear();
+        self.move_state = None;
         self.dirty = true;
     }
 
@@ -185,6 +190,59 @@ impl EngineBackend for LegacyBackend {
         }
     }
 
+    fn begin_move_layer(&mut self) -> bool {
+        let Some(id) = self.document.active_layer_id else {
+            return false;
+        };
+        let Some(layer) = self.document.get_layer(id) else {
+            return false;
+        };
+        self.move_state = Some((id, (layer.transform.x, layer.transform.y)));
+        true
+    }
+
+    fn move_active_layer(&mut self, x: i32, y: i32) -> bool {
+        let Some(id) = self.document.active_layer_id else {
+            return false;
+        };
+        let cambiato = self.document.set_layer_offset(id, x, y);
+        if cambiato {
+            self.dirty = true;
+        }
+        cambiato
+    }
+
+    fn translate_active_layer(&mut self, dx: i32, dy: i32) -> bool {
+        let Some(id) = self.document.active_layer_id else {
+            return false;
+        };
+        let cambiato = self.document.translate_layer(id, dx, dy);
+        if cambiato {
+            self.dirty = true;
+        }
+        cambiato
+    }
+
+    fn end_move_layer(&mut self) -> bool {
+        let Some((id, from)) = self.move_state.take() else {
+            return false;
+        };
+        let Some(layer) = self.document.get_layer(id) else {
+            return false;
+        };
+        let to = (layer.transform.x, layer.transform.y);
+        if to == from {
+            return false;
+        }
+        self.commit_move(id, from, to);
+        true
+    }
+
+    fn active_layer_offset(&self) -> Option<(i32, i32)> {
+        self.document
+            .get_active_layer()
+            .map(|l| (l.transform.x, l.transform.y))
+    }
     fn history_can_undo(&self) -> bool {
         self.history.can_undo()
     }
