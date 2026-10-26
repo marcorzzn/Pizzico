@@ -545,7 +545,7 @@ export function end_move_layer() {
 }
 
 /**
- * Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
+ * Termina la sessione di tratto e registra un'unica modifica di pixel nella History.
  * @returns {boolean}
  */
 export function end_stroke() {
@@ -601,6 +601,7 @@ export function export_as_png() {
 
 /**
  * Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  * @returns {Uint8Array}
  */
 export function export_as_psd() {
@@ -614,7 +615,8 @@ export function export_as_psd() {
 }
 
 /**
- * Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+ * Esporta l'immagine renderizzata del documento corrente in formato WebP (lossy, solo backend legacy).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  * @param {number} quality
  * @returns {Uint8Array}
  */
@@ -767,6 +769,7 @@ export function is_dirty() {
 /**
  * Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
  * resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  * @param {Uint8Array} bytes
  */
 export function load_project(bytes) {
@@ -781,6 +784,7 @@ export function load_project(bytes) {
 /**
  * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
  * e segnala la necessità di un nuovo frame di compositing WebGPU.
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  * @param {Uint8Array} bytes
  */
 export function load_psd_bytes(bytes) {
@@ -834,6 +838,7 @@ export function remove_layer(id) {
 /**
  * Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
  * nel formato container compresso nativo `.pizzico` (ZIP).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  * @returns {Uint8Array}
  */
 export function save_project() {
@@ -1090,7 +1095,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 242, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 284, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },

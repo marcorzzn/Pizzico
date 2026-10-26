@@ -225,7 +225,7 @@ export function create_document(width: number, height: number): void;
 export function end_move_layer(): boolean;
 
 /**
- * Termina la sessione di tratto e registra un unico `StrokeCommand` compatto nella History.
+ * Termina la sessione di tratto e registra un'unica modifica di pixel nella History.
  */
 export function end_stroke(): boolean;
 
@@ -247,11 +247,13 @@ export function export_as_png(): Uint8Array;
 
 /**
  * Esporta l'intero documento multilivello attivo in formato Adobe Photoshop (PSD).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  */
 export function export_as_psd(): Uint8Array;
 
 /**
- * Esporta l'immagine renderizzata del documento corrente in formato WebP (pure-Rust lossless con canale alpha).
+ * Esporta l'immagine renderizzata del documento corrente in formato WebP (lossy, solo backend legacy).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  */
 export function export_as_webp(quality: number): Uint8Array;
 
@@ -325,12 +327,14 @@ export function is_dirty(): boolean;
 /**
  * Carica un progetto `.pizzico` da buffer binario, sostituisce il Documento attivo,
  * resetta la cronologia e segnala la necessità di ricompositing WebGPU.
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  */
 export function load_project(bytes: Uint8Array): void;
 
 /**
  * Carica un file Adobe Photoshop (PSD/PSB) da buffer binario, sostituisce il Documento attivo
  * e segnala la necessità di un nuovo frame di compositing WebGPU.
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  */
 export function load_psd_bytes(bytes: Uint8Array): void;
 
@@ -357,6 +361,7 @@ export function remove_layer(id: number): boolean;
 /**
  * Serializza l'intero progetto attivo (documento, livelli, pixel e selezione)
  * nel formato container compresso nativo `.pizzico` (ZIP).
+ * @deprecated not supported in engine-v2 - usa il backend legacy.
  */
 export function save_project(): Uint8Array;
 
