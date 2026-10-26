@@ -337,13 +337,13 @@ export class DesktopShellLayout {
     const effectsPanel = new Panel({ title: 'Effetti' });
     const effectsNote = document.createElement('p');
     effectsNote.className = 'pz-panel-empty';
-    effectsNote.textContent = 'Sezione presente nello scheletro: viene collegata al motore nella Fase 6d.';
+    effectsNote.textContent = 'Sezione prevista dallo scheletro di Pizzart, non ancora collegata al motore. Sarà implementata quando il motore esporrà gli effetti.';
     effectsPanel.body.appendChild(effectsNote);
 
     const masksPanel = new Panel({ title: 'Maschere' });
     const masksNote = document.createElement('p');
     masksNote.className = 'pz-panel-empty';
-    masksNote.textContent = 'Sezione presente nello scheletro: viene collegata al motore nella Fase 6d.';
+    masksNote.textContent = 'Sezione prevista dallo scheletro di Pizzart, non ancora collegata al motore. Sarà implementata quando il motore esporrà gli effetti.';
     masksPanel.body.appendChild(masksNote);
 
     rightSidebar.appendChild(inspectorPanel.element);

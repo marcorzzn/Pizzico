@@ -12,9 +12,11 @@ Struttura del file:
                       `scripts/check-tokens.mjs` fallisce se divergono.
   2. Derivati       — valori calcolati dai token sopra (hover, overlay, ombre).
                       Non sono nel documento di design: sono implementazione.
-  3. Spaziature     — scala §5, invariata rispetto alla v1 (era già conforme).
-  4. Alias v1       — ponte per i componenti non ancora riscritti. Spariscono
-                      in 6c/6d, quando i componenti useranno i nomi Pizzart.
+  3. Spaziature     — scala §5.
+
+Fino alla 6c-b esisteva una quarta sezione con gli alias dei nomi v1
+(--pz-bg-app, --pz-accent-primary, …): era un ponte per i componenti non
+ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
 */
 
 :root {
@@ -96,21 +98,6 @@ Struttura del file:
   /* Default di densità: la shell usa la fascia "comfortable" */
   --pz-touch-min: 36px;
   --pz-toolbar-item-size: 36px;
-
-  /* ── 4. Alias v1 → Pizzart (ponte, da rimuovere in 6c/6d) ─────────────── */
-
-  --pz-bg-app: var(--pz-bg-canvas);
-  --pz-bg-surface: var(--pz-bg-panel);
-  --pz-bg-surface-hover: var(--pz-surface-hover);
-  --pz-bg-surface-active: var(--pz-surface-active);
-  --pz-border-muted: var(--pz-border);
-  --pz-accent-primary: var(--pz-accent);
-  --pz-accent-primary-hover: var(--pz-accent-hover);
-  --pz-accent-active: var(--pz-accent-hover);
-  --pz-font-sans: var(--pz-font-ui);
-  --pz-success: var(--pz-ok);
-  --pz-danger: var(--pz-error);
-  --pz-info: var(--pz-accent);
 }
 
 [data-density="compact"] {
