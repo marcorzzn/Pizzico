@@ -73,7 +73,7 @@
 | Area | State |
 | --- | --- |
 | Phase 1 — raster editor | Complete: brush, selection, layers, undo/redo, persistence, export. |
-| Phase 6 — interface redesign | Done through 6c-b (theme, shell, icon set, sliders, colour picker, inspector). **6c-c still open**: inspector card classes, removal of the v1 token aliases, wiring of the Effects and Masks sections. |
+| Phase 6 — interface redesign | **Complete**: dark theme, Pizzart shell, Lucide icon set, component sliders and colour picker, inspector cards, single accent colour, zero emoji. |
 | Engine v2 | In progress: the legacy stroke pipeline is not handed off yet. |
 | Phase 7 — Android (Tauri) | Not started. |
 

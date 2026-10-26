@@ -9,6 +9,7 @@ code and should be optimised before committing.
 | `screenshot-canvas.png` | Root README | The editor with a layered PSD open: canvas, tool strip in the top bar, layer panel (Phase 6 UI). |
 | `screenshot-inspector.png` | Root README | Context-aware inspector: tool settings and active layer properties. |
 | `screenshot-export.png` | Root README | Export panel offering PNG, JPEG, WebP and layered PSD. |
+| `fase-6c-c-final.png` | Docs | Final Phase 6 UI, with the dynamic status bar and the dark slider track. |
 | `photopea-validation.png` | Root README | A PSD exported by Pizzico, opened in Photopea with layers, blend modes, and opacity intact. |
 | `feature-selection.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
 | `feature-export.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
