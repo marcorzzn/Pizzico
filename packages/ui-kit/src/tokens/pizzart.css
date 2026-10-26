@@ -1,0 +1,52 @@
+/*
+Pizzico — packages/ui-kit/src/tokens/pizzart.css
+Riferimento: docs/ui/design-decisions.md §2, §3, §5
+Licenza: MIT OR Apache-2.0
+
+Token del tema Pizzart, INERTI finché l'attributo non è impostato:
+  document.documentElement.dataset.theme = 'pizzart';
+
+Non si tocca :root di proposito: i token v1 in tokens.css sono già consumati
+dalla UI corrente (packages/ui-web/src/styles.css). L'attivazione e la
+mappatura dei nomi v1 (--pz-bg-app, --pz-accent-primary, …) verso questi sono
+una decisione della Fase 6b/6c, non di questa fase.
+
+Questo file è lo specchio di src/tokens/pizzart.ts: se i valori divergono,
+`node packages/ui-kit/scripts/check-tokens.mjs` fallisce.
+*/
+
+[data-theme="pizzart"] {
+  /* Superfici */
+  --pz-bg-canvas: #1c1e22;
+  --pz-bg-panel: #1e1e24;
+  --pz-bg-toolbar: #18181b;
+
+  /* Linee */
+  --pz-border: #2d2d35;
+
+  /* Testo */
+  --pz-text-primary: #e0e0e0;
+  --pz-text-secondary: #a0a0a8;
+
+  /* Accento: si usa poco — stato attivo, focus, bottone primario */
+  --pz-accent: #6366f1;
+
+  /* Semantici */
+  --pz-error: #f07864;
+  --pz-ok: #a0c8a0;
+
+  /* Tipografia */
+  --pz-font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pz-font-size-small: 12px;
+  --pz-font-size-body: 14px;
+  --pz-font-size-heading: 16px;
+  --pz-font-size-title: 20px;
+  --pz-font-weight-regular: 400;
+  --pz-font-weight-medium: 500;
+  --pz-font-weight-semibold: 600;
+
+  /* Raggi */
+  --pz-radius-sm: 4px;
+  --pz-radius-md: 6px;
+  --pz-radius-lg: 8px;
+}

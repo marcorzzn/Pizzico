@@ -6,7 +6,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tokens:check": "node scripts/check-tokens.mjs",
+    "icons:gen": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "@pizzico/shared": "workspace:*"

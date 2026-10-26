@@ -1,0 +1,132 @@
+{
+  "pen": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/pen.svg",
+    "sha256": "1cfca61b377f82d710e2b1a2e00d8bf7d339990b8ba050d25bb5e4710951aeb6"
+  },
+  "square": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/square.svg",
+    "sha256": "3855d336619de5adc61a0b5293db82cb9f5456b859a7daf0cd249653c6f31063"
+  },
+  "circle": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/circle.svg",
+    "sha256": "b637bf7108911002e8cd416d15bcae88eb3cf03cc7e243486df2ac0c6259499f"
+  },
+  "type": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/type.svg",
+    "sha256": "11a38b3082b4a9abd9eee0d12e9454d297370fae267bc6312965f6da099aec16"
+  },
+  "eraser": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/eraser.svg",
+    "sha256": "c2d6b323f62163492f65c916f1b4a796d1a38b82755d48e30f05ade18a258223"
+  },
+  "hand": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/hand.svg",
+    "sha256": "48eb0936c9e857eec076659306886501166e8f7dec467ec39832ab2aa820aa3c"
+  },
+  "zoom-in": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/zoom-in.svg",
+    "sha256": "53af7a0e28b93700262fac762d47dea33e8d50696f3fa2a193881158db38249f"
+  },
+  "zoom-out": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/zoom-out.svg",
+    "sha256": "3ca8ad5ae39236b3b119d60e577788fad1ba95cb0cbbaec52221b794b7e4a27b"
+  },
+  "pipette": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/pipette.svg",
+    "sha256": "55b103ec35e96a69cb3362342640b0ce40c2b96087663bfea241fce3fbab6882"
+  },
+  "undo": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/undo.svg",
+    "sha256": "456fc8eadbc8439dc3773681eeb3a81e4ee973e82dd209abc733acaa2f7e01ec"
+  },
+  "redo": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/redo.svg",
+    "sha256": "79aa9097a16dc20a91599c84013ab9251d0f2dfa3b005a349547cdf69fbc9c7c"
+  },
+  "save": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/save.svg",
+    "sha256": "ca918dcfcbe5c47d2ea8bbd347e55a0f6aa9a605a3889474606f3b545083c7ce"
+  },
+  "folder-open": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/folder-open.svg",
+    "sha256": "5adf2987a25d174cb7c0ecfd241f12c40e35953217d7c4ee5ced8d29a3baef6f"
+  },
+  "download": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/download.svg",
+    "sha256": "bc9a77e3390e5c8b3e79f9dcc955f950b608d76877d58b920ed2bb8dac4488a3"
+  },
+  "upload": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/upload.svg",
+    "sha256": "70bde4bb3a234d0aec4339ae3bfea8a9648b04d792d188fdc66fb4ddda138f9e"
+  },
+  "trash-2": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/trash-2.svg",
+    "sha256": "0367c1f1ea8be2af6dcd38e79c944dc2667ad725488fb9e2d4d1d8826d7b418f"
+  },
+  "plus": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/plus.svg",
+    "sha256": "dfcf07b39b0f4c0b422595ae488fb08c468ef4782f6ef37d0deceaadfb2a5693"
+  },
+  "eye": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/eye.svg",
+    "sha256": "3eb607cfbd394442f231a2a377d5e149a41846cc7fe48e711e8141141b68d791"
+  },
+  "eye-off": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/eye-off.svg",
+    "sha256": "5e65f7fa6771e4190159fb442a108d8e5cf7af73f066d607379777c825ea23c2"
+  },
+  "layers": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/layers.svg",
+    "sha256": "13f4094d328912b62ac21df6d423295178ab92d7120f975e9875c7078b13a132"
+  },
+  "sliders": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/sliders.svg",
+    "sha256": "e8a094c05f10f92c74098503073a14783fb625ee63a394729b79b1f70c751cce"
+  },
+  "palette": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/palette.svg",
+    "sha256": "4f972f5fb3efa271960da26ecd9b258bcb89e83b290bbe3758bef44afaafc0df"
+  },
+  "check": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/check.svg",
+    "sha256": "cf5d8f45a017604917c0d74ed9c49c6926b0df780c4c9ad3ad85fb7a392bf746"
+  },
+  "x": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/x.svg",
+    "sha256": "a611112e8946480120e5e96f1d849651df76fa502f6190e293defaf6c4f56b07"
+  },
+  "circle-alert": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/circle-alert.svg",
+    "sha256": "9297d24761982135593d8a24fa90f3b901e36ec3b79a744df61012b4bb74addc"
+  },
+  "info": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/info.svg",
+    "sha256": "2dbeb8e85ec1aae8eedea831deb24a31b04917bceae5ce63bd49eaf07fdaf425"
+  }
+}

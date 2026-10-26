@@ -6,6 +6,8 @@ How the interface is reasoned about, and the decisions already taken.
 | --- | --- |
 | [principles.md](principles.md) | The principles that govern interaction and layout. |
 | [design-decisions.md](design-decisions.md) | Concrete decisions taken for the Phase 6 interface. |
+| [tokens.md](tokens.md) | Where the design values live, the two token layers, and how to verify them. |
+| [icons.md](icons.md) | The Lucide icon set, how it is generated, and how it is used. |
 
 ## Current direction
 
