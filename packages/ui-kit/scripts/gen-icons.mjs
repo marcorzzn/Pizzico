@@ -34,6 +34,13 @@ const ICONS = [
   ['zoom-in', 'ZoomInIcon'],
   ['zoom-out', 'ZoomOutIcon'],
   ['pipette', 'PipetteIcon'],
+  // Strumenti della shell (Fase 6b)
+  ['move', 'MoveIcon'],
+  ['square-dashed', 'SquareDashedIcon'],
+  ['brush', 'BrushIcon'],
+  ['spline', 'SplineIcon'],
+  ['wand-sparkles', 'WandSparklesIcon'],
+  ['crop', 'CropIcon'],
   // Azioni
   ['undo', 'UndoIcon'],
   ['redo', 'RedoIcon'],
@@ -48,6 +55,10 @@ const ICONS = [
   ['layers', 'LayersIcon'],
   ['sliders', 'SlidersIcon'],
   ['palette', 'PaletteIcon'],
+  ['chevron-down', 'ChevronDownIcon'],
+  ['command', 'CommandIcon'],
+  ['sun', 'SunIcon'],
+  ['sparkles', 'SparklesIcon'],
   // Stato
   ['check', 'CheckIcon'],
   ['x', 'XIcon'],

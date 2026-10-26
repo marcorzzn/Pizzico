@@ -1,13 +1,14 @@
 // Pizzico — packages/ui-kit/scripts/check-tokens.mjs
 // Licenza: MIT OR Apache-2.0
 //
-// Gate della Fase 6a. Verifica, senza dipendenze:
-//   1. pizzart.ts e pizzart.css dichiarano gli stessi token con gli stessi valori
+// Gate dei token. Verifica, senza dipendenze:
+//   1. ogni token canonico di pizzart.ts esiste in tokens.css :root con lo stesso
+//      valore (tokens.css può avere token in più: derivati e alias v1)
 //   2. nessun custom property dichiarato due volte nello stesso blocco
 //   3. ogni var(--pz-*) usato nel codice risolve a un token dichiarato
-//   4. zero emoji in packages/ui-kit e packages/ui-web (docs/ui/design-decisions.md §7)
+//   4. zero emoji nuove (ratchet su baseline, docs/ui/design-decisions.md §7)
 //
-// Uso: node packages/ui-kit/scripts/check-tokens.mjs
+// Uso: node packages/ui-kit/scripts/check-tokens.mjs [--update-baseline]
 
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, dirname, extname, relative } from 'node:path';
@@ -16,10 +17,7 @@ const HERE = dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/,
 const ROOT = join(HERE, '..', '..', '..');
 
 const TS_TOKENS = join(HERE, '..', 'src', 'tokens', 'pizzart.ts');
-const CSS_TOKENS = [
-  join(HERE, '..', 'src', 'tokens', 'tokens.css'),
-  join(HERE, '..', 'src', 'tokens', 'pizzart.css'),
-];
+const CSS_TOKENS = join(HERE, '..', 'src', 'tokens', 'tokens.css');
 const SCAN_DIRS = [
   join(ROOT, 'packages', 'ui-kit', 'src'),
   join(ROOT, 'packages', 'ui-web', 'src'),
@@ -30,7 +28,7 @@ const notes = [];
 
 const normalize = (value) => value.trim().replace(/\s+/g, ' ');
 
-// ── 1. token TS ───────────────────────────────────────────────────────────────
+// ── 1. token canonici (TypeScript) ────────────────────────────────────────────
 
 const tsSource = await readFile(TS_TOKENS, 'utf8');
 const tsTokens = new Map();
@@ -38,49 +36,50 @@ for (const match of tsSource.matchAll(/^\s*'(--pz-[a-z0-9-]+)':\s*'([^']*)',/gm)
   tsTokens.set(match[1], normalize(match[2]));
 }
 if (tsTokens.size === 0) problems.push('pizzart.ts: nessun token trovato');
-console.log(`pizzart.ts      : ${tsTokens.size} token`);
+console.log(`pizzart.ts      : ${tsTokens.size} token canonici`);
 
-// ── 2. token CSS, per blocco, con rilevamento duplicati ───────────────────────
+// ── 2. CSS: blocchi, duplicati, valori ───────────────────────────────────────
 
-const cssBlocks = [];
-for (const file of CSS_TOKENS) {
-  const css = await readFile(file, 'utf8');
-  const noComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const match of noComments.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
-    const selector = normalize(match[1]);
-    const seen = new Map();
-    for (const decl of match[2].matchAll(/(--pz-[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-      const name = decl[1];
-      if (seen.has(name)) {
-        problems.push(`${relative(ROOT, file)} → blocco "${selector}": "${name}" dichiarato due volte`);
-      }
-      seen.set(name, normalize(decl[2]));
+const css = await readFile(CSS_TOKENS, 'utf8');
+const noComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+const blocks = [];
+for (const match of noComments.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+  const selector = normalize(match[1]);
+  const seen = new Map();
+  for (const decl of match[2].matchAll(/(--pz-[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    const name = decl[1];
+    if (seen.has(name)) {
+      problems.push(`tokens.css → blocco "${selector}": "${name}" dichiarato due volte`);
     }
-    cssBlocks.push({ file, selector, tokens: seen });
+    seen.set(name, normalize(decl[2]));
   }
+  blocks.push({ selector, tokens: seen });
 }
 
-const allCssNames = new Set(cssBlocks.flatMap((b) => [...b.tokens.keys()]));
-console.log(`CSS             : ${allCssNames.size} token distinti su ${cssBlocks.length} blocchi`);
+const rootBlock = blocks.find((b) => b.selector === ':root');
+const allCssNames = new Set(blocks.flatMap((b) => [...b.tokens.keys()]));
 
-const pizzartBlock = cssBlocks.find((b) => b.selector === '[data-theme="pizzart"]');
-if (!pizzartBlock) {
-  problems.push('pizzart.css: blocco [data-theme="pizzart"] non trovato');
+if (!rootBlock) {
+  problems.push('tokens.css: blocco :root non trovato');
 } else {
-  console.log(`pizzart.css     : ${pizzartBlock.tokens.size} token nel blocco tema`);
+  console.log(`tokens.css      : ${allCssNames.size} token dichiarati (${rootBlock.tokens.size} in :root)`);
 
-  // ── 1b. specularità TS ↔ CSS ───────────────────────────────────────────────
+  // ── 1b. i canonici devono essere presenti e identici ─────────────────────
   for (const [name, value] of tsTokens) {
-    if (!pizzartBlock.tokens.has(name)) {
-      problems.push(`"${name}" è in pizzart.ts ma non in pizzart.css`);
-    } else if (pizzartBlock.tokens.get(name) !== value) {
+    if (!rootBlock.tokens.has(name)) {
+      problems.push(`"${name}" è in pizzart.ts ma non in tokens.css :root`);
+    } else if (rootBlock.tokens.get(name) !== value) {
       problems.push(
-        `"${name}" diverge → ts: "${value}" | css: "${pizzartBlock.tokens.get(name)}"`
+        `"${name}" diverge → ts: "${value}" | css: "${rootBlock.tokens.get(name)}"`
       );
     }
   }
-  for (const name of pizzartBlock.tokens.keys()) {
-    if (!tsTokens.has(name)) problems.push(`"${name}" è in pizzart.css ma non in pizzart.ts`);
+
+  const extra = [...rootBlock.tokens.keys()].filter((name) => !tsTokens.has(name));
+  if (extra.length) {
+    notes.push(
+      `${extra.length} token in :root non canonici (derivati o alias v1): ${extra.join(', ')}`
+    );
   }
 }
 
@@ -105,28 +104,27 @@ for (const file of scanned) {
     usedNames.get(match[1]).add(relative(ROOT, file));
   }
 }
+let orphans = 0;
 for (const [name, files] of usedNames) {
   if (!allCssNames.has(name)) {
+    orphans += 1;
     problems.push(`var(${name}) usato ma mai dichiarato — in ${[...files].join(', ')}`);
   }
 }
-console.log(`var(--pz-*)     : ${usedNames.size} distinte usate, tutte dichiarate? ${problems.length === 0 ? 'sì' : 'vedi errori'}`);
+console.log(`var(--pz-*)     : ${usedNames.size} distinte usate, ${orphans} orfane`);
 
-// ── 4. zero emoji (ratchet) ───────────────────────────────────────────────────
+// ── 4. zero emoji (ratchet) ─────────────────────────────────────────────────
 //
-// docs/ui/design-decisions.md §7 impone zero emoji, ma i componenti attuali ne
-// contengono ancora: sono debito che va estinto in 6c/6d riscrivendo i
-// componenti, e la 6a ha il divieto esplicito di toccarli. Il controllo quindi
-// è un ratchet: fallisce se compare un'emoji in un file non a baseline, o se un
-// file a baseline ne aggiunge altre. Non chiede di rieditare ciò che è fuori
-// perimetro, ma impedisce di peggiorare.
+// docs/ui/design-decisions.md §7 impone zero emoji. La 6b ha azzerato quelle di
+// layout.ts; LayerRow.ts e le stringhe di main.ts restano, perché sono fuori dal
+// perimetro delle fasi di sola shell. Il controllo fallisce se compare un'emoji
+// in un file non a baseline o se un file a baseline ne aggiunge.
 
 const BASELINE_FILE = join(HERE, 'emoji-baseline.json');
 const updateBaseline = process.argv.includes('--update-baseline');
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}\u{2600}-\u{27BF}\u{FE0F}]/u;
 
-/** Conta le righe che contengono almeno un'emoji, per file relativo alla root. */
 async function countEmoji(files) {
   const counts = new Map();
   for (const file of files) {
@@ -142,7 +140,8 @@ const inScope = await countEmoji(scanned);
 if (updateBaseline) {
   const ordered = Object.fromEntries([...inScope.entries()].sort(([a], [b]) => a.localeCompare(b)));
   await writeFile(BASELINE_FILE, JSON.stringify(ordered, null, 2) + '\n', 'utf8');
-  console.log(`baseline emoji aggiornata: ${inScope.size} file, ${[...inScope.values()].reduce((a, b) => a + b, 0)} righe`);
+  const total = [...inScope.values()].reduce((a, b) => a + b, 0);
+  console.log(`baseline emoji aggiornata: ${inScope.size} file, ${total} righe`);
   process.exit(0);
 }
 
@@ -168,16 +167,13 @@ for (const [file, count] of inScope) {
 for (const file of Object.keys(baseline)) {
   if (!inScope.has(file)) notes.push(`${file}: non contiene più emoji, rimuovibile dalla baseline.`);
 }
-console.log(`emoji           : ${baselineTotal} righe in ${inScope.size} file a baseline (in 6c/6d vanno a zero)`);
+console.log(`emoji           : ${baselineTotal} righe in ${inScope.size} file a baseline`);
 
-// apps/web/src è fuori dal perimetro della 6a: solo segnalazione.
 const webApp = await walk(join(ROOT, 'apps', 'web', 'src'));
 const appsEmoji = await countEmoji(webApp);
 const appsTotal = [...appsEmoji.values()].reduce((a, b) => a + b, 0);
 if (appsTotal) {
-  notes.push(
-    `apps/web/src contiene ${appsTotal} righe con emoji: fuori perimetro 6a, va rimosso in 6c/6d.`
-  );
+  notes.push(`apps/web/src contiene ${appsTotal} righe con emoji: fuori perimetro, va rimosso in 6c/6d.`);
 }
 
 // ── esito ─────────────────────────────────────────────────────────────────────
@@ -186,7 +182,7 @@ console.log('');
 for (const note of notes) console.log(`NOTA  ${note}`);
 if (problems.length === 0) {
   console.log(
-    'OK — token coerenti TS↔CSS, nessun duplicato, nessuna variabile orfana, nessuna emoji nuova.'
+    'OK — canonici allineati TS↔CSS, nessun duplicato, nessuna variabile orfana, nessuna emoji nuova.'
   );
   process.exit(0);
 }

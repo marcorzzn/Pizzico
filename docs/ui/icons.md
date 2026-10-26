@@ -33,21 +33,27 @@ instead of silently producing an empty glyph.
 
 ## Available icons
 
-26 icons, exported both by name and through a generic `icon()` helper.
+36 icons, exported both by name and through a generic `icon()` helper.
 
 ### Tools
 
 | Export | Lucide name |
 | --- | --- |
+| `MoveIcon` | `move` |
+| `SquareDashedIcon` | `square-dashed` |
+| `BrushIcon` | `brush` |
+| `EraserIcon` | `eraser` |
 | `PenIcon` | `pen` |
+| `SplineIcon` | `spline` |
+| `WandSparklesIcon` | `wand-sparkles` |
+| `CropIcon` | `crop` |
+| `HandIcon` | `hand` |
+| `PipetteIcon` | `pipette` |
 | `SquareIcon` | `square` |
 | `CircleIcon` | `circle` |
 | `TypeIcon` | `type` |
-| `EraserIcon` | `eraser` |
-| `HandIcon` | `hand` |
 | `ZoomInIcon` | `zoom-in` |
 | `ZoomOutIcon` | `zoom-out` |
-| `PipetteIcon` | `pipette` |
 
 ### Actions
 
@@ -66,6 +72,10 @@ instead of silently producing an empty glyph.
 | `LayersIcon` | `layers` |
 | `SlidersIcon` | `sliders` |
 | `PaletteIcon` | `palette` |
+| `SparklesIcon` | `sparkles` |
+| `SunIcon` | `sun` |
+| `CommandIcon` | `command` |
+| `ChevronDownIcon` | `chevron-down` |
 
 ### Status
 
@@ -84,8 +94,12 @@ import { PenIcon, icon, iconNames } from '@pizzico/ui-kit';
 PenIcon();            // 16px, the toolbar and list-row size
 PenIcon(20);          // 20px, primary buttons
 icon('eraser', 16);   // same thing by name
-iconNames;            // ['check', 'circle', …] — useful for specimens and tests
+iconNames;            // ['brush', 'check', …] — useful for specimens and tests
 ```
+
+> Import from `@pizzico/ui-kit`, not from a subpath: the package exposes a single
+> entry (`src/index.ts`) and has no `exports` map, so `@pizzico/ui-kit/icons`
+> would not resolve.
 
 Each function returns an SVG **string**:
 

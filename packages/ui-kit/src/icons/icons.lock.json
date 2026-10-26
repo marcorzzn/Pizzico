@@ -44,6 +44,36 @@
     "source": "https://unpkg.com/lucide-static@1.61.0/icons/pipette.svg",
     "sha256": "55b103ec35e96a69cb3362342640b0ce40c2b96087663bfea241fce3fbab6882"
   },
+  "move": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/move.svg",
+    "sha256": "bfe79340be0603c23a770c73f1eb921cb89ebdb924d5f0ba1a32c044e1a049f7"
+  },
+  "square-dashed": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/square-dashed.svg",
+    "sha256": "8412e033c906b8ac3015aeec1e5e9eec21aa5fb3a882456af57983146153b1cc"
+  },
+  "brush": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/brush.svg",
+    "sha256": "f356bb6063c698b584e3803f5cf54f398e1599afb3b264916149c3a92401af8e"
+  },
+  "spline": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/spline.svg",
+    "sha256": "29179b2b6d9e9843fdf21673b9c54c6ac0b882770513a58d861b9a2dad1c6e4e"
+  },
+  "wand-sparkles": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/wand-sparkles.svg",
+    "sha256": "beebc10f935b32f5d5e8f76f94c8b3a00601c1920f953fdd86e06d6b8fd4f0f5"
+  },
+  "crop": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/crop.svg",
+    "sha256": "3010889f3695762644056ce5313121fe94f2dd0ff7870c1f0292fb58747786e3"
+  },
   "undo": {
     "lucideVersion": "1.61.0",
     "source": "https://unpkg.com/lucide-static@1.61.0/icons/undo.svg",
@@ -108,6 +138,26 @@
     "lucideVersion": "1.61.0",
     "source": "https://unpkg.com/lucide-static@1.61.0/icons/palette.svg",
     "sha256": "4f972f5fb3efa271960da26ecd9b258bcb89e83b290bbe3758bef44afaafc0df"
+  },
+  "chevron-down": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/chevron-down.svg",
+    "sha256": "763bbc7f305bad8b852b5ae5feadfc08858acf97f19a5897aa8f1fe636abed45"
+  },
+  "command": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/command.svg",
+    "sha256": "789d6afcf6c043ac07a83d11066465792d51d07b831109ffd1e3cd3236e5e331"
+  },
+  "sun": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/sun.svg",
+    "sha256": "19d684776d546b673d45fc54b7dee7b22f18e0b2e673612220727e90f46fb4cf"
+  },
+  "sparkles": {
+    "lucideVersion": "1.61.0",
+    "source": "https://unpkg.com/lucide-static@1.61.0/icons/sparkles.svg",
+    "sha256": "5ff7dc6557dbe5068a18feb080df81e090eb0a495fa1a05e3abd8179ba53c52d"
   },
   "check": {
     "lucideVersion": "1.61.0",

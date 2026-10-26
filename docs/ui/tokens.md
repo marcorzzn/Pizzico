@@ -6,39 +6,41 @@ Where the design values live, what they are, and how they are consumed.
 > (binding, decided 2026-10-26). This document describes the implementation, not
 > new decisions.
 
-## Two token layers, on purpose
+## One theme, active
 
-The repository currently contains two generations of tokens. They coexist
-temporarily, and the reason matters more than the mechanics:
+Since Phase 6b the Pizzart theme **is** the interface. Up to Phase 6a the values
+sat in an inert layer scoped to `[data-theme="pizzart"]`; that layer was removed
+and the values moved into `:root`.
 
-| Layer | Files | State | Consumed by |
-| --- | --- | --- | --- |
-| **v1** | [`colors.ts`][c], [`spacing.ts`][s], [`typography.ts`][t], [`tokens.css`][css] | **live** | `packages/ui-web/src/styles.css` (19 custom properties) |
-| **Pizzart** | [`pizzart.ts`][pt], [`pizzart.css`][pcss] | **inert** | nothing yet |
+The token file has four sections, in this order:
 
-The v1 palette is what the current interface renders. The Pizzart layer holds the
-values chosen for Phase 6 and is deliberately inactive: it is declared under
-`[data-theme="pizzart"]`, so it only applies when that attribute is present on
-the root element. Phase 6a ships the values without changing the appearance.
+| Section | Content | Nature |
+| --- | --- | --- |
+| **1. Token Pizzart** | The 20 values from the decision document | Source of truth |
+| **2. Derivati** | Hover/overlay/shadow values computed from the above | Implementation detail |
+| **3. Spaziature** | The §5 scale | Unchanged from v1 — it was already compliant |
+| **4. Alias v1** | Old names pointing at new tokens | Temporary bridge, removed in 6c/6d |
 
-[c]: ../../packages/ui-kit/src/tokens/colors.ts
-[s]: ../../packages/ui-kit/src/tokens/spacing.ts
-[t]: ../../packages/ui-kit/src/tokens/typography.ts
-[css]: ../../packages/ui-kit/src/tokens/tokens.css
+The TypeScript mirror is [`pizzart.ts`][pt]: it holds section 1 only, and
+[`scripts/check-tokens.mjs`][gate] fails if it diverges from `tokens.css`.
+
 [pt]: ../../packages/ui-kit/src/tokens/pizzart.ts
-[pcss]: ../../packages/ui-kit/src/tokens/pizzart.css
+[gate]: ../../packages/ui-kit/scripts/check-tokens.mjs
 
-Activating it is one attribute:
+### Why the aliases exist
 
-```ts
-document.documentElement.dataset.theme = 'pizzart';
+The components written before Phase 6 read v1 names (`--pz-bg-app`,
+`--pz-accent-primary`, `--pz-font-sans`, …). The alias block points each of them
+at its Pizzart counterpart, so those components restyle without being touched:
+
+```css
+--pz-bg-app: var(--pz-bg-canvas);
+--pz-accent-primary: var(--pz-accent);
+--pz-font-sans: var(--pz-font-ui);
 ```
 
-Activating it today would **not** restyle the app: the existing components read
-v1 names (`--pz-bg-app`, `--pz-accent-primary`, …), and the Pizzart layer
-declares its own names (`--pz-bg-canvas`, `--pz-accent`, …). Mapping v1 names
-onto Pizzart names — or replacing them — is a Phase 6b/6c decision, because it is
-inseparable from rewriting the components.
+Components rewritten in 6c/6d should use the Pizzart names directly; once no
+consumer is left, section 4 is deleted.
 
 ## Colour
 
@@ -46,7 +48,7 @@ inseparable from rewriting the components.
 | --- | --- | --- |
 | `--pz-bg-canvas` | `#1c1e22` | Canvas surface (from Pizzart's own code) |
 | `--pz-bg-panel` | `#1e1e24` | Panels, inspector, layers list |
-| `--pz-bg-toolbar` | `#18181b` | Top bar, bottom bar |
+| `--pz-bg-toolbar` | `#18181b` | Top bar, bottom status bar |
 | `--pz-border` | `#2d2d35` | Dividers and control outlines |
 | `--pz-text-primary` | `#e0e0e0` | Values, labels with emphasis |
 | `--pz-text-secondary` | `#a0a0a8` | Field labels, units of measure |
@@ -54,51 +56,58 @@ inseparable from rewriting the components.
 | `--pz-error` | `#f07864` | Error text and destructive affordances (from Pizzart) |
 | `--pz-ok` | `#a0c8a0` | Positive status text (from Pizzart) |
 
-Usage rules from the decision document: the accent is used **sparingly** — never
-as a large background. `--pz-text-secondary` is for labels and units, never for
+Rules from the decision document: the accent is used **sparingly** — never as a
+large background. `--pz-text-secondary` is for labels and units, never for
 numeric values.
 
-Two Pizzart colours are intentionally **not** interface tokens:
-`#ffbe3c` (confirmed selection) and `#78c8ff` (selection in progress). They
-describe a real canvas state and stay on the canvas.
+Two Pizzart colours are intentionally **not** interface tokens: `#ffbe3c`
+(confirmed selection) and `#78c8ff` (selection in progress). They describe a
+canvas state and stay on the canvas.
+
+### Derived values (not in the decision document)
+
+`--pz-bg-elevated`, `--pz-surface-hover`, `--pz-surface-active`,
+`--pz-border-strong`, `--pz-text-muted`, `--pz-text-inverse`, `--pz-accent-hover`,
+`--pz-accent-subtle`, `--pz-accent-tint`, `--pz-accent-border`, `--pz-overlay`,
+`--pz-shadow-document`, `--pz-shadow-popover`, `--pz-radius-full`.
+
+One deserves a note: **`--pz-warning`** (`#d9a441`). Pizzart has no warning
+colour and the decision document does not define one, so this is a derived amber
+(taken from the selection colour and desaturated) rather than an inherited value.
 
 ## Typography
 
 | Token | Value | Use |
 | --- | --- | --- |
 | `--pz-font-ui` | `Inter, system-ui, …` | Every UI text |
-| `--pz-font-size-small` | `12px` | Field labels, status bar |
+| `--pz-font-size-small` | `12px` | Labels, status bar, layer names |
 | `--pz-font-size-body` | `14px` | Default body text |
-| `--pz-font-size-heading` | `16px` | Section headings |
-| `--pz-font-size-title` | `20px` | Panel titles |
+| `--pz-font-size-heading` | `16px` | Brand, command palette input |
+| `--pz-font-size-title` | `20px` | Drag-and-drop overlay |
 | `--pz-font-weight-regular` | `400` | Body |
-| `--pz-font-weight-medium` | `500` | Headings, labels with emphasis |
-| `--pz-font-weight-semibold` | `600` | Titles only |
+| `--pz-font-weight-medium` | `500` | Menu items, labels with emphasis |
+| `--pz-font-weight-semibold` | `600` | Titles, section headings |
 
 Weights 300 and 700 are excluded by the decision document. Numeric columns
-(opacity, dimensions, coordinates) use `font-variant-numeric: tabular-nums`.
+(opacity, dimensions, coordinates) use `font-variant-numeric: tabular-nums`,
+applied in `styles.css`.
 
 **Unknown at this stage:** Inter is not bundled. The stack declares it and falls
-back to `system-ui`, so nothing breaks, but the intended font only appears on
-machines that already have it. Whether to ship the font files (and their licence
-terms) is a decision for 6b/6c.
+back to `system-ui`. Shipping the font files (and their licence terms) is still
+an open decision.
 
 ## Radius
 
 | Token | Value | Note |
 | --- | --- | --- |
-| `--pz-radius-sm` | `4px` | Small controls, layer rows |
-| `--pz-radius-md` | `6px` | Buttons, inputs |
-| `--pz-radius-lg` | `8px` | Panels, popovers |
+| `--pz-radius-sm` | `4px` | Small controls, menu items, layer rows |
+| `--pz-radius-md` | `6px` | Buttons, inputs, popovers |
+| `--pz-radius-lg` | `8px` | Panels, export dropdown |
 
-`design-decisions.md` does not cover radii. These values follow the proposal in
-[`docs/design-pizzart/typography.md`](../design-pizzart/typography.md) and differ
-from the live v1 radii (`4 / 8 / 12`).
+`design-decisions.md` does not cover radii; these follow the proposal in
+[`docs/design-pizzart/typography.md`](../design-pizzart/typography.md).
 
 ## Spacing
-
-No new tokens were added, because the non-binding proposal and the current
-implementation already agree on the required scale. Existing names are kept:
 
 | Value | Token |
 | --- | --- |
@@ -111,11 +120,9 @@ implementation already agree on the required scale. Existing names are kept:
 
 Fixed by the decision document: panel padding 12px, gap between controls 8px,
 layer row height 32px, interactive areas at least 44px below 640px viewport
-width.
+width (see the `@media` block in `styles.css`).
 
 ## Using the tokens
-
-CSS, once the theme is active:
 
 ```css
 .panel {
@@ -136,17 +143,19 @@ import { pizzartTokens } from '@pizzico/ui-kit';
 pizzartTokens['--pz-accent']; // '#6366f1'
 ```
 
-## Verifying
+`styles.css` holds no colour literals outside `tokens.css`; the only exceptions
+are inline styles that `apps/web/src/main.ts` still sets (it passes hex values to
+`updateAutosaveIndicator`, which `layout.ts` maps back onto tokens until that
+file is refactored).
 
-`pizzart.ts` is the source of truth and `pizzart.css` mirrors it by hand, so a
-gate keeps them honest:
+## Verifying
 
 ```bash
 pnpm --filter @pizzico/ui-kit tokens:check
 ```
 
-It fails when the two files diverge, when a custom property is declared twice in
-the same block, when a `var(--pz-*)` is used but never declared, or when an emoji
-appears outside the recorded baseline. The baseline exists because the current
-components still contain 22 emoji that Phase 6a is not allowed to touch; the
-check prevents new ones while that debt is paid down in 6c/6d.
+It fails when a canonical token from `pizzart.ts` is missing from `tokens.css` or
+diverges from it, when a custom property is declared twice in the same block,
+when a `var(--pz-*)` is used but never declared, or when an emoji appears outside
+the recorded baseline. The baseline now only lists `LayerRow.ts` (5 emoji, 6c
+territory); `layout.ts` went from 17 to 0 in Phase 6b.

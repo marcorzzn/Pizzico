@@ -1,37 +1,91 @@
 /*
 Pizzico — packages/ui-kit/src/tokens/tokens.css
-Riferimento manifesto: §5.1, §5.6
+Riferimento: docs/ui/design-decisions.md §2, §3, §5
 Licenza: MIT OR Apache-2.0
+
+Tema Pizzart ATTIVO. Fino alla Fase 6a questi token erano un layer inerte
+([data-theme="pizzart"]); dalla 6b sono il tema predefinito.
+
+Struttura del file:
+  1. Token Pizzart  — valori del documento di design, sorgente di verità.
+                      Lo specchio TypeScript è src/tokens/pizzart.ts e
+                      `scripts/check-tokens.mjs` fallisce se divergono.
+  2. Derivati       — valori calcolati dai token sopra (hover, overlay, ombre).
+                      Non sono nel documento di design: sono implementazione.
+  3. Spaziature     — scala §5, invariata rispetto alla v1 (era già conforme).
+  4. Alias v1       — ponte per i componenti non ancora riscritti. Spariscono
+                      in 6c/6d, quando i componenti useranno i nomi Pizzart.
 */
 
 :root {
-  /* Surfaces & Backgrounds */
-  --pz-bg-app: #121316;
-  --pz-bg-surface: #1a1b1f;
-  --pz-bg-surface-hover: #24262c;
-  --pz-bg-surface-active: #2c2f37;
-  --pz-border-muted: #2c2d33;
-  --pz-border-strong: #3d3f47;
+  /* ── 1. Token Pizzart ─────────────────────────────────────────────────── */
 
-  /* Accents */
-  --pz-accent-primary: #4f46e5;
-  --pz-accent-primary-hover: #6366f1;
-  --pz-accent-active: #4338ca;
-  --pz-accent-subtle: rgba(79, 70, 229, 0.15);
+  /* Superfici */
+  --pz-bg-canvas: #1c1e22;
+  --pz-bg-panel: #1e1e24;
+  --pz-bg-toolbar: #18181b;
 
-  /* Semantic Feedback */
-  --pz-success: #10b981;
-  --pz-warning: #f59e0b;
-  --pz-danger: #ef4444;
-  --pz-info: #3b82f6;
+  /* Linee */
+  --pz-border: #2d2d35;
 
-  /* Text Colors */
-  --pz-text-primary: #f9fafb;
-  --pz-text-secondary: #9ca3af;
-  --pz-text-muted: #6b7280;
-  --pz-text-inverse: #111827;
+  /* Testo */
+  --pz-text-primary: #e0e0e0;
+  --pz-text-secondary: #a0a0a8;
 
-  /* Spacing */
+  /* Accento: stato attivo, focus, bottone primario. Mai come sfondo esteso. */
+  --pz-accent: #6366f1;
+
+  /* Semantici (valori da Pizzart) */
+  --pz-error: #f07864;
+  --pz-ok: #a0c8a0;
+
+  /* Tipografia: Inter con fallback di sistema, scala 12/14/16/20, pesi 400/500/600 */
+  --pz-font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pz-font-size-small: 12px;
+  --pz-font-size-body: 14px;
+  --pz-font-size-heading: 16px;
+  --pz-font-size-title: 20px;
+  --pz-font-weight-regular: 400;
+  --pz-font-weight-medium: 500;
+  --pz-font-weight-semibold: 600;
+
+  /* Raggi */
+  --pz-radius-sm: 4px;
+  --pz-radius-md: 6px;
+  --pz-radius-lg: 8px;
+
+  /* ── 2. Derivati ──────────────────────────────────────────────────────── */
+
+  /* Superfici secondarie: popover, menu, righe in hover */
+  --pz-bg-elevated: #232329;
+  --pz-surface-hover: rgba(255, 255, 255, 0.055);
+  --pz-surface-active: rgba(255, 255, 255, 0.09);
+
+  /* Linee */
+  --pz-border-strong: #3a3a42;
+
+  /* Testo */
+  --pz-text-muted: #7c7d86;
+  --pz-text-inverse: #14151a;
+
+  /* Accento, varianti alpha */
+  --pz-accent-hover: #7c7ff2;
+  --pz-accent-subtle: rgba(99, 102, 241, 0.15);
+  --pz-accent-tint: rgba(99, 102, 241, 0.08);
+  --pz-accent-border: rgba(99, 102, 241, 0.28);
+
+  /* Avviso: Pizzart non ha un colore di warning. Ambra derivata dalla
+     selezione confermata (#ffbe3c), desaturata per restare leggibile. */
+  --pz-warning: #d9a441;
+
+  /* Sovrapposizioni */
+  --pz-overlay: rgba(0, 0, 0, 0.66);
+  --pz-shadow-document: 0 18px 48px rgba(0, 0, 0, 0.55);
+  --pz-shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --pz-radius-full: 9999px;
+
+  /* ── 3. Spaziature (§5) ───────────────────────────────────────────────── */
+
   --pz-space-xs: 4px;
   --pz-space-sm: 8px;
   --pz-space-md: 12px;
@@ -39,19 +93,24 @@ Licenza: MIT OR Apache-2.0
   --pz-space-xl: 24px;
   --pz-space-xxl: 32px;
 
-  /* Radii */
-  --pz-radius-sm: 4px;
-  --pz-radius-md: 8px;
-  --pz-radius-lg: 12px;
-  --pz-radius-full: 9999px;
-
-  /* Density Defaults */
+  /* Default di densità: la shell usa la fascia "comfortable" */
   --pz-touch-min: 36px;
   --pz-toolbar-item-size: 36px;
 
-  /* Typography */
-  --pz-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --pz-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* ── 4. Alias v1 → Pizzart (ponte, da rimuovere in 6c/6d) ─────────────── */
+
+  --pz-bg-app: var(--pz-bg-canvas);
+  --pz-bg-surface: var(--pz-bg-panel);
+  --pz-bg-surface-hover: var(--pz-surface-hover);
+  --pz-bg-surface-active: var(--pz-surface-active);
+  --pz-border-muted: var(--pz-border);
+  --pz-accent-primary: var(--pz-accent);
+  --pz-accent-primary-hover: var(--pz-accent-hover);
+  --pz-accent-active: var(--pz-accent-hover);
+  --pz-font-sans: var(--pz-font-ui);
+  --pz-success: var(--pz-ok);
+  --pz-danger: var(--pz-error);
+  --pz-info: var(--pz-accent);
 }
 
 [data-density="compact"] {
@@ -60,6 +119,6 @@ Licenza: MIT OR Apache-2.0
 }
 
 [data-density="touch"] {
-  --pz-touch-min: 48px;
-  --pz-toolbar-item-size: 48px;
+  --pz-touch-min: 44px;
+  --pz-toolbar-item-size: 44px;
 }

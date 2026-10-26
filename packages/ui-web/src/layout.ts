@@ -1,9 +1,51 @@
 // Pizzico — packages/ui-web/src/layout.ts
 // Riferimento manifesto: §5.1, §5.5, §11 Step 3
+// Riferimento design: docs/ui/design-decisions.md §1-§6, docs/design-pizzart/layout.md
 // Licenza: MIT OR Apache-2.0
+//
+// Struttura della shell (Fase 6b), fedele al riferimento reale:
+//   top bar     → marchio, menu File/Modifica/Vista, suggerimento, strumenti
+//   canvas      → area flessibile, sfondo --pz-bg-canvas
+//   pannello    → 280px: Strumento, Layer, Effetti, Maschere
+//   bottom bar  → dimensioni, zoom, profilo colore, motore, nome documento
+//
+// Contratto pubblico invariato: main.ts dipende da root, canvas, canvasContainer,
+// canvasWrapper, selectionOverlay, inspectorPanelBody, layersPanelBody, undoBtn,
+// redoBtn, deselectBtn, autosaveIndicator, setActiveTool, updateAutosaveIndicator.
+// Gli ID sono quelli di prima: undo-btn, redo-btn, save-project-btn,
+// open-project-btn, export-btn, export-dropdown, open-psd-btn, deselect-btn,
+// pizzico-canvas, pizzico-selection-overlay, autosave-indicator.
+//
+// Nota: le azioni (Salva, Esporta, Annulla…) vivono dentro i menu, come nel
+// riferimento, ma restano le UNICHE istanze degli elementi: undoBtn è davvero il
+// pulsante che main.ts disabilita, non una copia.
 
 import { WorkspaceMode } from '@pizzico/shared';
-import { Panel, FloatingActionBar } from '@pizzico/ui-kit';
+import {
+  BrushIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CommandIcon,
+  CropIcon,
+  DownloadIcon,
+  EraserIcon,
+  FloatingActionBar,
+  FolderOpenIcon,
+  HandIcon,
+  MoveIcon,
+  Panel,
+  PenIcon,
+  PlusIcon,
+  RedoIcon,
+  SaveIcon,
+  SparklesIcon,
+  SplineIcon,
+  SquareDashedIcon,
+  SunIcon,
+  UndoIcon,
+  WandSparklesIcon,
+  XIcon,
+} from '@pizzico/ui-kit';
 import { CommandPalette } from '@pizzico/command-palette';
 
 export interface LayoutOptions {
@@ -21,6 +63,49 @@ export interface LayoutOptions {
   onRedo?: () => void;
   onDeselect?: () => void;
 }
+
+type IconFn = (size?: number) => string;
+type MenuEntry = HTMLButtonElement | 'separator';
+
+interface ToolDefinition {
+  id: string;
+  title: string;
+  icon: IconFn;
+  /** Suggerimento contestuale mostrato al centro della top bar. */
+  hint: string;
+}
+
+/**
+ * Colori che main.ts passa ancora inline a updateAutosaveIndicator.
+ * La mappatura sparisce quando main.ts verrà rifattorizzato (Fase 6c/6d).
+ */
+const LEGACY_COLOR_TO_TOKEN: Record<string, string> = {
+  '#38bdf8': 'var(--pz-accent)',
+  '#f87171': 'var(--pz-error)',
+  '#ef4444': 'var(--pz-error)',
+};
+
+const TOOLS: ToolDefinition[] = [
+  { id: 'move', title: 'Sposta livello (V)', icon: MoveIcon, hint: 'trascina per spostare il livello' },
+  {
+    id: 'marquee',
+    title: 'Selezione rettangolare (M)',
+    icon: SquareDashedIcon,
+    hint: 'trascina per selezionare un rettangolo',
+  },
+  { id: 'brush', title: 'Pennello (B)', icon: BrushIcon, hint: 'trascina per disegnare' },
+  { id: 'eraser', title: 'Gomma (E)', icon: EraserIcon, hint: 'trascina per cancellare' },
+  { id: 'pen', title: 'Penna Bézier (P)', icon: PenIcon, hint: 'traccia un percorso vettoriale' },
+  { id: 'curvature', title: 'Curvature κ-curves', icon: SplineIcon, hint: 'curva continua κ-curves' },
+  {
+    id: 'wand',
+    title: 'Bacchetta magica (W)',
+    icon: WandSparklesIcon,
+    hint: 'seleziona per similarità di colore',
+  },
+  { id: 'crop', title: 'Ritaglia (C)', icon: CropIcon, hint: 'definisci l’area di ritaglio' },
+  { id: 'hand', title: 'Mano / pan (H)', icon: HandIcon, hint: 'trascina per spostare la vista' },
+];
 
 export class DesktopShellLayout {
   public root: HTMLDivElement;
@@ -41,15 +126,97 @@ export class DesktopShellLayout {
   public deselectBtn: HTMLButtonElement;
   public autosaveIndicator: HTMLSpanElement;
 
-  private currentMode: WorkspaceMode = 'quick';
   private activeTool = 'brush';
+  private currentMode: WorkspaceMode = 'quick';
   private toolButtons = new Map<string, HTMLButtonElement>();
+  private toolHint!: HTMLSpanElement;
+  private menus: HTMLDivElement[] = [];
+  private openMenuList: HTMLElement | null = null;
 
   constructor(options: LayoutOptions = {}) {
     this.root = document.createElement('div');
     this.root.className = 'pz-app-shell';
 
-    // 1. Top Bar
+    // ── Export dropdown (aperto dal menu File) ───────────────────────────────
+
+    this.exportDropdown = this.buildExportDropdown(options);
+
+    // ── Azioni: uniche istanze, inserite nei menu ────────────────────────────
+
+    this.openPsdBtn = this.buildMenuButton('open-psd-btn', 'Apri PSD…', 'Ctrl+Shift+O', FolderOpenIcon, () =>
+      options.onOpenPsd?.()
+    );
+    this.openProjectBtn = this.buildMenuButton(
+      'open-project-btn',
+      'Apri progetto…',
+      'Ctrl+O',
+      FolderOpenIcon,
+      () => options.onOpenProject?.()
+    );
+    this.saveBtn = this.buildMenuButton('save-project-btn', 'Salva progetto', 'Ctrl+S', SaveIcon, () =>
+      options.onSaveProject?.()
+    );
+    this.exportBtn = this.buildMenuButton('export-btn', 'Esporta immagine…', '', DownloadIcon, () => {
+      this.exportDropdown.style.display = this.exportDropdown.style.display === 'none' ? 'flex' : 'none';
+    });
+    this.undoBtn = this.buildMenuButton('undo-btn', 'Annulla', 'Ctrl+Z', UndoIcon, () => options.onUndo?.());
+    this.redoBtn = this.buildMenuButton('redo-btn', 'Ripristina', 'Ctrl+Y', RedoIcon, () => options.onRedo?.());
+    this.deselectBtn = this.buildMenuButton('deselect-btn', 'Deseleziona', 'Ctrl+D', XIcon, () =>
+      options.onDeselect?.()
+    );
+    this.deselectBtn.style.display = 'none';
+    this.undoBtn.disabled = true;
+    this.redoBtn.disabled = true;
+
+    const newDocBtn = this.buildMenuButton('new-document-btn', 'Nuovo documento', 'Ctrl+N', PlusIcon, () =>
+      options.onCommand?.('file.new')
+    );
+    const paletteItem = this.buildMenuButton('open-palette-btn', 'Cerca comandi', 'Ctrl+K', CommandIcon, () =>
+      this.palette.open()
+    );
+
+    // Modalità workspace (§5.5): prima era uno switcher nella top bar, ora vive
+    // in Vista, perché la top bar resta a menu, suggerimento e strumenti.
+    const modeButtons = new Map<WorkspaceMode, HTMLButtonElement>();
+    const renderModes = () => {
+      modeButtons.forEach((btn, id) => {
+        const iconSpan = btn.querySelector('.pz-menu-item-icon');
+        if (iconSpan) iconSpan.innerHTML = id === this.currentMode ? CheckIcon(16) : '';
+        btn.setAttribute('aria-checked', String(id === this.currentMode));
+      });
+    };
+    const modeEntries: MenuEntry[] = [];
+    const modes: { id: WorkspaceMode; label: string }[] = [
+      { id: 'quick', label: 'Quick Edit' },
+      { id: 'vector', label: 'Vector Illustration' },
+      { id: 'photo', label: 'Deep Retouching' },
+    ];
+    modes.forEach(({ id, label }) => {
+      const btn = this.buildMenuButton(null, label, '', CheckIcon, () => {
+        this.currentMode = id;
+        renderModes();
+        options.onModeChange?.(id);
+      });
+      btn.setAttribute('role', 'menuitemradio');
+      modeButtons.set(id, btn);
+      modeEntries.push(btn);
+    });
+    renderModes();
+
+    const fileMenu = this.buildMenu('File', [
+      newDocBtn,
+      'separator',
+      this.openPsdBtn,
+      this.openProjectBtn,
+      'separator',
+      this.saveBtn,
+      this.exportBtn,
+    ]);
+    const editMenu = this.buildMenu('Modifica', [this.undoBtn, this.redoBtn, 'separator', this.deselectBtn]);
+    const viewMenu = this.buildMenu('Vista', [...modeEntries, 'separator', paletteItem]);
+
+    // ── 1. Top bar ───────────────────────────────────────────────────────────
+
     const topBar = document.createElement('header');
     topBar.className = 'pz-top-bar';
 
@@ -59,284 +226,70 @@ export class DesktopShellLayout {
     const brand = document.createElement('div');
     brand.className = 'pz-brand';
     brand.innerHTML = `
-      <svg class="pz-brand-logo" viewBox="0 0 128 128">
-        <circle cx="64" cy="64" r="42" fill="none" stroke="#4f46e5" stroke-width="12" />
-        <path d="M44 64 L64 36 L84 64 L64 92 Z" fill="#06b6d4" />
+      <svg class="pz-brand-logo" viewBox="0 0 128 128" aria-hidden="true" focusable="false">
+        <circle class="pz-brand-mark" cx="64" cy="64" r="42" fill="none" stroke-width="12" />
+        <path class="pz-brand-shape" d="M44 64 L64 36 L84 64 L64 92 Z" />
       </svg>
       <span>Pizzico</span>
     `;
-
     topLeft.appendChild(brand);
+    topLeft.appendChild(fileMenu);
+    topLeft.appendChild(editMenu);
+    topLeft.appendChild(viewMenu);
 
-    // Workspace Mode Switcher (§5.5)
-    const modeSwitcher = document.createElement('div');
-    modeSwitcher.className = 'pz-mode-switcher';
+    const topCenter = document.createElement('div');
+    topCenter.className = 'pz-top-center';
+    this.toolHint = document.createElement('span');
+    this.toolHint.className = 'pz-tool-hint';
+    topCenter.appendChild(this.toolHint);
 
-    const modes: { id: WorkspaceMode; label: string }[] = [
-      { id: 'quick', label: 'Quick Edit' },
-      { id: 'vector', label: 'Vector Illustration' },
-      { id: 'photo', label: 'Deep Retouching' },
-    ];
-
-    modes.forEach(({ id, label }) => {
-      const btn = document.createElement('button');
-      btn.className = `pz-mode-btn ${this.currentMode === id ? 'pz-active' : ''}`;
-      btn.textContent = label;
-      btn.addEventListener('click', () => {
-        modeSwitcher.querySelectorAll('.pz-mode-btn').forEach((b) => b.classList.remove('pz-active'));
-        btn.classList.add('pz-active');
-        this.currentMode = id;
-        if (options.onModeChange) options.onModeChange(id);
-      });
-      modeSwitcher.appendChild(btn);
-    });
-
-    // Top Right: Undo/Redo + Apri PSD + Command Palette Trigger Button
     const topRight = document.createElement('div');
-    topRight.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+    topRight.className = 'pz-top-right';
 
-    this.undoBtn = document.createElement('button');
-    this.undoBtn.id = 'undo-btn';
-    this.undoBtn.className = 'pz-btn pz-btn-secondary';
-    this.undoBtn.style.padding = '5px 10px';
-    this.undoBtn.style.fontSize = '12px';
-    this.undoBtn.innerHTML = '<span>↶ Undo</span>';
-    this.undoBtn.title = 'Annulla (Ctrl+Z)';
-    this.undoBtn.disabled = true;
-    this.undoBtn.addEventListener('click', () => {
-      if (options.onUndo) options.onUndo();
+    const toolGroup = document.createElement('div');
+    toolGroup.className = 'pz-tool-group';
+
+    TOOLS.forEach(({ id, title, icon, hint }) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `pz-tool-btn ${this.activeTool === id ? 'pz-active' : ''}`;
+      btn.dataset.tool = id;
+      btn.dataset.hint = hint;
+      btn.innerHTML = icon(16);
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+      btn.setAttribute('aria-pressed', String(this.activeTool === id));
+      btn.addEventListener('click', () => {
+        this.setActiveTool(id);
+        options.onToolSelect?.(id);
+      });
+      this.toolButtons.set(id, btn);
+      toolGroup.appendChild(btn);
     });
 
-    this.redoBtn = document.createElement('button');
-    this.redoBtn.id = 'redo-btn';
-    this.redoBtn.className = 'pz-btn pz-btn-secondary';
-    this.redoBtn.style.padding = '5px 10px';
-    this.redoBtn.style.fontSize = '12px';
-    this.redoBtn.innerHTML = '<span>↷ Redo</span>';
-    this.redoBtn.title = 'Ripristina (Ctrl+Y / Ctrl+Shift+Z)';
-    this.redoBtn.disabled = true;
-    this.redoBtn.addEventListener('click', () => {
-      if (options.onRedo) options.onRedo();
-    });
+    const toolbarSeparator = document.createElement('span');
+    toolbarSeparator.className = 'pz-toolbar-separator';
 
-    this.saveBtn = document.createElement('button');
-    this.saveBtn.id = 'save-project-btn';
-    this.saveBtn.className = 'pz-btn pz-btn-primary';
-    this.saveBtn.style.padding = '5px 12px';
-    this.saveBtn.style.fontSize = '12px';
-    this.saveBtn.innerHTML = '<span>💾 Salva</span>';
-    this.saveBtn.title = 'Salva Progetto .pizzico (Ctrl+S)';
-    this.saveBtn.addEventListener('click', () => {
-      if (options.onSaveProject) options.onSaveProject();
-    });
+    const paletteBtn = document.createElement('button');
+    paletteBtn.type = 'button';
+    paletteBtn.className = 'pz-tool-btn';
+    paletteBtn.innerHTML = CommandIcon(16);
+    paletteBtn.title = 'Cerca comandi (Ctrl+K)';
+    paletteBtn.setAttribute('aria-label', 'Cerca comandi');
+    paletteBtn.addEventListener('click', () => this.palette.open());
 
-    this.openProjectBtn = document.createElement('button');
-    this.openProjectBtn.id = 'open-project-btn';
-    this.openProjectBtn.className = 'pz-btn pz-btn-secondary';
-    this.openProjectBtn.style.padding = '5px 12px';
-    this.openProjectBtn.style.fontSize = '12px';
-    this.openProjectBtn.innerHTML = '<span>📁 Apri Progetto</span>';
-    this.openProjectBtn.title = 'Apri Progetto .pizzico (Ctrl+O)';
-    this.openProjectBtn.addEventListener('click', () => {
-      if (options.onOpenProject) options.onOpenProject();
-    });
+    topRight.appendChild(toolGroup);
+    topRight.appendChild(toolbarSeparator);
+    topRight.appendChild(paletteBtn);
 
-    this.exportBtn = document.createElement('button');
-    this.exportBtn.id = 'export-btn';
-    this.exportBtn.className = 'pz-btn pz-btn-secondary';
-    this.exportBtn.style.padding = '5px 12px';
-    this.exportBtn.style.fontSize = '12px';
-    this.exportBtn.innerHTML = '<span>📤 Esporta ▾</span>';
-    this.exportBtn.title = 'Esporta immagine renderizzata (PNG, JPEG, WebP)';
-
-    this.exportDropdown = document.createElement('div');
-    this.exportDropdown.id = 'export-dropdown';
-    this.exportDropdown.className = 'pz-export-dropdown';
-    this.exportDropdown.style.display = 'none';
-
-    this.exportDropdown.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-        <span style="font-weight: 600; font-size: 13px; color: #f8fafc;">📤 Esporta Immagine</span>
-        <button id="export-close-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">✕</button>
-      </div>
-
-      <!-- PNG Item -->
-      <div class="pz-export-item">
-        <div class="pz-export-item-title">
-          <span>PNG</span>
-          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">Lossless · Alpha</span>
-        </div>
-        <div class="pz-export-item-desc">Grafica raster a 32-bit con canale alpha trasparente.</div>
-        <button id="export-png-btn" class="pz-btn pz-btn-primary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica PNG</button>
-      </div>
-
-      <!-- JPEG Item -->
-      <div class="pz-export-item">
-        <div class="pz-export-item-title">
-          <span>JPEG</span>
-          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(251,191,36,0.15); color: #fbbf24;">Compresso</span>
-        </div>
-        <div class="pz-export-item-desc">Formato standard per fotografie. Aree trasparenti rese bianche.</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 2px;">
-          <span>Qualità:</span>
-          <span id="export-jpeg-quality-val" style="font-weight: 600; color: #e2e8f0;">90%</span>
-        </div>
-        <input type="range" id="export-jpeg-quality" min="1" max="100" value="90" style="width: 100%; accent-color: #38bdf8; cursor: pointer;" />
-        <button id="export-jpeg-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica JPEG</button>
-      </div>
-
-      <!-- WebP Item -->
-      <div class="pz-export-item">
-        <div class="pz-export-item-title">
-          <span>WebP</span>
-          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(52,211,153,0.15); color: #34d399;">Moderno · Leggero</span>
-        </div>
-        <div class="pz-export-item-desc">Pure-Rust lossless ad altissima efficienza con trasparenza.</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 2px;">
-          <span>Qualità:</span>
-          <span id="export-webp-quality-val" style="font-weight: 600; color: #e2e8f0;">90%</span>
-        </div>
-        <input type="range" id="export-webp-quality" min="1" max="100" value="90" style="width: 100%; accent-color: #34d399; cursor: pointer;" />
-        <button id="export-webp-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica WebP</button>
-      </div>
-
-      <!-- PSD Item -->
-      <div class="pz-export-item">
-        <div class="pz-export-item-title">
-          <span>PSD (Adobe Photoshop)</span>
-          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">Multilivello</span>
-        </div>
-        <div class="pz-export-item-desc">Formato Adobe PSD multilivello conforme Photopea/Photoshop con canali RLE e composito.</div>
-        <button id="export-psd-btn" class="pz-btn pz-btn-secondary" style="margin-top: 4px; padding: 4px 8px; font-size: 11px; justify-content: center;">Scarica PSD</button>
-      </div>
-    `;
+    topBar.appendChild(topLeft);
+    topBar.appendChild(topCenter);
+    topBar.appendChild(topRight);
 
     this.root.appendChild(this.exportDropdown);
 
-    this.exportBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isHidden = this.exportDropdown.style.display === 'none';
-      this.exportDropdown.style.display = isHidden ? 'flex' : 'none';
-    });
+    // ── 2. Canvas ────────────────────────────────────────────────────────────
 
-    this.exportDropdown.querySelector('#export-close-btn')?.addEventListener('click', () => {
-      this.exportDropdown.style.display = 'none';
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!this.exportDropdown.contains(e.target as Node) && e.target !== this.exportBtn && !this.exportBtn.contains(e.target as Node)) {
-        this.exportDropdown.style.display = 'none';
-      }
-    });
-
-    const jpegSlider = this.exportDropdown.querySelector('#export-jpeg-quality') as HTMLInputElement;
-    const jpegVal = this.exportDropdown.querySelector('#export-jpeg-quality-val') as HTMLSpanElement;
-    jpegSlider?.addEventListener('input', () => {
-      if (jpegVal) jpegVal.textContent = `${jpegSlider.value}%`;
-    });
-
-    const webpSlider = this.exportDropdown.querySelector('#export-webp-quality') as HTMLInputElement;
-    const webpVal = this.exportDropdown.querySelector('#export-webp-quality-val') as HTMLSpanElement;
-    webpSlider?.addEventListener('input', () => {
-      if (webpVal) webpVal.textContent = `${webpSlider.value}%`;
-    });
-
-    this.exportDropdown.querySelector('#export-png-btn')?.addEventListener('click', () => {
-      this.exportDropdown.style.display = 'none';
-      if (options.onExportPng) options.onExportPng();
-    });
-
-    this.exportDropdown.querySelector('#export-jpeg-btn')?.addEventListener('click', () => {
-      this.exportDropdown.style.display = 'none';
-      const q = parseInt(jpegSlider?.value || '90', 10);
-      if (options.onExportJpeg) options.onExportJpeg(q);
-    });
-
-    this.exportDropdown.querySelector('#export-webp-btn')?.addEventListener('click', () => {
-      this.exportDropdown.style.display = 'none';
-      const q = parseInt(webpSlider?.value || '90', 10);
-      if (options.onExportWebp) options.onExportWebp(q);
-    });
-
-    this.exportDropdown.querySelector('#export-psd-btn')?.addEventListener('click', () => {
-      this.exportDropdown.style.display = 'none';
-      if (options.onExportPsd) options.onExportPsd();
-    });
-
-    this.openPsdBtn = document.createElement('button');
-    this.openPsdBtn.id = 'open-psd-btn';
-    this.openPsdBtn.className = 'pz-btn pz-btn-secondary';
-    this.openPsdBtn.style.padding = '5px 12px';
-    this.openPsdBtn.style.fontSize = '12px';
-    this.openPsdBtn.innerHTML = '<span>📂 Apri PSD</span>';
-    this.openPsdBtn.title = 'Apri file Adobe Photoshop PSD/PSB';
-    this.openPsdBtn.addEventListener('click', () => {
-      if (options.onOpenPsd) options.onOpenPsd();
-    });
-
-    this.deselectBtn = document.createElement('button');
-    this.deselectBtn.id = 'deselect-btn';
-    this.deselectBtn.className = 'pz-btn pz-btn-secondary';
-    this.deselectBtn.style.padding = '5px 10px';
-    this.deselectBtn.style.fontSize = '12px';
-    this.deselectBtn.innerHTML = '<span>✕ Deseleziona</span>';
-    this.deselectBtn.title = 'Deseleziona (Ctrl+D)';
-    this.deselectBtn.style.display = 'none';
-    this.deselectBtn.addEventListener('click', () => {
-      if (options.onDeselect) options.onDeselect();
-    });
-
-    const cmdPaletteBtn = document.createElement('button');
-    cmdPaletteBtn.className = 'pz-btn pz-btn-secondary';
-    cmdPaletteBtn.style.padding = '4px 10px';
-    cmdPaletteBtn.style.fontSize = '12px';
-    cmdPaletteBtn.innerHTML = '<span>⌘K Cerca comandi</span>';
-    cmdPaletteBtn.addEventListener('click', () => this.palette.open());
-
-    topRight.appendChild(this.undoBtn);
-    topRight.appendChild(this.redoBtn);
-    topRight.appendChild(this.deselectBtn);
-    topRight.appendChild(this.saveBtn);
-    topRight.appendChild(this.openProjectBtn);
-    topRight.appendChild(this.exportBtn);
-    topRight.appendChild(this.openPsdBtn);
-    topRight.appendChild(cmdPaletteBtn);
-
-    topBar.appendChild(topLeft);
-    topBar.appendChild(modeSwitcher);
-    topBar.appendChild(topRight);
-
-    // 2. Left Toolbar
-    const leftToolbar = document.createElement('aside');
-    leftToolbar.className = 'pz-left-toolbar';
-
-    const tools = [
-      { id: 'move', label: '✥', title: 'Sposta Livello (V)' },
-      { id: 'marquee', label: '⬚', title: 'Selezione Rettangolare (M)' },
-      { id: 'brush', label: '🖌', title: 'Pennello (B)' },
-      { id: 'eraser', label: '🧹', title: 'Gomma (E)' },
-      { id: 'pen', label: '✒', title: 'Penna Bézier (P)' },
-      { id: 'curvature', label: '∿', title: 'Curvatura κ-curves' },
-      { id: 'wand', label: '🪄', title: 'Bacchetta Magica (W)' },
-      { id: 'crop', label: '✂', title: 'Ritaglia (C)' },
-      { id: 'hand', label: '✋', title: 'Mano Pan (H)' },
-    ];
-
-    tools.forEach(({ id, label, title }) => {
-      const btn = document.createElement('button');
-      btn.className = `pz-tool-btn ${this.activeTool === id ? 'pz-active' : ''}`;
-      btn.dataset.tool = id;
-      btn.innerHTML = label;
-      btn.title = title;
-      btn.addEventListener('click', () => {
-        this.setActiveTool(id);
-        if (options.onToolSelect) options.onToolSelect(id);
-      });
-      this.toolButtons.set(id, btn);
-      leftToolbar.appendChild(btn);
-    });
-
-    // 3. Central Canvas Viewport
     this.canvasContainer = document.createElement('main');
     this.canvasContainer.className = 'pz-canvas-viewport';
 
@@ -348,11 +301,10 @@ export class DesktopShellLayout {
     this.canvas.style.width = '600px';
     this.canvas.style.height = '400px';
 
-    // HUD Quick Actions
     const hud = new FloatingActionBar([
-      { id: 'bg-remove', label: 'Rimuovi Sfondo', icon: '✨', variant: 'primary' },
-      { id: 'auto-light', label: 'Auto Luce', icon: '☀️' },
-      { id: 'crop', label: 'Ritaglia', icon: '📐' },
+      { id: 'bg-remove', label: 'Rimuovi sfondo', icon: SparklesIcon(16), variant: 'primary' },
+      { id: 'auto-light', label: 'Auto luce', icon: SunIcon(16) },
+      { id: 'crop', label: 'Ritaglia', icon: CropIcon(16) },
     ]);
 
     this.canvasWrapper = document.createElement('div');
@@ -369,51 +321,83 @@ export class DesktopShellLayout {
     this.canvasContainer.appendChild(this.canvasWrapper);
     this.canvasContainer.appendChild(hud.element);
 
-    // 4. Right Sidebar (Inspector + Layers)
+    // ── 3. Pannello destro (§6: Strumento, Layer, Effetti, Maschere) ─────────
+
     const rightSidebar = document.createElement('aside');
     rightSidebar.className = 'pz-right-sidebar';
 
-    const inspectorPanel = new Panel({ title: 'Proprietà / Ispettore' });
+    const inspectorPanel = new Panel({ title: 'Strumento' });
     this.inspectorPanelBody = inspectorPanel.body;
 
-    const layersPanel = new Panel({ title: 'Livelli Ibridi' });
+    const layersPanel = new Panel({ title: 'Layer' });
     this.layersPanelBody = layersPanel.body;
+
+    const effectsPanel = new Panel({ title: 'Effetti' });
+    const effectsNote = document.createElement('p');
+    effectsNote.className = 'pz-panel-empty';
+    effectsNote.textContent = 'Sezione presente nello scheletro: viene collegata al motore nella Fase 6d.';
+    effectsPanel.body.appendChild(effectsNote);
+
+    const masksPanel = new Panel({ title: 'Maschere' });
+    const masksNote = document.createElement('p');
+    masksNote.className = 'pz-panel-empty';
+    masksNote.textContent = 'Sezione presente nello scheletro: viene collegata al motore nella Fase 6d.';
+    masksPanel.body.appendChild(masksNote);
 
     rightSidebar.appendChild(inspectorPanel.element);
     rightSidebar.appendChild(layersPanel.element);
+    rightSidebar.appendChild(effectsPanel.element);
+    rightSidebar.appendChild(masksPanel.element);
 
-    // 5. Status Bar
+    // ── 4. Barra di stato ────────────────────────────────────────────────────
+
     const statusBar = document.createElement('footer');
     statusBar.className = 'pz-bottom-status-bar';
 
     const statusLeft = document.createElement('div');
-    statusLeft.textContent = '1200 × 800 px · 100% · sRGB · WebGPU Attivo';
+    statusLeft.className = 'pz-status-group';
+    statusLeft.innerHTML = `
+      <span class="pz-status-item">1200 × 800 px</span>
+      <span class="pz-status-sep">·</span>
+      <span class="pz-status-item">100%</span>
+      <span class="pz-status-sep">·</span>
+      <span class="pz-status-item">sRGB</span>
+      <span class="pz-status-sep">·</span>
+      <span class="pz-status-item">WebGPU attivo</span>
+    `;
 
     const statusRight = document.createElement('div');
-    statusRight.style.cssText = 'display: flex; gap: 16px; align-items: center;';
+    statusRight.className = 'pz-status-group';
+
+    const docName = document.createElement('span');
+    docName.className = 'pz-status-doc';
+    docName.textContent = 'documento nuovo';
+
+    const statusSep = document.createElement('span');
+    statusSep.className = 'pz-status-sep';
+    statusSep.textContent = '·';
 
     this.autosaveIndicator = document.createElement('span');
     this.autosaveIndicator.id = 'autosave-indicator';
-    this.autosaveIndicator.style.cssText = 'color: #38bdf8; font-size: 11px;';
+    this.autosaveIndicator.className = 'pz-status-item';
     this.autosaveIndicator.textContent = 'Autosave attivo';
 
-    const brandSpan = document.createElement('span');
-    brandSpan.textContent = 'Pizzico v0.1.0 · Offline-First · Zero IA v1';
-
+    statusRight.appendChild(docName);
+    statusRight.appendChild(statusSep);
     statusRight.appendChild(this.autosaveIndicator);
-    statusRight.appendChild(brandSpan);
 
     statusBar.appendChild(statusLeft);
     statusBar.appendChild(statusRight);
 
-    // 6. Assemble
+    // ── 5. Assemblaggio ──────────────────────────────────────────────────────
+
     this.root.appendChild(topBar);
-    this.root.appendChild(leftToolbar);
     this.root.appendChild(this.canvasContainer);
     this.root.appendChild(rightSidebar);
     this.root.appendChild(statusBar);
 
-    // Command palette setup
+    // ── 6. Command palette ───────────────────────────────────────────────────
+
     this.palette = new CommandPalette({
       commands: [
         { id: 'file.new', title: 'Nuovo Documento', category: 'file', shortcut: 'Ctrl+N', description: 'Crea un nuovo canvas' },
@@ -423,10 +407,25 @@ export class DesktopShellLayout {
         { id: 'layer.new', title: 'Nuovo Livello', category: 'layer', shortcut: 'Ctrl+Shift+N', description: 'Aggiunge un livello vuoto' },
       ],
       onExecute: (cmdId) => {
-        if (options.onCommand) options.onCommand(cmdId);
+        options.onCommand?.(cmdId);
       },
     });
+
+    this.syncToolHint();
+
+    // Un solo listener per chiudere menu e dropdown al click esterno.
+    document.addEventListener('click', (e) => {
+      const target = e.target as Node;
+      if (this.openMenuList && !this.menus.some((menu) => menu.contains(target))) {
+        this.closeMenus();
+      }
+      if (!this.exportDropdown.contains(target) && !this.exportBtn.contains(target)) {
+        this.exportDropdown.style.display = 'none';
+      }
+    });
   }
+
+  // ── API pubblica ───────────────────────────────────────────────────────────
 
   public getActiveTool(): string {
     return this.activeTool;
@@ -435,18 +434,206 @@ export class DesktopShellLayout {
   public setActiveTool(toolId: string) {
     this.activeTool = toolId;
     this.toolButtons.forEach((btn, id) => {
-      if (id === toolId) {
-        btn.classList.add('pz-active');
-      } else {
-        btn.classList.remove('pz-active');
-      }
+      const isActive = id === toolId;
+      btn.classList.toggle('pz-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
     });
+    this.syncToolHint();
   }
 
-  public updateAutosaveIndicator(text: string, color = '#38bdf8') {
-    if (this.autosaveIndicator) {
-      this.autosaveIndicator.textContent = text;
-      this.autosaveIndicator.style.color = color;
-    }
+  public updateAutosaveIndicator(text: string, color?: string) {
+    if (!this.autosaveIndicator) return;
+    this.autosaveIndicator.textContent = text;
+    if (!color) return;
+    this.autosaveIndicator.style.color = LEGACY_COLOR_TO_TOKEN[color.toLowerCase()] ?? color;
+  }
+
+  // ── Costruzione: elementi e menu ───────────────────────────────────────────
+
+  private buildMenuButton(
+    id: string | null,
+    label: string,
+    shortcut: string,
+    icon: IconFn,
+    onClick: () => void
+  ): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    if (id) btn.id = id;
+    btn.className = 'pz-menu-item';
+    btn.setAttribute('role', 'menuitem');
+    btn.innerHTML = `
+      <span class="pz-menu-item-icon">${icon(16)}</span>
+      <span class="pz-menu-item-label">${label}</span>
+      ${shortcut ? `<span class="pz-menu-item-shortcut">${shortcut}</span>` : ''}
+    `;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeMenus();
+      onClick();
+    });
+    return btn;
+  }
+
+  private buildMenu(label: string, entries: MenuEntry[]): HTMLDivElement {
+    const container = document.createElement('div');
+    container.className = 'pz-menu';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'pz-menu-btn';
+    trigger.innerHTML = `<span>${label}</span>${ChevronDownIcon(14)}`;
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    const list = document.createElement('div');
+    list.className = 'pz-menu-list';
+    list.setAttribute('role', 'menu');
+
+    entries.forEach((entry) => {
+      if (entry === 'separator') {
+        const sep = document.createElement('div');
+        sep.className = 'pz-menu-separator';
+        sep.setAttribute('role', 'separator');
+        list.appendChild(sep);
+        return;
+      }
+      list.appendChild(entry);
+    });
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = list.classList.contains('pz-menu-list-open');
+      this.closeMenus();
+      if (!wasOpen) {
+        list.classList.add('pz-menu-list-open');
+        trigger.classList.add('pz-menu-open');
+        trigger.setAttribute('aria-expanded', 'true');
+        this.openMenuList = list;
+      }
+    });
+
+    container.appendChild(trigger);
+    container.appendChild(list);
+    this.menus.push(container);
+    return container;
+  }
+
+  private closeMenus() {
+    this.menus.forEach((menu) => {
+      menu.querySelector('.pz-menu-list')?.classList.remove('pz-menu-list-open');
+      const trigger = menu.querySelector('.pz-menu-btn');
+      trigger?.classList.remove('pz-menu-open');
+      trigger?.setAttribute('aria-expanded', 'false');
+    });
+    this.openMenuList = null;
+  }
+
+  private syncToolHint() {
+    const active = this.toolButtons.get(this.activeTool);
+    if (!active || !this.toolHint) return;
+    const name = (active.title || '').replace(/\s*\(.*\)$/, '');
+    const hint = active.dataset.hint;
+    this.toolHint.innerHTML = `<span class="pz-hint-tool">${name}</span>${hint ? ` — ${hint}` : ''}`;
+  }
+
+  // ── Costruzione: dropdown export ───────────────────────────────────────────
+
+  private buildExportDropdown(options: LayoutOptions): HTMLDivElement {
+    const dropdown = document.createElement('div');
+    dropdown.id = 'export-dropdown';
+    dropdown.className = 'pz-export-dropdown';
+    dropdown.style.display = 'none';
+
+    dropdown.innerHTML = `
+      <div class="pz-export-header">
+        <span class="pz-export-title">Esporta immagine</span>
+        <button type="button" id="export-close-btn" class="pz-export-close" aria-label="Chiudi">${XIcon(16)}</button>
+      </div>
+
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>PNG</span>
+          <span class="pz-export-badge">lossless · alpha</span>
+        </div>
+        <div class="pz-export-item-desc">Grafica raster a 32 bit con canale alpha trasparente.</div>
+        <button type="button" id="export-png-btn" class="pz-btn pz-btn-primary">Scarica PNG</button>
+      </div>
+
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>JPEG</span>
+          <span class="pz-export-badge">compresso</span>
+        </div>
+        <div class="pz-export-item-desc">Formato standard per fotografie. Le aree trasparenti diventano bianche.</div>
+        <div class="pz-export-quality">
+          <span>Qualità</span>
+          <span id="export-jpeg-quality-val" class="pz-export-quality-value">90%</span>
+        </div>
+        <input type="range" id="export-jpeg-quality" class="pz-slider-range" min="1" max="100" value="90" />
+        <button type="button" id="export-jpeg-btn" class="pz-btn pz-btn-secondary">Scarica JPEG</button>
+      </div>
+
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>WebP</span>
+          <span class="pz-export-badge">moderno · leggero</span>
+        </div>
+        <div class="pz-export-item-desc">Lossless in puro Rust, con trasparenza.</div>
+        <div class="pz-export-quality">
+          <span>Qualità</span>
+          <span id="export-webp-quality-val" class="pz-export-quality-value">90%</span>
+        </div>
+        <input type="range" id="export-webp-quality" class="pz-slider-range" min="1" max="100" value="90" />
+        <button type="button" id="export-webp-btn" class="pz-btn pz-btn-secondary">Scarica WebP</button>
+      </div>
+
+      <div class="pz-export-item">
+        <div class="pz-export-item-title">
+          <span>PSD</span>
+          <span class="pz-export-badge">multilivello</span>
+        </div>
+        <div class="pz-export-item-desc">Adobe PSD multilivello con canali RLE e composito.</div>
+        <button type="button" id="export-psd-btn" class="pz-btn pz-btn-secondary">Scarica PSD</button>
+      </div>
+    `;
+
+    dropdown.querySelector('#export-close-btn')?.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+    });
+
+    const jpegSlider = dropdown.querySelector('#export-jpeg-quality') as HTMLInputElement;
+    const jpegVal = dropdown.querySelector('#export-jpeg-quality-val') as HTMLSpanElement;
+    jpegSlider?.addEventListener('input', () => {
+      if (jpegVal) jpegVal.textContent = `${jpegSlider.value}%`;
+    });
+
+    const webpSlider = dropdown.querySelector('#export-webp-quality') as HTMLInputElement;
+    const webpVal = dropdown.querySelector('#export-webp-quality-val') as HTMLSpanElement;
+    webpSlider?.addEventListener('input', () => {
+      if (webpVal) webpVal.textContent = `${webpSlider.value}%`;
+    });
+
+    dropdown.querySelector('#export-png-btn')?.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+      options.onExportPng?.();
+    });
+
+    dropdown.querySelector('#export-jpeg-btn')?.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+      options.onExportJpeg?.(parseInt(jpegSlider?.value || '90', 10));
+    });
+
+    dropdown.querySelector('#export-webp-btn')?.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+      options.onExportWebp?.(parseInt(webpSlider?.value || '90', 10));
+    });
+
+    dropdown.querySelector('#export-psd-btn')?.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+      options.onExportPsd?.();
+    });
+
+    return dropdown;
   }
 }
