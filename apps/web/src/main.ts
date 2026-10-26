@@ -18,7 +18,7 @@
 
 import '@pizzico/ui-web/src/styles.css';
 import { DesktopShellLayout } from '@pizzico/ui-web';
-import { LayerRow, Button } from '@pizzico/ui-kit';
+import { LayerRow, Button, createSlider, createColorPicker } from '@pizzico/ui-kit';
 import { LayerMetadata } from '@pizzico/shared';
 import {
   initWasm,
@@ -1242,75 +1242,76 @@ function updateInspector() {
         <span style="font-size: 11px; color: #38bdf8;">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
       </div>
 
-      <!-- Raggio -->
-      <div style="display: flex; flex-direction: column; gap: 3px;">
-        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-          <span>Dimensione (Raggio)</span>
-          <span id="brush-radius-val">${brushRadius} px</span>
-        </div>
-        <input type="range" min="1" max="100" value="${brushRadius}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-radius-input">
-      </div>
-
-      <!-- Durezza -->
-      <div style="display: flex; flex-direction: column; gap: 3px;">
-        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-          <span>Durezza (Hardness)</span>
-          <span id="brush-hardness-val">${Math.round(brushHardness * 100)}%</span>
-        </div>
-        <input type="range" min="0" max="100" value="${Math.round(brushHardness * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-hardness-input">
-      </div>
-
-      <!-- Opacità Tratto -->
-      <div style="display: flex; flex-direction: column; gap: 3px;">
-        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--pz-text-secondary);">
-          <span>Opacità Tratto</span>
-          <span id="brush-opacity-val">${Math.round(brushOpacity * 100)}%</span>
-        </div>
-        <input type="range" min="1" max="100" value="${Math.round(brushOpacity * 100)}" class="pz-slider-input" style="width: 100%; accent-color: var(--pz-accent-primary); cursor: pointer;" id="brush-opacity-input">
-      </div>
-
-      <!-- Color Picker (attivo solo in modalità Pennello) -->
-      <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);">
-        <span style="font-size: 11px; color: var(--pz-text-secondary);">Colore Tratto</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <input type="color" value="${brushColorHex}" id="brush-color-picker" style="border: none; width: 28px; height: 26px; border-radius: 4px; cursor: pointer; background: transparent;">
-          <span id="brush-color-hex" style="font-family: monospace; font-size: 11px; color: #fff;">${brushColorHex}</span>
-        </div>
-      </div>
     `;
 
-    // Listener controlli pennello
-    const rInput = document.getElementById('brush-radius-input') as HTMLInputElement;
-    const rVal = document.getElementById('brush-radius-val');
-    rInput?.addEventListener('input', (e) => {
-      brushRadius = Number((e.target as HTMLInputElement).value);
-      if (rVal) rVal.textContent = `${brushRadius} px`;
-    });
+    // Controlli costruiti con i componenti di ui-kit: gli ID restano quelli che
+    // il resto del file interroga, e gli effetti su brushRadius/Hardness/Opacity
+    // e brushColorRgba sono identici a prima.
+    brushPropsSection.appendChild(
+      createSlider({
+        id: 'brush-radius-input',
+        label: 'Dimensione (Raggio)',
+        min: 1,
+        max: 100,
+        value: brushRadius,
+        unit: ' px',
+        onInput: (v) => {
+          brushRadius = v;
+        },
+      })
+    );
 
-    const hInput = document.getElementById('brush-hardness-input') as HTMLInputElement;
-    const hVal = document.getElementById('brush-hardness-val');
-    hInput?.addEventListener('input', (e) => {
-      const v = Number((e.target as HTMLInputElement).value);
-      brushHardness = v / 100.0;
-      if (hVal) hVal.textContent = `${v}%`;
-    });
+    brushPropsSection.appendChild(
+      createSlider({
+        id: 'brush-hardness-input',
+        label: 'Durezza (Hardness)',
+        min: 0,
+        max: 100,
+        value: Math.round(brushHardness * 100),
+        unit: '%',
+        onInput: (v) => {
+          brushHardness = v / 100.0;
+        },
+      })
+    );
 
-    const oInput = document.getElementById('brush-opacity-input') as HTMLInputElement;
-    const oVal = document.getElementById('brush-opacity-val');
-    oInput?.addEventListener('input', (e) => {
-      const v = Number((e.target as HTMLInputElement).value);
-      brushOpacity = v / 100.0;
-      brushColorRgba[3] = Math.round(brushOpacity * 255);
-      if (oVal) oVal.textContent = `${v}%`;
-    });
+    brushPropsSection.appendChild(
+      createSlider({
+        id: 'brush-opacity-input',
+        label: 'Opacità Tratto',
+        min: 1,
+        max: 100,
+        value: Math.round(brushOpacity * 100),
+        unit: '%',
+        onInput: (v) => {
+          brushOpacity = v / 100.0;
+          brushColorRgba[3] = Math.round(brushOpacity * 255);
+        },
+      })
+    );
 
-    const cInput = document.getElementById('brush-color-picker') as HTMLInputElement;
-    const cHex = document.getElementById('brush-color-hex');
-    cInput?.addEventListener('input', (e) => {
-      brushColorHex = (e.target as HTMLInputElement).value;
-      brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
-      if (cHex) cHex.textContent = brushColorHex;
-    });
+    const colorRow = document.createElement('div');
+    colorRow.style.cssText =
+      'display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);';
+
+    const colorLabel = document.createElement('span');
+    colorLabel.className = 'pz-slider-title';
+    colorLabel.textContent = 'Colore Tratto';
+
+    colorRow.append(
+      colorLabel,
+      createColorPicker({
+        id: 'brush-color-picker',
+        label: 'Colore tratto',
+        value: brushColorHex,
+        onChange: (hex) => {
+          brushColorHex = hex;
+          brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
+        },
+      })
+    );
+
+    brushPropsSection.appendChild(colorRow);
   }
 
   // 3. Proprietà Livello Attivo
