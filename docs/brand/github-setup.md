@@ -7,7 +7,7 @@ automatizzabili da repository: vanno fatte una volta nella UI di GitHub.
 
 | Area | Cosa |
 | --- | --- |
-| Sorgente | `apps/web/public/icona_pizzico.png` (1254×1254) e copia in `apps/tauri/icons/source.png` |
+| Sorgente | `docs/brand/icona-pizzico.png` (1254×1254) e copia in `apps/tauri/icons/source.png` |
 | Web | `favicon.ico` (16/32/48), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (logo al 60% su `#0a0c10`), `apple-touch-icon.png` (180), `logo-48.png` per la top bar |
 | HTML | `apps/web/index.html`: link a png + ico + apple-touch-icon, `theme-color: #0a0c10`, titolo «pizzico — editor grafico» |
 | PWA | `apps/web/public/manifest.json`: `name`/`short_name` `pizzico`, icone png, `theme_color`/`background_color` `#0a0c10` |

@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Pizzico — Creative Software Lab",
+        "title": "pizzico — editor grafico",
         "width": 1280,
         "height": 840,
         "minWidth": 400,
