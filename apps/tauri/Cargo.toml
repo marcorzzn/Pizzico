@@ -10,6 +10,18 @@ authors = ["Pizzico Contributors"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+# Il crate resta FUORI dal workspace principale, di proposito: la CI esegue
+# `cargo check --workspace` e `cargo test --workspace`, e includere Tauri
+# significherebbe tirarsi dietro webkit2gtk sui runner Linux a ogni push.
+# La build nativa si verifica qui, con `cargo check` lanciato in questa
+# directory, e in futuro nel workflow APK.
+[workspace]
+
+[lib]
+# Richiesto da Tauri 2 per il supporto mobile: la piattaforma carica la
+# libreria, il binario desktop è solo un guscio sottile.
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
 
