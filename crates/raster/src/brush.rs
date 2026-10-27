@@ -342,6 +342,37 @@ mod tests {
     }
 
     #[test]
+    fn test_stroke_degenerate_paints_a_dab() {
+        // Un click senza trascinamento produce from == to. Il motore deve
+        // dipingere un timbro: altrimenti registra un'azione in cronologia
+        // senza toccare alcun pixel, e il pennello sembra non funzionare.
+        let mut layer = Layer::new_raster_color(1, "Test", 40, 40, [255, 255, 255, 255]);
+        let brush = Brush {
+            radius: 5.0,
+            hardness: 1.0,
+            color: [0, 0, 255, 255],
+            opacity: 1.0,
+        };
+
+        let bbox = stroke(&mut layer, (20.0, 20.0), (20.0, 20.0), &brush);
+        assert!(
+            bbox.is_some(),
+            "un tratto degenere deve restituire un bounding box, non None"
+        );
+
+        if let LayerKind::Raster { width, pixels, .. } = &layer.kind {
+            let center_idx = ((20 * width + 20) * 4) as usize;
+            assert_eq!(
+                &pixels[center_idx..center_idx + 4],
+                &[0, 0, 255, 255],
+                "il centro del timbro deve avere il colore del pennello"
+            );
+        } else {
+            panic!("il livello di prova deve essere raster");
+        }
+    }
+
+    #[test]
     fn test_stroke_clipped_to_selection() {
         let mut layer = Layer::new_raster_color(1, "Test", 100, 100, [255, 255, 255, 255]);
         let brush = Brush {
