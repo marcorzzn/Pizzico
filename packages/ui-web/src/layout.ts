@@ -38,6 +38,7 @@ import {
   PlusIcon,
   RedoIcon,
   SaveIcon,
+  SlidersIcon,
   SparklesIcon,
   SplineIcon,
   SquareDashedIcon,
@@ -237,6 +238,22 @@ export class DesktopShellLayout {
 
     const topRight = document.createElement('div');
     topRight.className = 'pz-top-right';
+
+    // Su schermi stretti il pannello destro diventa un bottom sheet e serve un
+    // modo per chiuderlo: questo pulsante è visibile solo lì (via CSS).
+    const sidebarToggle = document.createElement('button');
+    sidebarToggle.type = 'button';
+    sidebarToggle.className = 'pz-tool-btn pz-sidebar-toggle';
+    sidebarToggle.innerHTML = SlidersIcon(16);
+    sidebarToggle.title = 'Mostra o nascondi i pannelli';
+    sidebarToggle.setAttribute('aria-label', 'Mostra o nascondi i pannelli');
+    sidebarToggle.setAttribute('aria-expanded', 'true');
+    sidebarToggle.setAttribute('aria-controls', 'pizzico-canvas');
+    sidebarToggle.addEventListener('click', () => {
+      const collapsed = this.root.classList.toggle('pz-sidebar-collapsed');
+      sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+    topRight.appendChild(sidebarToggle);
 
     const toolGroup = document.createElement('div');
     toolGroup.className = 'pz-tool-group';

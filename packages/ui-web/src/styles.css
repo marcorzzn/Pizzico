@@ -1043,12 +1043,107 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Adattamenti per viewport strette (§5: aree di tocco ≥ 44px) ─────────── */
+/* ── Adattamenti touch (pointer: coarse) ──────────────────────────────────────
+   Su un dispositivo a dito le aree di tocco minime sono 44px: le regole del
+   desktop qui sotto le rispettano già in parte (36px), ma un dito non è un
+   mouse. Vale per telefoni e tablet, a qualunque larghezza. */
+
+@media (pointer: coarse) {
+  body {
+    /* niente doppio-tap-to-zoom: i gesti rapidi non devono cambiare la scala */
+    touch-action: manipulation;
+  }
+
+  .pz-tool-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+  }
+
+  .pz-menu-btn {
+    min-height: 44px;
+    padding: 0 var(--pz-space-md);
+  }
+
+  .pz-menu-item {
+    min-height: 44px;
+    padding: 10px var(--pz-space-md);
+  }
+
+  .pz-layer-row {
+    min-height: 44px;
+  }
+
+  .pz-btn {
+    min-height: 44px;
+  }
+
+  /* Un pollice sopra un thumb da 14px è un esercizio di mira: lo si allarga
+     insieme al track, senza cambiare il componente. */
+  .pz-slider-range,
+  .pz-layer-opacity-slider {
+    height: 6px;
+  }
+
+  .pz-slider-range::-webkit-slider-thumb,
+  .pz-layer-opacity-slider::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .pz-layer-opacity-slider {
+    width: 72px;
+  }
+
+  .pz-right-sidebar {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Viewport strette: portrait ──────────────────────────────────────────────
+   Il pannello destro diventa un bottom sheet richiudibile, la barra strumenti
+   scorre in orizzontale invece di uscire dallo schermo (prima i pulsanti
+   finivano fuori dalla viewport e sembravano non rispondere). */
 
 @media (max-width: 640px) {
   .pz-app-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: 48px 1fr 220px 26px;
+    grid-template-rows: 52px 1fr minmax(0, 42%) 26px;
+  }
+
+  .pz-top-bar {
+    gap: var(--pz-space-sm);
+    padding: 0 var(--pz-space-sm);
+  }
+
+  /* il suggerimento dello strumento è testo: su 400px ruba lo spazio dei
+     pulsanti, che sono ciò che si deve poter toccare */
+  .pz-top-center {
+    display: none;
+  }
+
+  .pz-brand span {
+    display: none;
+  }
+
+  /* gli strumenti scorrono, non vengono tagliati */
+  .pz-top-right {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pz-top-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pz-tool-group {
+    flex-wrap: nowrap;
+  }
+
+  .pz-sidebar-toggle {
+    display: inline-flex;
   }
 
   .pz-right-sidebar {
@@ -1056,18 +1151,56 @@ html {
     grid-column: 1;
     border-left: none;
     border-top: 1px solid var(--pz-border);
+    overflow-y: auto;
   }
 
   .pz-bottom-status-bar {
     grid-row: 4;
   }
 
-  .pz-tool-btn {
-    width: var(--pz-touch-min);
-    height: 40px;
+  /* pannello chiuso: la riga collassa e il canvas prende lo spazio */
+  .pz-app-shell.pz-sidebar-collapsed {
+    grid-template-rows: 52px 1fr 0 26px;
   }
 
-  .pz-menu-btn {
-    padding: 10px;
+  .pz-app-shell.pz-sidebar-collapsed .pz-right-sidebar {
+    display: none;
+  }
+}
+
+/* Pulsante pannelli: esiste solo dove serve */
+.pz-sidebar-toggle {
+  display: none;
+}
+
+/* ── Viewport basse: landscape su telefono ───────────────────────────────────
+   In landscape l'altezza è la risorsa scarsa: il pannello torna a destra
+   invece di occupare metà schermo in basso. */
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .pz-app-shell {
+    grid-template-columns: 1fr 240px;
+    grid-template-rows: 48px 1fr 24px;
+  }
+
+  .pz-right-sidebar {
+    grid-column: 2;
+    grid-row: 2;
+    border-left: 1px solid var(--pz-border);
+    border-top: none;
+    overflow-y: auto;
+  }
+
+  .pz-bottom-status-bar {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .pz-app-shell.pz-sidebar-collapsed {
+    grid-template-columns: 1fr 0;
+  }
+
+  .pz-app-shell.pz-sidebar-collapsed .pz-right-sidebar {
+    display: none;
   }
 }
