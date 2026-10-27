@@ -219,11 +219,8 @@ export class DesktopShellLayout {
     const brand = document.createElement('div');
     brand.className = 'pz-brand';
     brand.innerHTML = `
-      <svg class="pz-brand-logo" viewBox="0 0 128 128" aria-hidden="true" focusable="false">
-        <circle class="pz-brand-mark" cx="64" cy="64" r="42" fill="none" stroke-width="12" />
-        <path class="pz-brand-shape" d="M44 64 L64 36 L84 64 L64 92 Z" />
-      </svg>
-      <span>Pizzico</span>
+      <img class="pz-brand-logo" src="/logo-48.png" alt="" aria-hidden="true" />
+      <span>pizzico</span>
     `;
     topLeft.appendChild(brand);
     topLeft.appendChild(fileMenu);

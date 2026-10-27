@@ -86,15 +86,6 @@ html {
   width: 20px;
   height: 20px;
 }
-
-.pz-brand-mark {
-  stroke: var(--pz-accent);
-}
-
-.pz-brand-shape {
-  fill: var(--pz-accent-hover);
-}
-
 /* Menu (File, Modifica, Vista) */
 
 .pz-menu {
