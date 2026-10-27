@@ -56,8 +56,31 @@ base64 -w0 pizzico-release.keystore > keystore.b64
 wc -c keystore.b64
 ```
 
-`-w0` evita gli a capo. Sono comunque innocui (il workflow decodifica con `base64 -d`, che
-li ignora), ma un file su una riga sola si incolla meglio.
+`-w0` evita gli a capo. Sono comunque innocui (il workflow li rimuove prima di decodificare),
+ma un file su una riga sola si incolla meglio.
+
+### Verifica prima di incollare (non saltarla)
+
+Un secret sbagliato costa un run di sette minuti e un errore incomprensibile di Gradle
+(`toDerInputStream rejects tag type -11`). Questi tre controlli costano dieci secondi:
+
+```bash
+# 1. il keystore deve pesare 2-3 KB, non centinaia di byte
+ls -l pizzico-release.keystore
+
+# 2. keytool deve aprirlo ed elencare l'alias
+keytool -list -keystore pizzico-release.keystore -storepass '<password>' -alias pizzico
+
+# 3. il base64 deve riprodurre esattamente il file originale
+base64 -w0 pizzico-release.keystore | base64 -d | cmp - pizzico-release.keystore && echo "base64 OK"
+```
+
+Se il punto 3 stampa `base64 OK`, il secret è corretto. Se `wc -c keystore.b64` dà un numero
+molto più piccolo di qualche migliaio di caratteri, il file non è quello giusto.
+
+La prima riga del file decodificato deve iniziare con `30 82` (PKCS12/DER) oppure
+`fe ed fe ed` (JKS): sono le firme dei due formati. Il workflow stampa i primi 8 byte, così
+si vede subito se il contenuto è un keystore.
 
 ## Step 4 — Copia il contenuto
 
