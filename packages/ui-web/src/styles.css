@@ -1043,6 +1043,14 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
+/* Pulsante pannelli: nascosto di default, mostrato sotto i 640px.
+   QUESTA REGOLA DEVE STARE PRIMA DELLA MEDIA QUERY: a parità di specificità
+   vince l'ultima dichiarazione, e messa dopo rendeva il pulsante invisibile
+   anche su mobile. */
+.pz-sidebar-toggle {
+  display: none;
+}
+
 /* ── Adattamenti touch (pointer: coarse) ──────────────────────────────────────
    Su un dispositivo a dito le aree di tocco minime sono 44px: le regole del
    desktop qui sotto le rispettano già in parte (36px), ma un dito non è un
@@ -1194,11 +1202,6 @@ html {
   .pz-app-shell.pz-sidebar-collapsed .pz-right-sidebar {
     display: none;
   }
-}
-
-/* Pulsante pannelli: esiste solo dove serve */
-.pz-sidebar-toggle {
-  display: none;
 }
 
 /* ── Viewport basse: landscape su telefono ───────────────────────────────────
