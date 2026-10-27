@@ -6,7 +6,7 @@
 name = "pizzico-tauri"
 version = "0.1.0"
 description = "Pizzico Tauri 2 Native Mobile & Desktop Shell"
-authors = ["Pizzico Contributors"]
+authors = ["Marco Razzano"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 

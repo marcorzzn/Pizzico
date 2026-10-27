@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Pizzico",
+  "productName": "pizzico",
   "version": "0.1.0",
-  "identifier": "io.pizzico.app",
+  "identifier": "app.pizzico",
   "build": {
     "frontendDist": "../web/dist",
     "devUrl": "http://localhost:5173",
@@ -27,6 +27,8 @@
     }
   },
   "bundle": {
+    "publisher": "Marco Razzano",
+    "copyright": "Copyright © 2026 Marco Razzano",
     "active": true,
     "targets": "all",
     "icon": [

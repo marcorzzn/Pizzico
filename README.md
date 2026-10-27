@@ -1,12 +1,13 @@
 <p align="center">
-  <img src="./packages/ui-kit/tokens/logo.svg" alt="Pizzico Logo" width="128" height="128" />
+  <img src="./packages/ui-kit/tokens/logo.svg" alt="pizzico logo" width="128" height="128" />
 </p>
 
-<h1 align="center">Pizzico</h1>
+<h1 align="center">pizzico</h1>
 
 <p align="center">
   <strong>A professional, offline-first graphics editor for the web and mobile, built in Rust + WebAssembly.</strong><br />
-  <em>No AI, no cloud dependencies, no subscription. 100% free and open-source.</em>
+  <em>No AI, no cloud dependencies, no subscription. 100% free and open-source.</em><br />
+  <em>Created by <strong>Marco Razzano</strong>.</em>
 </p>
 
 <p align="center">
@@ -181,3 +182,9 @@ All documentation is licensed under **Creative Commons Attribution 4.0 Internati
 
 Try Pizzico now: [https://pizzico.pages.dev/](https://pizzico.pages.dev/)  
 Works offline after first load. Import a PSD to get started.
+
+---
+
+## Credits
+
+Created by Marco Razzano ([@marcorzzn](https://github.com/marcorzzn)).

@@ -31,11 +31,11 @@ resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
-authors = ["Pizzico Contributors"]
+authors = ["Marco Razzano"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pizzico/pizzico"
-homepage = "https://github.com/pizzico/pizzico"
+repository = "https://github.com/marcorzzn/pizzico"
+homepage = "https://github.com/marcorzzn/pizzico"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
