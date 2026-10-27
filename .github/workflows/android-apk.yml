@@ -1,0 +1,176 @@
+# Pizzico — .github/workflows/android-apk.yml
+# Riferimento manifesto: §3.1, §3.3, §11 Step 5
+# Licenza: MIT OR Apache-2.0
+#
+# Build dell'APK Android interamente in cloud: nessuna toolchain locale.
+# Sostituisce release-apk.yml, che era un segnaposto con il passo di build
+# commentato e uno `setup-android` che sulle immagini runner attuali falliva.
+#
+# Perche' non si usa android-actions/setup-android: ubuntu-latest arriva gia'
+# con l'SDK Android in $ANDROID_SDK_ROOT, e l'action cerca il pacchetto `tools`
+# legacy, rimosso dalle immagini. Qui si usa `sdkmanager` direttamente.
+
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NDK_VERSION: '26.1.10909125'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-apk:
+    name: Build signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # true/false, non il segreto: serve solo a decidere se firmare
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEY_BASE64 != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Stessa versione di ci.yml: due workflow con pnpm diversi sono un guaio.
+      - name: Install pnpm 9
+        run: npm install -g pnpm@9
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri -> target
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "SDK trovato in: $SDK"
+          # --licenses accettate in anticipo: sdkmanager le chiede al primo uso
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          echo "NDK_HOME=$SDK/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$SDK/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/tauri/gen/android/**/*.gradle*') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Build frontend
+        run: pnpm --filter @pizzico/app-web build
+
+      # GitHub NON permette il contesto `secrets` dentro un `if`: si calcola un
+      # booleano nell'env del job e si testa quello.
+      # Il keystore arriva come secret base64 e vive solo per questa run.
+      - name: Decode keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pizzico.keystore"
+          chmod 600 "$RUNNER_TEMP/pizzico.keystore"
+          echo "keystore decodificato: $(stat -c%s "$RUNNER_TEMP/pizzico.keystore") byte"
+
+      # Tauri 2: la firma va in bundle.android.release. Il JSON e' costruito da
+      # python con i valori letti da variabili d'ambiente: cosi' virgolette,
+      # spazi e caratteri speciali nelle password non rompono nulla, e i secret
+      # non finiscono mai su una riga di comando.
+      - name: Write signing config
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          out = os.path.join(os.environ["RUNNER_TEMP"], "signing.json")
+          cfg = {"bundle": {"android": {"release": {
+              "keystorePath": os.path.join(os.environ["RUNNER_TEMP"], "pizzico.keystore"),
+              "keystorePassword": os.environ["KS_PASS"],
+              "keyAlias": os.environ["KEY_ALIAS"],
+              "keyPassword": os.environ["KEY_PASS"],
+          }}}}
+          with open(out, "w", encoding="utf-8") as fh:
+              json.dump(cfg, fh)
+          print("firma configurata in", out)
+          PY
+
+      # gen/android viene generato una volta e poi committato; qui si crea solo
+      # se manca, cosi' il workflow funziona sia al primo run sia dopo.
+      - name: Init Android project
+        working-directory: apps/tauri
+        run: |
+          set -euo pipefail
+          if [ ! -d "gen/android" ]; then
+            cargo tauri android init --ci
+          else
+            echo "gen/android gia' presente: init saltato"
+          fi
+
+      - name: Build APK (firmato se i secret ci sono)
+        working-directory: apps/tauri
+        run: |
+          set -euo pipefail
+          if [ -f "$RUNNER_TEMP/signing.json" ]; then
+            cargo tauri android build --apk --config "$RUNNER_TEMP/signing.json"
+          else
+            echo "::warning::Nessun keystore nei secret: build APK non firmato (debug/unsigned)."
+            cargo tauri android build --apk
+          fi
+
+      - name: List APK outputs
+        run: find apps/tauri/gen/android -name '*.apk' -type f -exec ls -lh {} \;
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pizzico-apk
+          path: apps/tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create draft release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/tauri/gen/android/app/build/outputs/apk/**/*.apk
+          draft: true
+          generate_release_notes: true
