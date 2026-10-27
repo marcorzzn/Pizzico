@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./packages/ui-kit/tokens/logo.svg" alt="pizzico logo" width="128" height="128" />
+  <img src="docs/brand/icona-pizzico.png" alt="pizzico logo" width="128" height="128" />
 </p>
 
 <h1 align="center">pizzico</h1>
