@@ -1,5 +1,3 @@
-/* @ts-self-types="./pizzico_wasm_bindings.d.ts" */
-
 /**
  * Handle principale all'engine grafico esposto al JavaScript.
  */
