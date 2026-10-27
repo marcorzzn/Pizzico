@@ -318,3 +318,36 @@ l'apertura della Fase 7.
 Restano aperte, da decidere più avanti: distribuzione su Google Play o solo GitHub Releases
 (cambia requisiti di firma e split per ABI) e se il pannello da 280px diventi un bottom
 sheet o resti un pannello ridimensionato su schermi stretti.
+
+---
+
+## 7. Eseguito: blocco B (crate compilabile)
+
+Chiuso. `cargo check` lanciato in `apps/tauri` **passa** (tauri 2.12.5, wry 0.57.1,
+tao 0.37.2), e `cargo check --workspace` resta verde.
+
+| Intervento | Esito |
+| --- | --- |
+| `build.rs` con `tauri_build::build()` | fatto |
+| `[workspace]` vuota nel crate | risolve l'errore «believes it's in a workspace when it's not» |
+| `[lib] crate-type` + `src/lib.rs` con `run()` | fatto, `main.rs` ridotto a un guscio |
+| `capabilities/default.json` con `core:default` | fatto (nessun plugin installato: `dialog`/`fs` sarebbero falliti) |
+| `tauri.conf.json` sullo schema ufficiale | fatto, più `label: "main"` sulla finestra |
+| icone raster flat | fatte (32, 128, 128@2x, 512, `.ico` 7 risoluzioni) |
+
+**Due cose da sapere per la prossima sessione:**
+
+1. **`cargo check -p pizzico-tauri` dal root non funziona, e non deve.** Il crate non è nel
+   workspace (scelta deliberata, vedi §6). Il comando giusto è `cd apps/tauri && cargo check`.
+2. **`cargo` ha bisogno di rete** per risolvere le dipendenze Tauri, e questo ambiente
+   blocca il certificato Windows (`schannel SEC_E_NO_CREDENTIALS`). Il check è passato solo
+   con accesso completo al sandbox. In CI il problema non esiste.
+
+**Cosa resta per il blocco C:** toolchain Android (JDK 17, SDK, NDK, quattro target Rust),
+`tauri android init`, primo APK debug, verifica su dispositivo reale. Il workflow
+`release-apk.yml` esiste ma il passo di build è ancora un commento.
+
+**Nota sulle icone:** `.icns` (macOS) non è stato generato — non serve su Windows e il
+target Apple non è in programma. L'SVG in `apps/web/public/icon.svg` ha ancora il gradiente
+vietato dall'ADR: le icone native sono state ridisegnate piatte, ma il file sorgente web
+andrebbe allineato.
