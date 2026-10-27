@@ -5,8 +5,6 @@
 // L'entry point vive qui, non nel binario: Tauri 2 su mobile carica il crate
 // come libreria, quindi `main.rs` resta un guscio desktop.
 
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 /// Avvia l'applicazione Tauri.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
