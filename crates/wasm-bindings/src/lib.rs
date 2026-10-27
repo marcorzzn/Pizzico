@@ -71,8 +71,15 @@ fn with_backend<R>(f: impl FnOnce(&dyn crate::engine::EngineBackend) -> R) -> R 
 }
 
 /// Esegue una closure con il backend modificabile.
+///
+/// Segnala sempre il documento come dirty: le operazioni delegate al backend
+/// (aggiunta/rimozione livello, opacità, visibilità, undo/redo) mutano lo stato
+/// del documento, e senza questo flag il loop di rendering non ricaricava la
+/// texture composita — il pannello si aggiornava e il canvas restava fermo.
 fn with_backend_mut<R>(f: impl FnOnce(&mut dyn crate::engine::EngineBackend) -> R) -> R {
-    BACKEND.with(|cell| f(&mut **cell.borrow_mut()))
+    let r = BACKEND.with(|cell| f(&mut **cell.borrow_mut()));
+    set_document_dirty(true);
+    r
 }
 
 
