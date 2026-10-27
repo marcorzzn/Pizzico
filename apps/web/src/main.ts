@@ -700,12 +700,69 @@ window.addEventListener('drop', async (e: DragEvent) => {
   }
 });
 
+// URL del PSD di esempio risolto rispetto al documento. In una WebView
+// (Tauri/Android) il path assoluto "/sample-01.psd" può non risolvere come nel
+// browser; document.baseURI è la base corretta in entrambi i casi.
+const SAMPLE_PSD_URL = new URL('sample-01.psd', document.baseURI).toString();
+
+/**
+ * Ultima rete di sicurezza del boot: se il PSD di esempio non si può caricare
+ * (404, protocollo della WebView, WASM non pronto) si apre un documento vuoto
+ * invece di lasciare l'editor inerte.
+ *
+ * Il motivo viene mostrato a schermo di proposito: su un dispositivo non c'è
+ * una console a portata di mano, e un editor vuoto senza spiegazione è
+ * indistinguibile da un'app rotta.
+ */
+function bootBlankDocument(reason: string) {
+  hideLoadingSpinner();
+
+  if (!wasmReady) {
+    shell.updateAutosaveIndicator('WASM non pronto', 'var(--pz-error)');
+    showToast(`Documento non caricato (${reason}) e engine WASM non pronto.`, 'error');
+    return;
+  }
+
+  try {
+    create_document(800, 600);
+    add_raster_layer('Sfondo', 800, 600, new Uint8Array([255, 255, 255, 255]));
+    syncSelectionUi();
+    renderLayersPanel();
+    updateInspector();
+    showToast(`Documento demo non disponibile (${reason}). Aperto un documento vuoto.`, 'warning');
+    console.warn('[Boot] Documento vuoto creato come riserva:', reason);
+  } catch (err) {
+    showToast(`Impossibile creare un documento di riserva: ${err}`, 'error');
+    console.error('[Boot] Creazione documento di riserva fallita:', err);
+  }
+}
+
 // Helper esposto per test automatizzati e verifica rapida browser
 (window as any).__loadSamplePsd = async () => {
-  const res = await fetch('/sample-01.psd');
-  const blob = await res.blob();
-  const file = new File([blob], 'sample-01.psd', { type: 'image/vnd.adobe.photoshop' });
-  await handlePsdFile(file);
+  try {
+    let res: Response;
+    try {
+      res = await fetch(SAMPLE_PSD_URL, { cache: 'no-store' });
+    } catch (err) {
+      throw new Error(
+        `fetch fallita su ${SAMPLE_PSD_URL}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`fetch ${SAMPLE_PSD_URL} ha risposto ${res.status} ${res.statusText}`);
+    }
+    const blob = await res.blob();
+    if (blob.size < 1024) {
+      throw new Error(`risposta di soli ${blob.size} byte: il file non è stato servito`);
+    }
+    const file = new File([blob], 'sample-01.psd', { type: 'image/vnd.adobe.photoshop' });
+    await handlePsdFile(file);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error('[Boot] PSD di esempio non caricato:', reason);
+    bootBlankDocument(reason);
+    throw err;
+  }
 };
 
 // ── 7. Tool Engine: Sposta, Selezione e Pennello (§10 Fase 1) ────────────
