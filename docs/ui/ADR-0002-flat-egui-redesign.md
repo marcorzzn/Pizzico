@@ -7,7 +7,7 @@
 
 ## Contesto
 
-La Fase 6 ha dato a Pizzico un tema scuro «moderno»: arrotondamenti da 6-8px, ombre
+La Fase 6 ha dato a Pizzico un tema «moderno»: arrotondamenti da 6-8px, ombre
 soffici sui pannelli e sui popover, superfici leggermente rialzate, accento indaco.
 
 Funziona, ma non rispecchia il progetto. Pizzico è un motore Rust con un'interfaccia
@@ -27,17 +27,26 @@ momento giusto per togliere, non per aggiungere.
 
 ## Decisione
 
-L'interfaccia passa a un design **piatto, squadrato e monocromatico**, con un solo accento
+L'interfaccia passa a un design **flat, squadrato e a tema chiaro**, sul modello di egui
+originale: pannelli grigio chiaro, testo scuro, canvas scuro per contrasto, un solo accento
 funzionale. Valori di riferimento:
 
 | Ruolo | Valore |
 | --- | --- |
-| Sfondo canvas | `#0A0C10` |
-| Sfondo pannelli | `#12141A` |
-| Bordi | `#1F232D` |
-| Testo primario | `#D1D5DB` |
-| Testo secondario | `#9CA3AF` |
-| Accento | `#3B82F6` (blu desaturato) |
+| Sfondo canvas | `#1c1e22` (resta scuro, come Pizzart originale) |
+| Sfondo pannelli | `#f0f0f0` |
+| Sfondo toolbar | `#e8e8e8` |
+| Superficie sollevata | `#f5f5f5` |
+| Bordi | `#c8c8c8` (forti: `#a8a8a8`) |
+| Testo primario | `#1a1a1a` |
+| Testo secondario | `#6b6b6b` |
+| Accento | `#0078d4` (blu dei widget di sistema) |
+
+> **Correzione di rotta (2026-10-27).** La prima stesura di questo ADR applicava un tema
+> **scuro** con accento blu desaturato (`#0a0c10` / `#3b82f6`). Era un'interpretazione
+> sbagliata della richiesta: «simile a egui» intende il tema **chiaro di default** di egui,
+> quello degli screenshot originali di Pizzart — pannelli grigi chiari, widget di sistema,
+> testo scuro — non un tema scuro custom. I valori della tabella sopra sono quelli corretti.
 
 Regole vincolanti:
 
@@ -46,8 +55,9 @@ Regole vincolanti:
    con un bordo da 1px, non con un blur.
 3. **Gradienti:** nessuno.
 4. **Gerarchia:** affidata a peso e colore del testo, non alla profondità.
-5. **Accento unico:** `#3B82F6` solo per stato attivo, focus e selezione. Nessun secondo
-   colore decorativo.
+5. **Accento unico:** `#0078d4` solo per stato attivo, focus e selezione.
+6. **Canvas scuro su UI chiara.** È la scelta di Pizzart: l'immagine deve staccarsi dal
+   resto dell'interfaccia invece di confondersi con essa.
 
 ## Conseguenze
 
@@ -59,7 +69,7 @@ Regole vincolanti:
 
 **Negative, accettate:**
 
-- **La Fase 6 va parzialmente rivista.** Token, screenshot in `docs/` e le affermazioni di
+- **La Fase 6 va parzialmente rivista.** Il cambio di tema (da scuro a chiaro) rende obsoleti i token, gli screenshot in `docs/` e le affermazioni di
   `fase-6-completata.md` sulla palette non valgono più così come sono scritte. Il lavoro
   strutturale (shell, componenti, icone, zero emoji) resta valido.
 - **Meno indizi di profondità.** Un pannello senza ombra è più piatto da leggere: si
