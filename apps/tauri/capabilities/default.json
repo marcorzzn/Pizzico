@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permessi di base per la finestra di Pizzico: solo il core. Nessun plugin (dialog, fs, shell) è ancora in uso, e dichiarare permessi di plugin non installati farebbe fallire la build.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
