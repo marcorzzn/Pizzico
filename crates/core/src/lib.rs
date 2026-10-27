@@ -23,7 +23,7 @@ pub mod selection;
 
 pub use blend::{BlendMode, blend_pixel};
 pub use compositing::{CompositeBuffer, composite_layers};
-pub use document::{Document, DocumentMetadata};
+pub use document::{CropError, Document, DocumentMetadata};
 pub use history::{
     AddLayerCommand, Command, History, HistoryStack, MoveLayerCommand, RemoveLayerCommand,
     SetOpacityCommand, SetVisibilityCommand, StrokeCommand,

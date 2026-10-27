@@ -174,6 +174,22 @@ pub fn create_document(width: u32, height: u32) {
     set_document_dirty(true);
 }
 
+/// Ritaglia il documento attivo al rettangolo `(x, y, w, h)`.
+///
+/// La history viene azzerata: il ritaglio cambia le coordinate di tutti i
+/// livelli, quindi le azioni precedenti non sarebbero più coerenti con la
+/// nuova tela (un undo riporterebbe i pixel in posizioni sbagliate).
+#[wasm_bindgen]
+pub fn crop_document(x: u32, y: u32, w: u32, h: u32) -> Result<(), JsValue> {
+    match with_active_document_mut(|doc| doc.crop_document(x, y, w, h)) {
+        Ok(()) => {
+            clear_history_via_backend();
+            Ok(())
+        }
+        Err(err) => Err(JsValue::from_str(&format!("Ritaglio rifiutato: {}", err))),
+    }
+}
+
 /// Aggiunge un nuovo livello raster al documento attivo riempito con un colore RGBA uniforme.
 /// Ritorna l'ID univoco del livello appena creato.
 #[wasm_bindgen]

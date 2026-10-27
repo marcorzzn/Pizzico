@@ -192,6 +192,65 @@ impl Document {
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Crop del documento
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Errori possibili di [`Document::crop_document`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CropError {
+    /// Larghezza o altezza richieste sono zero.
+    EmptyRect,
+    /// Il rettangolo richiesto esce dai limiti del documento.
+    OutOfBounds,
+}
+
+impl std::fmt::Display for CropError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CropError::EmptyRect => write!(f, "il rettangolo di ritaglio ha area zero"),
+            CropError::OutOfBounds => write!(f, "il rettangolo di ritaglio esce dal documento"),
+        }
+    }
+}
+
+impl std::error::Error for CropError {}
+
+impl Document {
+    /// Ritaglia il documento al rettangolo `(x, y, w, h)`.
+    ///
+    /// Semantica: la tela diventa `w × h` e ogni livello viene traslato di
+    /// `(-x, -y)`. I buffer dei livelli **non** vengono ritagliati: il
+    /// compositing salta già i pixel che cadono fuori dalla tela, quindi il
+    /// risultato visibile è identico a un ritaglio distruttivo, mentre i dati
+    /// restano intatti (nessun livello corrotto se sporge, e nessuna
+    /// reimplementazione del buffer per ogni livello).
+    ///
+    /// La selezione viene azzerata perché il suo rettangolo è relativo alla
+    /// tela precedente.
+    pub fn crop_document(&mut self, x: u32, y: u32, w: u32, h: u32) -> Result<(), CropError> {
+        if w == 0 || h == 0 {
+            return Err(CropError::EmptyRect);
+        }
+
+        let right = x.checked_add(w).ok_or(CropError::OutOfBounds)?;
+        let bottom = y.checked_add(h).ok_or(CropError::OutOfBounds)?;
+        if right > self.width || bottom > self.height {
+            return Err(CropError::OutOfBounds);
+        }
+
+        for layer in &mut self.layers {
+            layer.transform.x -= x as i32;
+            layer.transform.y -= y as i32;
+        }
+
+        self.width = w;
+        self.height = h;
+        self.selection = RectSelection::default();
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,5 +357,81 @@ mod tests {
 
         assert!(!doc.select_layer(999));
         assert_eq!(doc.active_layer_id, Some(id1));
+    }
+
+    // ── Crop ────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_crop_full_document_is_noop() {
+        let mut doc = Document::new(200, 100, "test");
+        let before_w = doc.width;
+        let before_h = doc.height;
+
+        assert_eq!(doc.crop_document(0, 0, 200, 100), Ok(()));
+        assert_eq!(doc.width, before_w);
+        assert_eq!(doc.height, before_h);
+        assert_eq!(doc.layers[0].transform.x, 0);
+        assert_eq!(doc.layers[0].transform.y, 0);
+    }
+
+    #[test]
+    fn test_crop_half_document_translates_layers() {
+        let mut doc = Document::new(200, 100, "test");
+        // layer spostato in (50, 20)
+        doc.layers[0].transform.x = 50;
+        doc.layers[0].transform.y = 20;
+
+        assert_eq!(doc.crop_document(50, 20, 100, 50), Ok(()));
+        assert_eq!(doc.width, 100);
+        assert_eq!(doc.height, 50);
+        // il contenuto che era in (50,20) ora è nell'angolo
+        assert_eq!(doc.layers[0].transform.x, 0);
+        assert_eq!(doc.layers[0].transform.y, 0);
+    }
+
+    #[test]
+    fn test_crop_keeps_layer_pixels_outside_canvas() {
+        // Un livello che sporge conserva il proprio buffer: il compositing
+        // salta i pixel fuori tela, quindi il crop non deve corromperlo.
+        let mut doc = Document::new(100, 100, "test");
+        let original_len = match &doc.layers[0].kind {
+            crate::LayerKind::Raster { pixels, .. } => pixels.len(),
+            _ => panic!("il livello di sfondo deve essere raster"),
+        };
+
+        assert_eq!(doc.crop_document(25, 25, 50, 50), Ok(()));
+
+        let after_len = match &doc.layers[0].kind {
+            crate::LayerKind::Raster { pixels, .. } => pixels.len(),
+            _ => panic!("il livello di sfondo deve essere raster"),
+        };
+        assert_eq!(after_len, original_len, "il buffer del livello non va ridimensionato");
+        assert_eq!(doc.layers[0].transform.x, -25);
+        assert_eq!(doc.layers[0].transform.y, -25);
+    }
+
+    #[test]
+    fn test_crop_rejects_out_of_bounds() {
+        let mut doc = Document::new(100, 100, "test");
+        assert_eq!(doc.crop_document(60, 0, 50, 50), Err(CropError::OutOfBounds));
+        assert_eq!(doc.crop_document(0, 60, 50, 50), Err(CropError::OutOfBounds));
+        // nessuna modifica dopo un rifiuto
+        assert_eq!((doc.width, doc.height), (100, 100));
+        assert_eq!(doc.layers[0].transform.x, 0);
+    }
+
+    #[test]
+    fn test_crop_rejects_empty_rect() {
+        let mut doc = Document::new(100, 100, "test");
+        assert_eq!(doc.crop_document(0, 0, 0, 10), Err(CropError::EmptyRect));
+        assert_eq!(doc.crop_document(0, 0, 10, 0), Err(CropError::EmptyRect));
+    }
+
+    #[test]
+    fn test_crop_composite_has_new_size() {
+        let mut doc = Document::new(100, 100, "test");
+        assert_eq!(doc.crop_document(10, 10, 40, 30), Ok(()));
+        let buffer = crate::composite_layers(&doc);
+        assert_eq!(buffer.len(), 40 * 30 * 4);
     }
 }
