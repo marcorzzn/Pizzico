@@ -35,8 +35,27 @@ packages/worker-core/pkg-v2/
 !packages/worker-core/pkg/pizzico_wasm_bindings_bg.wasm
 
 # Tauri
-apps/tauri/src-tauri/target/
-apps/tauri/gen/
+# Il crate ha una [workspace] propria: la sua target/ è coperta da `target/` sopra.
+apps/tauri/src-tauri/
+
+# Android (Tauri 2)
+# gen/android è il progetto nativo generato da `cargo tauri android init`: VA
+# committato. Così la build in CI è riproducibile e non dipende dal fatto che
+# `init` venga rilanciato a ogni run. Si ignorano solo i suoi output.
+apps/tauri/gen/*
+!apps/tauri/gen/android/
+apps/tauri/gen/android/app/build/
+apps/tauri/gen/android/build/
+apps/tauri/gen/android/.gradle/
+apps/tauri/gen/android/.cxx/
+apps/tauri/gen/android/local.properties
+apps/tauri/gen/android/app/src/main/assets/
+
+# Firma degli APK: un keystore di release non deve MAI entrare nel repository.
+*.keystore
+*.jks
+*.p12
+keystore.b64
 
 # Testing & Coverage
 coverage/
