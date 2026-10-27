@@ -23,19 +23,19 @@ ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
   /* ── 1. Token Pizzart ─────────────────────────────────────────────────── */
 
   /* Superfici */
-  --pz-bg-canvas: #1c1e22;
-  --pz-bg-panel: #1e1e24;
-  --pz-bg-toolbar: #18181b;
+  --pz-bg-canvas: #0a0c10;
+  --pz-bg-panel: #12141a;
+  --pz-bg-toolbar: #0a0c10;
 
   /* Linee */
-  --pz-border: #2d2d35;
+  --pz-border: #1f232d;
 
   /* Testo */
-  --pz-text-primary: #e0e0e0;
-  --pz-text-secondary: #a0a0a8;
+  --pz-text-primary: #d1d5db;
+  --pz-text-secondary: #9ca3af;
 
   /* Accento: stato attivo, focus, bottone primario. Mai come sfondo esteso. */
-  --pz-accent: #6366f1;
+  --pz-accent: #3b82f6;
 
   /* Semantici (valori da Pizzart) */
   --pz-error: #f07864;
@@ -52,29 +52,29 @@ ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
   --pz-font-weight-semibold: 600;
 
   /* Raggi */
-  --pz-radius-sm: 4px;
-  --pz-radius-md: 6px;
-  --pz-radius-lg: 8px;
+  --pz-radius-sm: 0px;
+  --pz-radius-md: 2px;
+  --pz-radius-lg: 2px;
 
   /* ── 2. Derivati ──────────────────────────────────────────────────────── */
 
   /* Superfici secondarie: popover, menu, righe in hover */
-  --pz-bg-elevated: #232329;
+  --pz-bg-elevated: #181b23;
   --pz-surface-hover: rgba(255, 255, 255, 0.055);
   --pz-surface-active: rgba(255, 255, 255, 0.09);
 
   /* Linee */
-  --pz-border-strong: #3a3a42;
+  --pz-border-strong: #2c313d;
 
   /* Testo */
-  --pz-text-muted: #7c7d86;
-  --pz-text-inverse: #14151a;
+  --pz-text-muted: #6b7280;
+  --pz-text-inverse: #0a0c10;
 
   /* Accento, varianti alpha */
-  --pz-accent-hover: #7c7ff2;
-  --pz-accent-subtle: rgba(99, 102, 241, 0.15);
-  --pz-accent-tint: rgba(99, 102, 241, 0.08);
-  --pz-accent-border: rgba(99, 102, 241, 0.28);
+  --pz-accent-hover: #5b9af7;
+  --pz-accent-subtle: rgba(59, 130, 246, 0.14);
+  --pz-accent-tint: rgba(59, 130, 246, 0.07);
+  --pz-accent-border: rgba(59, 130, 246, 0.30);
 
   /* Avviso: Pizzart non ha un colore di warning. Ambra derivata dalla
      selezione confermata (#ffbe3c), desaturata per restare leggibile. */
@@ -82,9 +82,7 @@ ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
 
   /* Sovrapposizioni */
   --pz-overlay: rgba(0, 0, 0, 0.66);
-  --pz-shadow-document: 0 18px 48px rgba(0, 0, 0, 0.55);
-  --pz-shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.55);
-  --pz-radius-full: 9999px;
+  --pz-radius-full: 2px;
 
   /* ── 3. Spaziature (§5) ───────────────────────────────────────────────── */
 

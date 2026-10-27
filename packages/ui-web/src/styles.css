@@ -134,7 +134,6 @@ html {
   background: var(--pz-bg-elevated);
   border: 1px solid var(--pz-border-strong);
   border-radius: var(--pz-radius-md);
-  box-shadow: var(--pz-shadow-popover);
   z-index: 900;
 }
 
@@ -269,8 +268,10 @@ html {
 .pz-canvas-element {
   display: block;
   background-color: var(--pz-bg-panel);
-  border: 1px solid var(--pz-border);
-  box-shadow: var(--pz-shadow-document);
+  /* outline e non border: il renderer dimensiona la surface WebGPU su
+     clientWidth/clientHeight, e un border da 1px restringe il content box
+     (era il vecchio 600x400 -> 598x398). outline non entra nel layout. */
+  outline: 1px solid var(--pz-border);
 }
 
 /* Selezione: il tratteggio è uno stato reale del canvas, quindi resta bianco
@@ -316,7 +317,6 @@ html {
   background: var(--pz-bg-elevated);
   border: 1px solid var(--pz-border-strong);
   border-radius: var(--pz-radius-full);
-  box-shadow: var(--pz-shadow-popover);
   z-index: 100;
 }
 
@@ -556,7 +556,7 @@ html {
   appearance: none;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--pz-accent);
   border: 2px solid var(--pz-bg-panel);
   cursor: pointer;
@@ -579,7 +579,7 @@ html {
 .pz-layer-opacity-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--pz-accent);
   border: 2px solid var(--pz-bg-panel);
   cursor: pointer;
@@ -749,7 +749,6 @@ html {
   background: var(--pz-bg-elevated);
   border: 1px solid var(--pz-border-strong);
   border-radius: var(--pz-radius-lg);
-  box-shadow: var(--pz-shadow-popover);
   overflow: hidden;
 }
 
@@ -852,7 +851,7 @@ html {
   height: 36px;
   border: 2px solid var(--pz-border-strong);
   border-top-color: var(--pz-accent);
-  border-radius: 50%;
+  border-radius: 0;
   animation: pz-spin 0.8s linear infinite;
 }
 
@@ -888,7 +887,6 @@ html {
   display: flex;
   align-items: center;
   gap: var(--pz-space-sm);
-  box-shadow: var(--pz-shadow-popover);
   animation: pz-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
@@ -956,7 +954,6 @@ html {
   background: var(--pz-bg-elevated);
   border: 1px solid var(--pz-border-strong);
   border-radius: var(--pz-radius-lg);
-  box-shadow: var(--pz-shadow-popover);
   z-index: 1000;
 }
 

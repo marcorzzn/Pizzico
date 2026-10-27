@@ -23,19 +23,19 @@ export const PIZZART_THEME = 'pizzart';
  */
 export const pizzartTokens = {
   // Superfici (docs/ui/design-decisions.md §2)
-  '--pz-bg-canvas': '#1c1e22',
-  '--pz-bg-panel': '#1e1e24',
-  '--pz-bg-toolbar': '#18181b',
+  '--pz-bg-canvas': '#0a0c10',
+  '--pz-bg-panel': '#12141a',
+  '--pz-bg-toolbar': '#0a0c10',
 
   // Linee
-  '--pz-border': '#2d2d35',
+  '--pz-border': '#1f232d',
 
   // Testo
-  '--pz-text-primary': '#e0e0e0',
-  '--pz-text-secondary': '#a0a0a8',
+  '--pz-text-primary': '#d1d5db',
+  '--pz-text-secondary': '#9ca3af',
 
   // Accento
-  '--pz-accent': '#6366f1',
+  '--pz-accent': '#3b82f6',
 
   // Semantici (valori da Pizzart)
   '--pz-error': '#f07864',
@@ -53,9 +53,9 @@ export const pizzartTokens = {
 
   // Raggi: sm/md/lg = 4/6/8. Valori non fissati da design-decisions.md,
   // che non tratta i raggi; seguono docs/design-pizzart/typography.md.
-  '--pz-radius-sm': '4px',
-  '--pz-radius-md': '6px',
-  '--pz-radius-lg': '8px',
+  '--pz-radius-sm': '0px',
+  '--pz-radius-md': '2px',
+  '--pz-radius-lg': '2px',
 } as const;
 
 export type PizzartTokenName = keyof typeof pizzartTokens;
