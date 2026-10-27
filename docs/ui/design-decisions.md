@@ -1,5 +1,11 @@
 # Decisioni di design — Fase 6 (vincolanti)
 
+> **Superato da [ADR-0002-flat-egui-redesign.md](ADR-0002-flat-egui-redesign.md) per la v2 della UI.**
+> Le sezioni §1 (palette) e §2 (superfici, ombre, arrotondamenti) valgono come storia
+> della Fase 6, non più come regole correnti: la palette, i raggi e le ombre sono
+> sostituiti dall'ADR. Restano valide le sezioni su tipografia, spaziatura, accessibilità,
+> zero emoji e accento unico, dove l'ADR non dice diversamente.
+
 > **Stato**: deciso dal committente (Marco) il 2026-10-26.
 > **Natura**: vincolante. Chi implementa la Fase 6 non riapre queste scelte senza
 > una nuova decisione esplicita del committente.
