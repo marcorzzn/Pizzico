@@ -94,6 +94,19 @@ jobs:
       - name: Build frontend
         run: pnpm --filter @pizzico/app-web build
 
+      # gen/android viene generato una volta e poi committato; qui si crea solo
+      # se manca. DEVE venire prima della configurazione della firma, perché
+      # firma e keystore.properties vivono dentro il progetto generato.
+      - name: Init Android project
+        working-directory: apps/tauri
+        run: |
+          set -euo pipefail
+          if [ ! -d "gen/android" ]; then
+            cargo tauri android init --ci
+          else
+            echo "gen/android gia' presente: init saltato"
+          fi
+
       # GitHub NON permette il contesto `secrets` dentro un `if`: si calcola un
       # booleano nell'env del job e si testa quello.
       # Il keystore arriva come secret base64 e vive solo per questa run.
@@ -107,54 +120,99 @@ jobs:
           chmod 600 "$RUNNER_TEMP/pizzico.keystore"
           echo "keystore decodificato: $(stat -c%s "$RUNNER_TEMP/pizzico.keystore") byte"
 
-      # Tauri 2: la firma va in bundle.android.release. Il JSON e' costruito da
-      # python con i valori letti da variabili d'ambiente: cosi' virgolette,
-      # spazi e caratteri speciali nelle password non rompono nulla, e i secret
-      # non finiscono mai su una riga di comando.
-      - name: Write signing config
+      # Tauri 2 NON accetta la firma in tauri.conf.json: bundle.android ammette
+      # solo minSdkVersion / versionCode / autoIncrementVersionCode /
+      # debugApplicationIdSuffix (verificato in tauri-utils 2.10.2), e qualunque
+      # altra chiave fa fallire il parsing con "Additional properties are not
+      # allowed". La procedura ufficiale è keystore.properties + signingConfigs
+      # in app/build.gradle.kts: https://v2.tauri.app/distribute/sign/android/
+      - name: Configure Android signing
         if: env.HAS_KEYSTORE == 'true'
         env:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json, os
-          out = os.path.join(os.environ["RUNNER_TEMP"], "signing.json")
-          cfg = {"bundle": {"android": {"release": {
-              "keystorePath": os.path.join(os.environ["RUNNER_TEMP"], "pizzico.keystore"),
-              "keystorePassword": os.environ["KS_PASS"],
-              "keyAlias": os.environ["KEY_ALIAS"],
-              "keyPassword": os.environ["KEY_PASS"],
-          }}}}
-          with open(out, "w", encoding="utf-8") as fh:
-              json.dump(cfg, fh)
-          print("firma configurata in", out)
+          GEN="apps/tauri/gen/android"
+          test -d "$GEN/app" || { echo "::error::$GEN/app non esiste: init fallito"; exit 1; }
+
+          # 1. keystore.properties: percorso assoluto, letto da rootProject.file()
+          {
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'password=%s\n' "$KS_PASS"
+            printf 'storeFile=%s\n' "$RUNNER_TEMP/pizzico.keystore"
+          } > "$GEN/keystore.properties"
+          chmod 600 "$GEN/keystore.properties"
+          echo "keystore.properties scritto ($(wc -l < "$GEN/keystore.properties") righe)"
+
+          # 2. patch idempotente di app/build.gradle.kts
+          python3 - "$GEN/app/build.gradle.kts" <<'PY'
+          import re, sys
+
+          path = sys.argv[1]
+          src = open(path, encoding="utf-8").read()
+
+          if "signingConfigs" in src:
+              print("build.gradle.kts già configurato per la firma: nessuna modifica")
+              sys.exit(0)
+
+          original = src
+
+          # import necessario per FileInputStream
+          if "java.io.FileInputStream" not in src:
+              m = re.search(r"^import .*$", src, re.M)
+              if not m:
+                  sys.exit("ERRORE: nessuna riga import in build.gradle.kts")
+              src = src[:m.start()] + "import java.io.FileInputStream\n" + src[m.start():]
+
+          signing = '''signingConfigs {
+              create("release") {
+                  val keystorePropertiesFile = rootProject.file("keystore.properties")
+                  val keystoreProperties = Properties()
+                  if (keystorePropertiesFile.exists()) {
+                      keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+                  }
+                  keyAlias = keystoreProperties["keyAlias"] as String
+                  keyPassword = keystoreProperties["password"] as String
+                  storeFile = file(keystoreProperties["storeFile"] as String)
+                  storePassword = keystoreProperties["password"] as String
+              }
+          }
+
+          '''
+
+          # signingConfigs deve stare dentro android {}, subito prima di buildTypes
+          m = re.search(r"^(\s*)buildTypes\s*\{", src, re.M)
+          if not m:
+              sys.exit("ERRORE: blocco buildTypes non trovato in build.gradle.kts")
+          indent = m.group(1)
+          block = "".join((indent + line) if line.strip() else line
+                          for line in signing.splitlines(True))
+          src = src[:m.start()] + block + src[m.start():]
+
+          # aggancio della config al buildType release
+          m = re.search(r'getByName\("release"\)\s*\{', src)
+          if not m:
+              sys.exit('ERRORE: buildTypes.getByName("release") non trovato')
+          insert_at = m.end()
+          src = src[:insert_at] + '\n            signingConfig = signingConfigs.getByName("release")' + src[insert_at:]
+
+          assert src != original
+          open(path, "w", encoding="utf-8").write(src)
+          print("build.gradle.kts: signingConfigs + signingConfig(release) aggiunti")
           PY
 
-      # gen/android viene generato una volta e poi committato; qui si crea solo
-      # se manca, cosi' il workflow funziona sia al primo run sia dopo.
-      - name: Init Android project
-        working-directory: apps/tauri
-        run: |
-          set -euo pipefail
-          if [ ! -d "gen/android" ]; then
-            cargo tauri android init --ci
-          else
-            echo "gen/android gia' presente: init saltato"
-          fi
+          echo "--- verifica ---"
+          grep -c "signingConfig" "$GEN/app/build.gradle.kts"
 
-      - name: Build APK (firmato se i secret ci sono)
+      - name: Build APK
         working-directory: apps/tauri
         run: |
           set -euo pipefail
-          if [ -f "$RUNNER_TEMP/signing.json" ]; then
-            cargo tauri android build --apk --config "$RUNNER_TEMP/signing.json"
-          else
-            echo "::warning::Nessun keystore nei secret: build APK non firmato (debug/unsigned)."
-            cargo tauri android build --apk
+          if [ "$HAS_KEYSTORE" != "true" ]; then
+            echo "::warning::Nessun keystore nei secret: l'APK non sarà firmato."
           fi
+          cargo tauri android build --apk
 
       - name: List APK outputs
         run: find apps/tauri/gen/android -name '*.apk' -type f -exec ls -lh {} \;
