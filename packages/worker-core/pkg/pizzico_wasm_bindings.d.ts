@@ -219,6 +219,15 @@ export function clear_selection(): boolean;
 export function create_document(width: number, height: number): void;
 
 /**
+ * Ritaglia il documento attivo al rettangolo `(x, y, w, h)`.
+ *
+ * La history viene azzerata: il ritaglio cambia le coordinate di tutti i
+ * livelli, quindi le azioni precedenti non sarebbero più coerenti con la
+ * nuova tela (un undo riporterebbe i pixel in posizioni sbagliate).
+ */
+export function crop_document(x: number, y: number, w: number, h: number): void;
+
+/**
  * Termina l'operazione di spostamento del livello attivo.
  * Se l'offset finale differisce da quello iniziale, registra un `MoveLayerCommand` nella History.
  */
@@ -414,6 +423,7 @@ export interface InitOutput {
     readonly can_undo: () => number;
     readonly clear_selection: () => number;
     readonly create_document: (a: number, b: number) => void;
+    readonly crop_document: (a: number, b: number, c: number, d: number) => [number, number];
     readonly end_move_layer: () => number;
     readonly end_stroke: () => number;
     readonly eraser_stroke: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;

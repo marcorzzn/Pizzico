@@ -1,3 +1,5 @@
+/* @ts-self-types="./pizzico_wasm_bindings.d.ts" */
+
 /**
  * Handle principale all'engine grafico esposto al JavaScript.
  */
@@ -530,6 +532,24 @@ export function clear_selection() {
  */
 export function create_document(width, height) {
     wasm.create_document(width, height);
+}
+
+/**
+ * Ritaglia il documento attivo al rettangolo `(x, y, w, h)`.
+ *
+ * La history viene azzerata: il ritaglio cambia le coordinate di tutti i
+ * livelli, quindi le azioni precedenti non sarebbero più coerenti con la
+ * nuova tela (un undo riporterebbe i pixel in posizioni sbagliate).
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ */
+export function crop_document(x, y, w, h) {
+    const ret = wasm.crop_document(x, y, w, h);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 /**
@@ -1093,12 +1113,12 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 284, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 285, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___wasm_bindgen_12528a006083644c___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_12528a006083644c___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 7, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 8, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_12528a006083644c___convert__closures_____invoke___f64______true_);
             return ret;
         },
