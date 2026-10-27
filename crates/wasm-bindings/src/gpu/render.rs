@@ -251,10 +251,14 @@ pub async fn init_webgpu_canvas(canvas_id: &str) -> Result<(), JsValue> {
 
     win.request_animation_frame(&cb)?;
 
-    // Mantieni il closure attivo per l'intera durata della pagina
-    if let Some(closure) = raf_closure.borrow_mut().take() {
-        closure.forget();
-    }
+    // Il closure si ri-schedula da solo leggendo `raf_inner`. Va quindi
+    // lasciato dentro la cella: estraendolo con `take()` la cella resterebbe
+    // vuota e, al frame successivo, `raf_inner.borrow()` darebbe `None`, con
+    // il risultato che il loop si fermerebbe dopo un solo frame (documento
+    // visibile ma mai più ridisegnato dopo una modifica).
+    // Il ciclo Rc che si crea (closure → cella → closure) tiene vivo il
+    // closure per l'intera durata della pagina: è il comportamento voluto.
+    std::mem::forget(raf_closure);
 
     Ok(())
 }
