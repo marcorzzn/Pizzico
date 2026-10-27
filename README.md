@@ -34,25 +34,23 @@
 ## Showcase
 
 <p align="center">
-  <img src="docs/assets/screenshot-canvas.png" alt="Pizzico editor with a layered PSD loaded and the layer panel on the right" width="88%" />
+  <img src="docs/assets/screenshot-01-overview.png" alt="pizzico — editor with a layered document open" width="92%" />
   <br />
-  <em>A layered PSD open in the editor: canvas, tool strip in the top bar, layer panel on the right.</em>
+  <em>The editor in the browser: tool strip in the top bar, canvas, inspector and layer panel on the right.</em>
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshot-inspector.png" alt="Inspector showing tool settings and active layer properties" width="21%" />
-  <img src="docs/assets/screenshot-export.png" alt="Export panel with PNG, JPEG, WebP and layered PSD" width="64%" />
+  <img src="docs/assets/screenshot-02-inspector.png" alt="pizzico — inspector panel" width="24%" />
+  <img src="docs/assets/screenshot-03-mobile.png" alt="pizzico on a phone-sized viewport" width="28%" />
   <br />
-  <em>Left: the context-aware inspector. Right: multi-format export, including layered PSD.</em>
+  <em>Left: the inspector. Right: the same interface on a 390px viewport, with a collapsible panel.</em>
 </p>
 
 <p align="center">
   <img src="docs/assets/photopea-validation.png" alt="Photopea PSD Validation" width="85%" />
   <br />
-  <em>Adobe Photoshop PSD Export: Verified in Photopea with preserved layer hierarchy, blend modes, and opacity.</em>
+  <em>A PSD exported by pizzico, opened in Photopea with layer hierarchy, blend modes and opacity intact.</em>
 </p>
-
----
 
 ## Features
 
@@ -73,15 +71,18 @@
 
 | Area | State |
 | --- | --- |
+| Phase 0 — foundation | Complete. |
 | Phase 1 — raster editor | Complete: brush, selection, layers, undo/redo, persistence, export. |
-| Phase 6 — interface redesign | **Complete**: dark theme, Pizzart shell, Lucide icon set, component sliders and colour picker, inspector cards, single accent colour, zero emoji. |
+| Phase 1.5 — colour management | Complete: sRGB, Display P3, OkLab, ICC. |
+| Phase 6 — interface redesign | Complete: flat light theme (egui style), Lucide icon set, single accent, zero emoji. |
+| Phase 7 — Android (Tauri) | Early preview: a signed APK is built in CI. Touch UI adaptation in progress. |
+| Document crop | Core implemented and covered by tests; the UI tool is in progress. |
+| Vector shapes, text | Planned. Design options recorded in ADR-0005 and ADR-0006. |
+| Transform (rotate, scale, flip) | Planned. The compositor only applies integer offsets today; see ADR-0007. |
 | Engine v2 | In progress: the legacy stroke pipeline is not handed off yet. |
-| Phase 7 — Android (Tauri) | Not started. |
 
 The live demo tracks `master`: every push to the default branch is built and deployed to
 Cloudflare Pages.
-
----
 
 ## Quick Start
 
@@ -185,6 +186,20 @@ Works offline after first load. Import a PSD to get started.
 
 ---
 
+## Android (early preview)
+
+pizzico builds an Android APK entirely in GitHub Actions — no local Android
+toolchain is needed.
+
+- Signed APK, downloadable from the latest workflow run or release.
+- Known limitation: the touch UI adaptation is in progress; the layout works on
+  a phone-sized viewport but the editing tools are still mouse-first.
+- Requires Android 8.0+ (min SDK 26).
+
+[Download the latest APK](https://github.com/marcorzzn/pizzico/releases/latest)
+
 ## Credits
 
 Created by Marco Razzano ([@marcorzzn](https://github.com/marcorzzn)).
+
+Licensed under MIT OR Apache-2.0. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
