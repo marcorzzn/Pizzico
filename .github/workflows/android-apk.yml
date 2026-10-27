@@ -116,9 +116,36 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEY_BASE64 }}
         run: |
           set -euo pipefail
-          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pizzico.keystore"
+          # lo spazio bianco è innocuo: se il secret è stato incollato con a capo
+          # o spazi, base64 -d fallirebbe su GNU coreutils a seconda della posizione
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/pizzico.keystore"
           chmod 600 "$RUNNER_TEMP/pizzico.keystore"
-          echo "keystore decodificato: $(stat -c%s "$RUNNER_TEMP/pizzico.keystore") byte"
+
+      # Fallire QUI, in dieci secondi, invece che dopo sette minuti di build:
+      # un keystore troncato produce altrimenti un KeytoolException di Gradle
+      # ("toDerInputStream rejects tag type -11") che non dice cosa fare.
+      - name: Verify keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/pizzico.keystore"
+          SIZE=$(stat -c%s "$F")
+          MAGIC=$(xxd -p -l 8 "$F")
+          echo "dimensione: $SIZE byte, primi byte: $MAGIC"
+          if [ "$SIZE" -lt 1000 ]; then
+            echo "::error::keystore di soli $SIZE byte: un PKCS12 con chiave RSA 2048 pesa 2-3 KB. Il secret ANDROID_KEY_BASE64 è troncato o non contiene il file. Rigeneralo con: base64 -w0 pizzico-release.keystore"
+            exit 1
+          fi
+          if keytool -list -keystore "$F" -storepass "$KS_PASS" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "keystore valido, alias '$KEY_ALIAS' presente"
+          else
+            echo "::error::il keystore si decodifica ma keytool non lo apre con la password e l'alias forniti. Controlla ANDROID_KEYSTORE_PASSWORD e ANDROID_KEY_ALIAS."
+            keytool -list -keystore "$F" -storepass "$KS_PASS" 2>&1 | head -5 || true
+            exit 1
+          fi
 
       # Tauri 2 NON accetta la firma in tauri.conf.json: bundle.android ammette
       # solo minSdkVersion / versionCode / autoIncrementVersionCode /
