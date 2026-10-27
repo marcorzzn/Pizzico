@@ -23,23 +23,23 @@ ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
   /* ── 1. Token Pizzart ─────────────────────────────────────────────────── */
 
   /* Superfici */
-  --pz-bg-canvas: #0a0c10;
-  --pz-bg-panel: #12141a;
-  --pz-bg-toolbar: #0a0c10;
+  --pz-bg-canvas: #1c1e22;
+  --pz-bg-panel: #f0f0f0;
+  --pz-bg-toolbar: #e8e8e8;
 
   /* Linee */
-  --pz-border: #1f232d;
+  --pz-border: #c8c8c8;
 
   /* Testo */
-  --pz-text-primary: #d1d5db;
-  --pz-text-secondary: #9ca3af;
+  --pz-text-primary: #1a1a1a;
+  --pz-text-secondary: #6b6b6b;
 
   /* Accento: stato attivo, focus, bottone primario. Mai come sfondo esteso. */
-  --pz-accent: #3b82f6;
+  --pz-accent: #0078d4;
 
   /* Semantici (valori da Pizzart) */
-  --pz-error: #f07864;
-  --pz-ok: #a0c8a0;
+  --pz-error: #d13438;
+  --pz-ok: #107c10;
 
   /* Tipografia: Inter con fallback di sistema, scala 12/14/16/20, pesi 400/500/600 */
   --pz-font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -59,26 +59,26 @@ ancora riscritti. Rimossa nella 6c-c, quando nessun file li usava più.
   /* ── 2. Derivati ──────────────────────────────────────────────────────── */
 
   /* Superfici secondarie: popover, menu, righe in hover */
-  --pz-bg-elevated: #181b23;
-  --pz-surface-hover: rgba(255, 255, 255, 0.055);
-  --pz-surface-active: rgba(255, 255, 255, 0.09);
+  --pz-bg-elevated: #f5f5f5;
+  --pz-surface-hover: rgba(0, 0, 0, 0.05);
+  --pz-surface-active: rgba(0, 0, 0, 0.08);
 
   /* Linee */
-  --pz-border-strong: #2c313d;
+  --pz-border-strong: #a8a8a8;
 
   /* Testo */
-  --pz-text-muted: #6b7280;
-  --pz-text-inverse: #0a0c10;
+  --pz-text-muted: #909090;
+  --pz-text-inverse: #ffffff;
 
   /* Accento, varianti alpha */
-  --pz-accent-hover: #5b9af7;
-  --pz-accent-subtle: rgba(59, 130, 246, 0.14);
-  --pz-accent-tint: rgba(59, 130, 246, 0.07);
-  --pz-accent-border: rgba(59, 130, 246, 0.30);
+  --pz-accent-hover: #106ebe;
+  --pz-accent-subtle: rgba(0, 120, 212, 0.12);
+  --pz-accent-tint: rgba(0, 120, 212, 0.06);
+  --pz-accent-border: rgba(0, 120, 212, 0.3);
 
   /* Avviso: Pizzart non ha un colore di warning. Ambra derivata dalla
      selezione confermata (#ffbe3c), desaturata per restare leggibile. */
-  --pz-warning: #d9a441;
+  --pz-warning: #ff8c00;
 
   /* Sovrapposizioni */
   --pz-overlay: rgba(0, 0, 0, 0.66);

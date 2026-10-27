@@ -26,7 +26,7 @@ html {
   height: 100%;
   overflow: hidden;
   /* Rende scuri i controlli nativi (track degli slider, scrollbar, form) */
-  color-scheme: dark;
+  color-scheme: light;
   background-color: var(--pz-bg-canvas);
   color: var(--pz-text-primary);
   font-family: var(--pz-font-ui);
@@ -253,6 +253,7 @@ html {
   grid-column: 1;
   position: relative;
   overflow: hidden;
+  background-color: var(--pz-bg-canvas);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,7 +268,9 @@ html {
 
 .pz-canvas-element {
   display: block;
-  background-color: var(--pz-bg-panel);
+  /* Il canvas resta scuro anche su UI chiara: è la scelta di Pizzart, e serve
+     a far staccare l'immagine dall'interfaccia invece di confonderla con essa. */
+  background-color: var(--pz-bg-canvas);
   /* outline e non border: il renderer dimensiona la surface WebGPU su
      clientWidth/clientHeight, e un border da 1px restringe il content box
      (era il vecchio 600x400 -> 598x398). outline non entra nel layout. */
@@ -536,7 +539,7 @@ html {
 }
 
 /* Range: track scuro, thumb in accento. Senza styling esplicito il tratto non
-   riempito resta chiaro e "stona" su tema scuro; `color-scheme: dark` non basta.
+   riempito seguirebbe il tema invece di staccarsi; `color-scheme` da solo non basta.
    Nota: disattivando l'appearance nativo sparisce anche il riempimento accento
    a sinistra del thumb, che qui non è previsto. */
 .pz-slider-range,

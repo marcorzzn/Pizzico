@@ -23,23 +23,23 @@ export const PIZZART_THEME = 'pizzart';
  */
 export const pizzartTokens = {
   // Superfici (docs/ui/design-decisions.md §2)
-  '--pz-bg-canvas': '#0a0c10',
-  '--pz-bg-panel': '#12141a',
-  '--pz-bg-toolbar': '#0a0c10',
+  '--pz-bg-canvas': '#1c1e22',
+  '--pz-bg-panel': '#f0f0f0',
+  '--pz-bg-toolbar': '#e8e8e8',
 
   // Linee
-  '--pz-border': '#1f232d',
+  '--pz-border': '#c8c8c8',
 
   // Testo
-  '--pz-text-primary': '#d1d5db',
-  '--pz-text-secondary': '#9ca3af',
+  '--pz-text-primary': '#1a1a1a',
+  '--pz-text-secondary': '#6b6b6b',
 
   // Accento
-  '--pz-accent': '#3b82f6',
+  '--pz-accent': '#0078d4',
 
   // Semantici (valori da Pizzart)
-  '--pz-error': '#f07864',
-  '--pz-ok': '#a0c8a0',
+  '--pz-error': '#d13438',
+  '--pz-ok': '#107c10',
 
   // Tipografia (§3): Inter con fallback di sistema, scala 12/14/16/20, pesi 400/500/600
   '--pz-font-ui': 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
