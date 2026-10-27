@@ -10,7 +10,8 @@ code and should be optimised before committing.
 | `screenshot-inspector.png` | Root README | Context-aware inspector: tool settings and active layer properties. |
 | `screenshot-export.png` | Root README | Export panel offering PNG, JPEG, WebP and layered PSD. |
 | `fase-6c-c-final.png` | Docs | Final Phase 6 UI, with the dynamic status bar and the dark slider track. |
-| `fase-6d-flat-egui.png` | Docs | Flat redesign (ADR-0002): square corners, no shadows, blue accent, brush dab visible. |
+| `fase-6d-flat-egui.png` | Docs | First flat attempt (dark). Superseded by the light theme below. |
+| `fase-6e-egui-light.png` | Docs | Current UI: light grey panels, dark text, dark canvas, flat shapes (ADR-0002 corrected). |
 | `photopea-validation.png` | Root README | A PSD exported by Pizzico, opened in Photopea with layers, blend modes, and opacity intact. |
 | `feature-selection.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
 | `feature-export.png` | — (legacy) | Pre-Phase-6 interface. Kept as a historical record, no longer referenced. |
