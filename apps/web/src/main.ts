@@ -84,6 +84,18 @@ import { saveAutosave, loadAutosave, clearAutosave } from './storage';
 
 console.log('Pizzico Engine initializing…');
 
+// Diagnostica P0-E: identifica l'elemento che riceve davvero il pointer. Da
+// rimuovere quando i bug touch/import sono chiusi.
+function describeElement(element: Element | null): string {
+  if (!element) return 'null';
+  const id = element.id ? `#${element.id}` : '';
+  const className =
+    typeof element.className === 'string' && element.className
+      ? `.${element.className.trim().split(/\s+/).join('.')}`
+      : '';
+  return `${element.tagName.toLowerCase()}${id}${className}`;
+}
+
 // ── Stato Brush Tool e Disegno (§10 Fase 1) ──────────────────────────────────
 
 let currentTool = 'brush'; // 'brush' | 'eraser' | etc.
@@ -117,9 +129,15 @@ const shell = new DesktopShellLayout({
     updateInspector();
   },
   onCommand: (cmdId) => console.log(`[Command] Esecuzione: ${cmdId}`),
-  onOpenPsd: () => fileInput.click(),
+  onOpenPsd: () => {
+    console.info('[P0E] menu: Apri PSD');
+    fileInput.click();
+  },
   onSaveProject: () => handleSaveProject(),
-  onOpenProject: () => projectFileInput.click(),
+  onOpenProject: () => {
+    console.info('[P0E] menu: Apri progetto');
+    projectFileInput.click();
+  },
   onExportPng: () => handleExportPng(),
   onExportJpeg: (q) => handleExportJpeg(q),
   onExportWebp: (q) => handleExportWebp(q),
@@ -587,6 +605,7 @@ document.body.appendChild(projectFileInput);
 
 projectFileInput.addEventListener('change', async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
+  console.info('[P0E] project file scelto', file?.name, file?.size);
   if (!file) return;
   await handleOpenProjectFile(file);
   projectFileInput.value = '';
@@ -600,12 +619,14 @@ document.body.appendChild(fileInput);
 
 fileInput.addEventListener('change', async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
+  console.info('[P0E] PSD scelto', file?.name, file?.size);
   if (!file) return;
   await handlePsdFile(file);
   fileInput.value = '';
 });
 
 async function handlePsdFile(file: File): Promise<void> {
+  console.info('[P0E] import PSD', { name: file.name, size: file.size, wasmReady });
   if (!wasmReady) {
     showToast('Engine grafico WASM non ancora pronto', 'warning');
     return;
@@ -695,6 +716,7 @@ window.addEventListener('drop', async (e: DragEvent) => {
   hideDragOverlay();
 
   const file = e.dataTransfer?.files?.[0];
+  console.info('[P0E] drop', file?.name, file?.size);
   if (file) {
     await handlePsdFile(file);
   }
@@ -849,6 +871,25 @@ function handleDeselect() {
 }
 
 shell.canvas.style.touchAction = 'none';
+
+document.addEventListener(
+  'pointerdown',
+  (event) => {
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    console.info('[P0E] pointerdown', {
+      pointerType: event.pointerType,
+      target: describeElement(event.target as Element),
+      hit: describeElement(hit),
+      x: Math.round(event.clientX),
+      y: Math.round(event.clientY),
+    });
+  },
+  true
+);
+
+shell.canvas.addEventListener('pointercancel', (event) => {
+  console.warn('[P0E] pointercancel', event.pointerId);
+});
 updateCanvasCursor();
 
 shell.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
@@ -1520,6 +1561,7 @@ function updateInspector() {
     }
 
     try {
+      console.info('[P0E] navigator.gpu', 'gpu' in navigator);
       await init_webgpu('pizzico-canvas');
       console.log('[WebGPU] Render loop Rust attivo — 60 FPS via RAF con dirty checking');
     } catch (err) {
