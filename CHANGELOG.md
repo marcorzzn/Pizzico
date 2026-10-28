@@ -46,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Release packaging: the APK is named `pizzico-<version>-android.apk` and the
   `.sha256` contains only the basename, so `sha256sum -c` works after download.
-- CI: runtime WASM smoke test under the Tauri CSP (headless Chromium).
+- CI: runtime WASM smoke test under the Tauri CSP (headless Chromium),
+  including PSD import and touch strokes.
 
 ## [0.1.2] - 2026-10-28
 
