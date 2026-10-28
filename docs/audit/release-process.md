@@ -170,7 +170,8 @@ successiva; non si cancella la release precedente senza motivo.
 - `pnpm install --frozen-lockfile` in CI: il lockfile è vincolante.
 - `tauri-cli` pinnato a `2.12.4` (`cargo install tauri-cli --version "=2.12.4"`).
 - Rust pinnato a `1.99.1` da `rust-toolchain.toml` e da
-  `dtolnay/rust-toolchain@1.99.1`.
+  `dtolnay/rust-toolchain@1.99.1`. In locale, la prima volta:
+  `rustup toolchain install 1.99.1`.
 - Le cache Rust/Gradle non devono mascherare un cambio di dipendenze: la cache
   Rust è keyed sul `Cargo.lock`, la cache Gradle viene calcolata dopo
   `android init` (prima `hashFiles` sarebbe vuoto).
