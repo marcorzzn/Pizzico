@@ -345,6 +345,9 @@ jobs:
             apps/tauri/gen/android/app/build/outputs/apk/**/*.apk
             apps/tauri/gen/android/app/build/outputs/apk/**/*.apk.sha256
           draft: false
+          # Sempre prerelease: la promozione a stabile è un atto manuale, dopo
+          # il test su device. Vedi docs/audit/release-process.md.
+          prerelease: true
           # generate_release_notes fallisce se la release esiste gia'
           # (l'API non rigenera le note di una release pubblicata): lo
           # chiediamo solo quando la stiamo creando.
