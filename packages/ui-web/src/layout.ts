@@ -29,7 +29,6 @@ import {
   CropIcon,
   DownloadIcon,
   EraserIcon,
-  FloatingActionBar,
   FolderOpenIcon,
   HandIcon,
   MoveIcon,
@@ -39,10 +38,8 @@ import {
   RedoIcon,
   SaveIcon,
   SlidersIcon,
-  SparklesIcon,
   SplineIcon,
   SquareDashedIcon,
-  SunIcon,
   UndoIcon,
   WandSparklesIcon,
   XIcon,
@@ -307,12 +304,6 @@ export class DesktopShellLayout {
     this.canvas.style.width = '600px';
     this.canvas.style.height = '400px';
 
-    const hud = new FloatingActionBar([
-      { id: 'bg-remove', label: 'Rimuovi sfondo', icon: SparklesIcon(16), variant: 'primary' },
-      { id: 'auto-light', label: 'Auto luce', icon: SunIcon(16) },
-      { id: 'crop', label: 'Ritaglia', icon: CropIcon(16) },
-    ]);
-
     this.canvasWrapper = document.createElement('div');
     this.canvasWrapper.className = 'pz-canvas-wrapper';
 
@@ -325,7 +316,6 @@ export class DesktopShellLayout {
     this.canvasWrapper.appendChild(this.selectionOverlay);
 
     this.canvasContainer.appendChild(this.canvasWrapper);
-    this.canvasContainer.appendChild(hud.element);
 
     // ── 3. Pannello destro (§6: Strumento, Layer, Effetti, Maschere) ─────────
 

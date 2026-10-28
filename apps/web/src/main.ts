@@ -315,7 +315,7 @@ function scheduleAutosave() {
 
 // ── Salvataggio & Apertura File Progetto .pizzico (§10 Step H) ─────────────────
 
-function handleSaveProject() {
+async function handleSaveProject() {
   if (!wasmReady) {
     showToast('Engine WASM non ancora pronto', 'warning');
     return;
@@ -326,19 +326,31 @@ function handleSaveProject() {
     const rawTitle = docMeta?.title ? docMeta.title.trim().replace(/[^a-zA-Z0-9_\-]/g, '_') : 'progetto';
     const fileName = `${rawTitle}.pizzico`;
 
-    const blob = new Blob([bytes as any], { type: 'application/x-pizzico' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // La WebView Tauri (wry) non implementa DownloadListener: un <a download>
+    // non produce alcun file. Su mobile salviamo sempre in OPFS/IndexedDB, che
+    // è anche la sorgente del banner "Progetto precedente trovato".
+    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    const target = await saveAutosave(bytes);
 
-    const sizeKb = (bytes.length / 1024).toFixed(1);
-    showToast(`Progetto salvato su disco: "${fileName}" (${sizeKb} KB)`, 'success');
-    scheduleAutosave();
+    if (isTauri) {
+      if (target === 'none') {
+        showToast('Salvataggio locale non disponibile su questo device', 'error');
+        return;
+      }
+      showToast(`Progetto salvato in locale (${target.toUpperCase()})`, 'success');
+    } else {
+      const blob = new Blob([bytes as any], { type: 'application/x-pizzico' });
+      downloadBlob(blob, fileName);
+      const sizeKb = (bytes.length / 1024).toFixed(1);
+      showToast(
+        target === 'none'
+          ? `Progetto salvato: "${fileName}" (${sizeKb} KB)`
+          : `Progetto salvato: "${fileName}" + copia locale (${target.toUpperCase()})`,
+        'success'
+      );
+    }
+
+    console.info('[P0F] save project', { target, tauri: isTauri, fileName, bytes: bytes.length });
   } catch (err) {
     console.error('[Save Project] Errore salvataggio file .pizzico:', err);
     showToast(`Errore salvataggio progetto: ${err}`, 'error');
@@ -889,11 +901,28 @@ document.addEventListener(
 
 shell.canvas.addEventListener('pointercancel', (event) => {
   console.warn('[P0E] pointercancel', event.pointerId);
+  if (isDrawing) {
+    try {
+      end_stroke();
+    } catch (_) {}
+    isDrawing = false;
+    lastDocPoint = null;
+    syncHistoryUi();
+    renderLayersPanel();
+    updateInspector();
+    scheduleAutosave();
+  }
+  isMovingLayer = false;
+  moveStartDoc = null;
+  isSelecting = false;
+  selStartDoc = null;
 });
 updateCanvasCursor();
 
 shell.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-  if (e.button !== 0 || !wasmReady) return;
+  // Su alcune WebView Android il pointerdown touch riporta button=-1: il
+  // controllo sul bottone deve valere solo per mouse/penna.
+  if (!wasmReady || (e.pointerType !== 'touch' && e.button !== 0)) return;
   e.preventDefault();
   try {
     shell.canvas.setPointerCapture(e.pointerId);

@@ -275,6 +275,11 @@ html {
   /* Il canvas resta scuro anche su UI chiara: è la scelta di Pizzart, e serve
      a far staccare l'immagine dall'interfaccia invece di confonderla con essa. */
   background-color: var(--pz-bg-canvas);
+  /* Il dito non deve mai diventare scroll/zoom: il pointerdown deve arrivare
+     al canvas anche su WebView Android. L'inline style in main.ts fa lo stesso,
+     questa regola lo rende esplicito e sopravvive ai futuri refactor. */
+  touch-action: none;
+  overscroll-behavior: contain;
   /* outline e non border: il renderer dimensiona la surface WebGPU su
      clientWidth/clientHeight, e un border da 1px restringe il content box
      (era il vecchio 600x400 -> 598x398). outline non entra nel layout. */
