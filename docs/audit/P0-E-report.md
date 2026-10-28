@@ -44,17 +44,19 @@ Il device conferma: `WASM Rust v100 pronto`, `WebGPU attivo`, canvas con il
 documento visibile. Quindi le ipotesi “build 0.1.2” e “fallback Canvas2D” sono
 **smentite**. Restano:
 
-- tocco che non arriva né al canvas né al pulsante flottante (stessa area);
+- il tocco non disegna sul canvas. **Il pulsante flottante non è una prova**:
+  `FloatingActionBar` viene creato in `layout.ts` (righe 310-314) con tre item
+  senza `onClick`, quindi è inerte per costruzione. Il sospetto resta
+  canvas-only: overlay sopra il canvas o pointer non consegnati dalla WebView;
 - import che non produce effetti su web e mobile.
 
 ## Ipotesi aperte
 
-1. **Hit-testing mobile.** Un overlay trasparente o un contenitore che copre
-   l'area del canvas (o una mancata consegna dei `pointer` nella WebView)
-   spiegherebbe perché canvas e pulsante flottante sono entrambi inerti.
-   Il logger `[P0E] pointerdown` stampa `target` e `elementFromPoint`: se
-   `hit` non è il canvas/HUD, l'overlay è identificato.
-2. **Import web.** Il bundle live è aggiornato (`index-8QImmrZ5.js`), il menu
+1. **Hit-testing sul canvas (mobile).** Un overlay trasparente sopra l'area del
+   canvas (o una mancata consegna dei `pointer` nella WebView) spiegherebbe
+   perché il tratto non parte. Il logger `[P0E] pointerdown` stampa `target` e
+   `elementFromPoint`: se `hit` non è il canvas, l'overlay è identificato.
+2. **Import web.** Il bundle live è aggiornato (`index-NNwDmTzs.js`), il menu
    è cablato (`onOpenPsd: () => J.click()`) e gli input sono nel DOM. Se il
    click umano non apre il picker, il log `[P0E]` distingue: handler non
    invocato, picker non aperto, oppure file scelto ma parser fallito.
