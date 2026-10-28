@@ -33,6 +33,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/audit/gruppo-2-handoff.md` for the executable handoff.
 - Stroke tools on the v2 backend are still pending.
 
+## [0.1.2] - 2026-10-28
+
+### Changed
+
+- Release identity fixed: `versionName 0.1.2`, `versionCode 1002`, and Android
+  launcher icons generated from the brand source in CI.
+- Android workflow: tag/version check, APK smoke test (manifest and embedded
+  bundle), `.sha256` checksum, releases only from tags and always as
+  prerelease.
+- Build hygiene: Rust 1.99.1 and tauri-cli 2.12.4 pinned, frozen pnpm lockfile.
+
 ## [0.1.0-alpha] - 2026-10-26
 
 First public alpha. Phase 1 (raster editor) is complete.

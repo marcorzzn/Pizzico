@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml"><img src="https://github.com/marcorzzn/Pizzico/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
   <a href="https://pizzico.pages.dev"><img src="https://img.shields.io/badge/Live_Demo-pizzico.pages.dev-success?style=flat-square&logo=cloudflare" alt="Live Demo" /></a>
-    <a href="https://github.com/marcorzzn/pizzico/releases/latest"><img
+    <a href="https://github.com/marcorzzn/pizzico/releases"><img
     src="https://img.shields.io/github/v/release/marcorzzn/pizzico?style=flat-square&label=release"
     alt="Latest release" /></a>
   <a href="./LICENSE-MIT"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=flat-square" alt="License: MIT / Apache-2.0" /></a>
@@ -199,7 +199,7 @@ toolchain is needed.
   a phone-sized viewport but the editing tools are still mouse-first.
 - Requires Android 8.0+ (min SDK 26). Identifier: `io.github.marcorzzn.pizzico`.
 
-[Download the latest APK](https://github.com/marcorzzn/pizzico/releases/latest)
+[Download an APK from the releases page](https://github.com/marcorzzn/pizzico/releases)
 
 ## Credits
 

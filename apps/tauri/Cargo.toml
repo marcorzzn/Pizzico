@@ -4,7 +4,7 @@
 
 [package]
 name = "pizzico-tauri"
-version = "0.1.0"
+version = "0.1.2"
 description = "Pizzico Tauri 2 Native Mobile & Desktop Shell"
 authors = ["Marco Razzano"]
 edition = "2021"
