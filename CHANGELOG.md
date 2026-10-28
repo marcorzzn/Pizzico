@@ -33,6 +33,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/audit/gruppo-2-handoff.md` for the executable handoff.
 - Stroke tools on the v2 backend are still pending.
 
+## [0.1.4] - 2026-10-28
+
+Build di test P0-F. Nessun tag.
+
+### Fixed
+
+- Touch: il `pointerdown` del canvas accetta i pointer `touch` anche quando la
+  WebView riporta `button != 0`; `pointercancel` azzera lo stato di disegno.
+- Salvataggio progetto: su Tauri il `.pizzico` viene scritto in OPFS/IndexedDB
+  (il download via anchor non è supportato dalla WebView) e il boot propone il
+  ripristino; su web resta anche il download del file.
+
+### Removed
+
+- I tre pulsanti flottanti segnaposto (`Rimuovi sfondo`, `Auto luce`,
+  `Ritaglia`): non avevano handler e confondevano l'utente.
+
+### Added
+
+- Test Node `tests/wasm-roundtrip.mjs`: crea un documento, disegna, salva e
+  ricarica `.pizzico` confrontando i pixel; verifica le firme PNG/JPEG. Girato
+  in CI nel job `test-wasm`.
+
+### Not included
+
+- Import PNG/JPG: il motore espone solo `load_psd_bytes` e
+  `add_raster_layer(name, w, h, color)` a tinta unita; serve una nuova API WASM.
+- Export PNG/JPEG su mobile: la WebView wry non implementa i download; serve un
+  salvataggio nativo (plugin dialog/fs) in una sessione successiva.
+
 ## [0.1.3] - 2026-10-28
 
 ### Fixed
