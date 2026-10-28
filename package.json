@@ -10,6 +10,7 @@
     "build:wasm": "wasm-pack build crates/wasm-bindings --target web --out-dir ../../packages/worker-core/pkg",
     "bump": "node scripts/bump-version.mjs",
     "test": "pnpm -r test",
+    "test:wasm": "node tests/wasm-roundtrip.mjs",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
