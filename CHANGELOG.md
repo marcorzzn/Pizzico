@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stroke completion now records a single compact pixel modification in history
   instead of a `StrokeCommand`.
 - Eraser and clipping-mask semantics implemented in `engine-draw`.
+- Release packaging: the APK is named `pizzico-<version>-android.apk` and the
+  `.sha256` contains only the basename. The workflow fix ships from the next
+  tag; the v0.1.2 assets were renamed manually (same bytes and sha256).
 
 ### Known Limitations
 

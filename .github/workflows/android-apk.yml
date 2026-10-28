@@ -321,6 +321,31 @@ jobs:
           sha256sum "$(basename "$DEST")" > "$(basename "$DEST").sha256"
           cat "$(basename "$DEST").sha256"
 
+      # Lo smoke test controlla il contenuto; questo controlla il packaging,
+      # che lo smoke test non vede: nome stabile e checksum portabile.
+      - name: Verify release artifact name and checksum
+        run: |
+          set -euo pipefail
+          APK="$(find apps/tauri/gen/android -name 'pizzico-*.apk' -type f -print -quit)"
+          VERSION="$(node -p "require('./apps/tauri/tauri.conf.json').version")"
+          EXPECTED="pizzico-${VERSION}-android.apk"
+          test -n "$APK" || { echo "::error::APK non trovato"; exit 1; }
+          if [ "$(basename "$APK")" != "$EXPECTED" ]; then
+            echo "::error::nome APK inatteso: $(basename "$APK") != $EXPECTED"
+            exit 1
+          fi
+          SUM="${APK}.sha256"
+          test -f "$SUM" || { echo "::error::checksum mancante: $SUM"; exit 1; }
+          HASH="$(sha256sum "$APK" | cut -d' ' -f1)"
+          EXPECTED_LINE="$HASH  $EXPECTED"
+          ACTUAL="$(cat "$SUM")"
+          if [ "$ACTUAL" != "$EXPECTED_LINE" ]; then
+            echo "::error::checksum non portabile. atteso: [$EXPECTED_LINE] trovato: [$ACTUAL]"
+            exit 1
+          fi
+          echo "Packaging OK: $EXPECTED"
+          cat "$SUM"
+
       - name: List APK outputs
         run: find apps/tauri/gen/android -name '*.apk' -type f -exec ls -lh {} \;
 

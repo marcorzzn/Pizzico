@@ -144,8 +144,15 @@ Lo script legge l'APK senza toolchain Android e verifica:
 3. i nomi hashati del bundle (`assets/index-*.js`, `*.css`, `*.wasm`) presenti
    nella libreria nativa corrispondono a quelli prodotti in `apps/web/dist`.
 
+Un passo successivo, `Verify release artifact name and checksum`, verifica il
+packaging che lo smoke test non vede:
+
+4. il file si chiama `pizzico-<versione>-android.apk`;
+5. il `.sha256` contiene solo `<hash>  <basename>` (due spazi), così
+   `sha256sum -c` funziona dopo il download.
+
 Se uno dei controlli fallisce, il job fallisce e la release non viene creata.
-Il workflow genera anche `<apk>.sha256` e lo allega alla release.
+Il workflow rinomina l'APK e allega il `.sha256` portabile.
 
 Nota: lo smoke test **non** verifica il rendering dell'interfaccia. Quello
 resta un test manuale su device (vedi checklist).
