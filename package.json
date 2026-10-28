@@ -8,6 +8,7 @@
     "build": "pnpm -r build",
     "dev": "pnpm --filter @pizzico/app-web dev",
     "build:wasm": "wasm-pack build crates/wasm-bindings --target web --out-dir ../../packages/worker-core/pkg",
+    "bump": "node scripts/bump-version.mjs",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
