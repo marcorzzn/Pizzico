@@ -13,9 +13,10 @@
 // Chromium headless. Uso:
 //   PLAYWRIGHT_MODULE=/path/to/node_modules/playwright node tests/e2e/wasm-runtime.mjs
 
-import { readFile, stat } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -126,7 +127,13 @@ try {
 }
 
 const problems = [];
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const context = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+  deviceScaleFactor: 2,
+});
+const page = await context.newPage();
 
 page.on("console", (message) => {
   if (message.type() === "error") {
@@ -171,6 +178,68 @@ try {
   });
   if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
     throw new Error("canvas #pizzico-canvas assente o senza dimensioni");
+  }
+
+  // ── Import PSD dalla UI: menu File → Apri PSD… → file chooser ────────────
+  // Uso un nome distinto dal sample di boot per non confondere i toast.
+  const fixtureDir = await mkdtemp(join(tmpdir(), "pizzico-e2e-"));
+  const fixture = join(fixtureDir, "e2e-import.psd");
+  await copyFile(join(ROOT, "apps/web/public/sample-01.psd"), fixture);
+
+  const chooserPromise = page.waitForEvent("filechooser", { timeout: 15_000 });
+  await page.tap('.pz-menu-btn:has-text("File")');
+  await page.tap("#open-psd-btn");
+  const chooser = await chooserPromise;
+  await chooser.setFiles(fixture);
+
+  await page.waitForFunction(
+    (name) =>
+      [...document.querySelectorAll(".pz-toast")].some((toast) =>
+        (toast.textContent ?? "").includes(name),
+      ),
+    "e2e-import.psd",
+    { timeout: 45_000 },
+  );
+
+  // ── Tratto touch sul canvas (CDP: touchStart/Move/End reali) ────────────
+  const touchAction = await page.$eval("#pizzico-canvas", (element) =>
+    getComputedStyle(element).touchAction,
+  );
+  if (touchAction !== "none") {
+    throw new Error(`canvas touch-action = "${touchAction}", atteso "none"`);
+  }
+
+  const canvasHandle = await page.$("#pizzico-canvas");
+  const box = await canvasHandle.boundingBox();
+  if (!box) throw new Error("canvas senza bounding box");
+
+  const viewport = page.viewportSize();
+  const centerX = Math.min(viewport.width - 40, Math.max(40, box.x + box.width / 2));
+  const centerY = Math.min(viewport.height - 40, Math.max(40, box.y + box.height / 2));
+  const startX = centerX - 30;
+  const endX = centerX + 30;
+
+  const cdp = await page.context().newCDPSession(page);
+  const point = (x) => [{ x, y: centerY, id: 1, radiusX: 4, radiusY: 4, force: 1 }];
+
+  const undoBefore = await page.$eval("#undo-btn", (button) => button.disabled);
+  if (!undoBefore) {
+    throw new Error("undo già abilitato prima del tratto: il test non può attribuirlo al touch");
+  }
+
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(startX) });
+  for (let step = 1; step <= 5; step++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: point(startX + ((endX - startX) * step) / 5),
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+  await page.waitForTimeout(500);
+  const undoAfter = await page.$eval("#undo-btn", (button) => button.disabled);
+  if (undoAfter) {
+    throw new Error("il tratto touch non ha prodotto storia (undo ancora disabilitato)");
   }
 
   // Lascia emergere eventuali errori asincroni di boot (autosave, sample).
