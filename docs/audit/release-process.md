@@ -104,8 +104,14 @@ Subito dopo l'init, prima della build:
 
 ```bash
 cd apps/tauri
-cargo tauri icon icons/source.png
+cargo tauri icon icons/android-source.png
 ```
+
+`icons/android-source.png` è la versione 1024×1024 a **pieno bleed** dell'icona
+(sfondo scuro fino ai bordi, mano centrata), derivata da `icons/source.png`
+ritagliando i margini bianchi. `source.png` e `128x128.png` hanno un bordo
+bianco attorno al quadrato arrotondato: passandoli direttamente a `tauri icon`
+si otterrebbe un'icona con cornice bianca. Non usarli per Android.
 
 Il comando (tauri-cli 2.12.4) scrive le icone desktop in `apps/tauri/icons/` e,
 poiché esiste `apps/tauri/gen/android/app/src/main/res/`, scrive anche:

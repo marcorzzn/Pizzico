@@ -143,13 +143,14 @@ jobs:
       # le mipmap vanno rigenerate dal sorgente del brand. Il comando va
       # eseguito senza --output, altrimenti la CLI cerca gen/android rispetto
       # alla cartella di output e scrive nel posto sbagliato.
+      # android-source.png è a pieno bleed: source.png ha i margini bianchi.
       - name: Regenerate Android icons from brand source
         working-directory: apps/tauri
         run: |
           set -euo pipefail
           ICON="gen/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
           BEFORE="$(sha256sum "$ICON" | cut -d' ' -f1)"
-          cargo tauri icon icons/source.png
+          cargo tauri icon icons/android-source.png
           AFTER="$(sha256sum "$ICON" | cut -d' ' -f1)"
           echo "icona prima: $BEFORE"
           echo "icona dopo:  $AFTER"
