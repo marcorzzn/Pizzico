@@ -26,15 +26,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stroke completion now records a single compact pixel modification in history
   instead of a `StrokeCommand`.
 - Eraser and clipping-mask semantics implemented in `engine-draw`.
-- Release packaging: the APK is named `pizzico-<version>-android.apk` and the
-  `.sha256` contains only the basename. The workflow fix ships from the next
-  tag; the v0.1.2 assets were renamed manually (same bytes and sha256).
 
 ### Known Limitations
 
 - The stroke pipeline still contains 16 legacy residual points; see
   `docs/audit/gruppo-2-handoff.md` for the executable handoff.
 - Stroke tools on the v2 backend are still pending.
+
+## [0.1.3] - 2026-10-28
+
+### Fixed
+
+- Android: the Tauri CSP now allows `'wasm-unsafe-eval'`, so the Rust WASM
+  engine initializes in the WebView (`v0.1.2` showed "Errore caricamento WASM").
+- Android: safe-area insets are respected (`viewport-fit=cover` plus
+  `env(safe-area-inset-*)` on the shell, top bar and bottom bar).
+
+### Changed
+
+- Release packaging: the APK is named `pizzico-<version>-android.apk` and the
+  `.sha256` contains only the basename, so `sha256sum -c` works after download.
+- CI: runtime WASM smoke test under the Tauri CSP (headless Chromium).
 
 ## [0.1.2] - 2026-10-28
 
