@@ -17,6 +17,7 @@
 
 use pizzico_core::{BlendMode, Document, Layer, LayerKind, RectSelection, Transform2D};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::io::{Cursor, Read, Write};
 use thiserror::Error;
 use zip::write::SimpleFileOptions;
@@ -78,7 +79,18 @@ pub fn serialize_document(doc: &Document) -> Result<Vec<u8>, NativeIoError> {
         let mut manifest_layers = Vec::with_capacity(doc.layers.len());
 
         // 1. Scrittura blob binari dei pixel in `layers/layer_{id}.bin`
+        let mut seen_layer_ids = HashSet::new();
         for layer in &doc.layers {
+            // Un documento con ID duplicati produrrebbe due file con lo stesso
+            // nome nello ZIP (errore "Duplicate filename"). Meglio fermarsi
+            // con un messaggio chiaro che consegnare un archivio corrotto.
+            if !seen_layer_ids.insert(layer.id) {
+                return Err(NativeIoError::Format(format!(
+                    "ID layer duplicato nel documento: {}. Salvataggio .pizzico annullato per non creare un archivio corrotto.",
+                    layer.id
+                )));
+            }
+
             match &layer.kind {
                 LayerKind::Raster {
                     width,
@@ -340,6 +352,21 @@ mod tests {
             assert_eq!(&pixels[0..4], &[255, 0, 0, 255]);
         } else {
             panic!("Tipo layer atteso: Raster");
+        }
+    }
+
+    #[test]
+    fn test_serialize_rejects_duplicate_layer_ids() {
+        let mut doc = Document::new_empty(4, 4);
+        doc.add_layer(Layer::new_raster(1, "primo", 4, 4));
+        doc.add_layer(Layer::new_raster(1, "duplicato", 4, 4));
+
+        let err = serialize_document(&doc).unwrap_err();
+        match err {
+            NativeIoError::Format(message) => {
+                assert!(message.contains("duplicato"), "messaggio inatteso: {message}");
+            }
+            other => panic!("atteso NativeIoError::Format, trovato: {other:?}"),
         }
     }
 }

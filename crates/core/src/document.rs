@@ -78,8 +78,16 @@ impl Document {
     }
 
     /// Aggiunge un livello in cima allo stack e lo seleziona come livello attivo.
+    ///
+    /// `next_layer_id` viene avanzato anche quando il layer arriva con un ID
+    /// esplicito (import PSD, caricamento `.pizzico`, undo/redo): senza questo
+    /// un documento ricaricato ripartiva da 1 e il layer successivo collideva
+    /// con il primo, producendo due `layers/layer_1.bin` nello ZIP.
     pub fn add_layer(&mut self, layer: Layer) -> LayerId {
         let id = layer.id;
+        if id >= self.next_layer_id {
+            self.next_layer_id = id.saturating_add(1);
+        }
         self.layers.push(layer);
         self.active_layer_id = Some(id);
         id
@@ -314,6 +322,18 @@ mod tests {
         assert_ne!(id1, id2);
         assert_ne!(id2, id3);
         assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_add_layer_with_explicit_id_advances_the_allocator() {
+        // Simula il caricamento di un progetto: i layer arrivano con ID
+        // espliciti e l'allocatore deve ripartire dal massimo + 1.
+        let mut doc = Document::new_empty(100, 100);
+        doc.add_layer(Layer::new_raster(1, "uno", 100, 100));
+        doc.add_layer(Layer::new_raster(2, "due", 100, 100));
+        doc.add_layer(Layer::new_raster(10, "dieci", 100, 100));
+
+        assert_eq!(doc.allocate_layer_id(), 11);
     }
 
     #[test]

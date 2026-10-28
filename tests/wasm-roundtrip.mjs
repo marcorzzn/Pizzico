@@ -19,7 +19,9 @@ import init, {
   get_composite_buffer,
   get_document_metadata,
   get_layer_count,
+  get_layers_metadata,
   load_project,
+  load_psd_bytes,
   save_project,
 } from "../packages/worker-core/pkg/pizzico_wasm_bindings.js";
 
@@ -84,6 +86,39 @@ assert(
   jpeg.length > 3 && jpeg[0] === 0xff && jpeg[1] === 0xd8 && jpeg[2] === 0xff,
   "export_as_jpeg() non restituisce un JPEG valido",
 );
+
+// Regressione P0-G: PSD import + layer aggiunto + save, poi ripristino del
+// progetto + un altro layer. Il secondo add partiva da ID 1 e collideva con
+// il primo layer del PSD (Duplicate filename: layers/layer_1.bin).
+const samplePsd = new Uint8Array(await readFile(join(root, "apps/web/public/sample-01.psd")));
+load_psd_bytes(samplePsd);
+
+function assertUniqueLayerIds(label) {
+  const layers = get_layers_metadata();
+  const seen = new Set();
+  for (const layer of layers) {
+    assert(!seen.has(layer.id), `${label}: ID layer duplicato ${layer.id}`);
+    seen.add(layer.id);
+  }
+  return seen;
+}
+
+const psdIds = assertUniqueLayerIds("dopo import PSD");
+const rectangleId = Number(add_raster_layer("Rettangolo Rosso", 800, 600, new Uint8Array([239, 68, 68, 255])));
+assert(!psdIds.has(rectangleId), `ID ${rectangleId} collide con un layer del PSD`);
+
+const withRectangle = new Uint8Array(save_project());
+assert(withRectangle.length > 0, "save dopo PSD + layer ha restituito 0 byte");
+
+create_document(8, 8);
+load_project(withRectangle);
+const restoredIds = assertUniqueLayerIds("dopo load_project");
+
+const afterRestoreId = Number(add_raster_layer("Dopo ripristino", 800, 600, new Uint8Array([0, 0, 255, 255])));
+assert(!restoredIds.has(afterRestoreId), `ID ${afterRestoreId} collide dopo il ripristino`);
+
+const afterRestore = new Uint8Array(save_project());
+assert(afterRestore.length > 0, "save dopo ripristino + layer ha restituito 0 byte");
 
 console.log("ROUND-TRIP .pizzico OK");
 console.log(`  documento: ${W}x${H}, layer: ${get_layer_count()}`);
