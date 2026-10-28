@@ -12,6 +12,15 @@ Regole rispettate:
 
 @import "../../ui-kit/src/tokens/tokens.css";
 
+/* Android 15+ disegna edge-to-edge: le inset della WebView sono disponibili
+   solo con viewport-fit=cover (apps/web/index.html). */
+:root {
+  --pz-safe-top: env(safe-area-inset-top, 0px);
+  --pz-safe-right: env(safe-area-inset-right, 0px);
+  --pz-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pz-safe-left: env(safe-area-inset-left, 0px);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -39,10 +48,13 @@ html {
 
 .pz-app-shell {
   display: grid;
-  grid-template-rows: 46px 1fr 26px;
+  grid-template-rows: calc(46px + var(--pz-safe-top)) 1fr calc(26px + var(--pz-safe-bottom));
   grid-template-columns: 1fr 280px;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
+  padding-left: var(--pz-safe-left);
+  padding-right: var(--pz-safe-right);
 }
 
 /* ── Top bar: marchio · menu · strumenti · suggerimento ───────────────────── */
@@ -54,6 +66,7 @@ html {
   align-items: center;
   gap: var(--pz-space-md);
   padding: 0 var(--pz-space-md);
+  padding-top: var(--pz-safe-top);
   background-color: var(--pz-bg-toolbar);
   border-bottom: 1px solid var(--pz-border);
 }
@@ -696,6 +709,7 @@ html {
   justify-content: space-between;
   gap: var(--pz-space-md);
   padding: 0 var(--pz-space-md);
+  padding-bottom: var(--pz-safe-bottom);
   background-color: var(--pz-bg-toolbar);
   border-top: 1px solid var(--pz-border);
   font-size: var(--pz-font-size-small);
@@ -1107,7 +1121,7 @@ html {
 @media (max-width: 640px) {
   .pz-app-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: 52px 1fr minmax(0, 42%) 26px;
+    grid-template-rows: calc(52px + var(--pz-safe-top)) 1fr minmax(0, 42%) calc(26px + var(--pz-safe-bottom));
     /* la shell non deve mai essere più larga della viewport: un figlio
        troppo largo (il canvas) sposta tutto, barra strumenti compresa */
     overflow-x: hidden;
@@ -1140,7 +1154,8 @@ html {
 
   .pz-top-bar {
     gap: var(--pz-space-sm);
-    padding: 0 var(--pz-space-sm);
+    padding-left: var(--pz-space-sm);
+    padding-right: var(--pz-space-sm);
   }
 
   /* il suggerimento dello strumento è testo: su 400px ruba lo spazio dei
@@ -1187,7 +1202,7 @@ html {
 
   /* pannello chiuso: la riga collassa e il canvas prende lo spazio */
   .pz-app-shell.pz-sidebar-collapsed {
-    grid-template-rows: 52px 1fr 0 26px;
+    grid-template-rows: calc(52px + var(--pz-safe-top)) 1fr 0 calc(26px + var(--pz-safe-bottom));
   }
 
   .pz-app-shell.pz-sidebar-collapsed .pz-right-sidebar {
@@ -1202,7 +1217,7 @@ html {
 @media (orientation: landscape) and (max-height: 520px) {
   .pz-app-shell {
     grid-template-columns: 1fr 240px;
-    grid-template-rows: 48px 1fr 24px;
+    grid-template-rows: calc(48px + var(--pz-safe-top)) 1fr calc(24px + var(--pz-safe-bottom));
   }
 
   .pz-right-sidebar {
