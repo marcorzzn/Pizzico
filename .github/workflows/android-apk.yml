@@ -122,9 +122,10 @@ jobs:
       - name: Build frontend
         run: pnpm --filter @pizzico/app-web build
 
-      # gen/android viene generato una volta e poi committato; qui si crea solo
-      # se manca. DEVE venire prima della configurazione della firma, perché
-      # firma e keystore.properties vivono dentro il progetto generato.
+      # gen/android è ignorato da git e viene rigenerato a ogni run: non può
+      # portarsi dietro le icone del brand. DEVE venire prima della
+      # configurazione della firma, perché firma e keystore.properties vivono
+      # dentro il progetto generato.
       - name: Init Android project
         working-directory: apps/tauri
         run: |
@@ -134,6 +135,26 @@ jobs:
           else
             echo "gen/android gia' presente: init saltato"
           fi
+
+      # `android init` crea il progetto con le icone di default della CLI:
+      # le mipmap vanno rigenerate dal sorgente del brand. Il comando va
+      # eseguito senza --output, altrimenti la CLI cerca gen/android rispetto
+      # alla cartella di output e scrive nel posto sbagliato.
+      - name: Regenerate Android icons from brand source
+        working-directory: apps/tauri
+        run: |
+          set -euo pipefail
+          ICON="gen/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+          BEFORE="$(sha256sum "$ICON" | cut -d' ' -f1)"
+          cargo tauri icon icons/source.png
+          AFTER="$(sha256sum "$ICON" | cut -d' ' -f1)"
+          echo "icona prima: $BEFORE"
+          echo "icona dopo:  $AFTER"
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "::error::tauri icon non ha sostituito le icone Android (sha256 invariato)"
+            exit 1
+          fi
+          ls -l gen/android/app/src/main/res/mipmap-*/ic_launcher.png
 
       # GitHub NON permette il contesto `secrets` dentro un `if`: si calcola un
       # booleano nell'env del job e si testa quello.
