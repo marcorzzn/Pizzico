@@ -306,11 +306,20 @@ jobs:
             --config apps/tauri/tauri.conf.json \
             --dist apps/web/dist
 
-      - name: Write APK checksum
+      # Nome stabile e checksum portabile: il file scaricato deve potersi
+      # verificare con `sha256sum -c pizzico-<versione>-android.apk.sha256`
+      # senza dipendere dal path del runner.
+      - name: Name APK and write portable checksum
         run: |
           set -euo pipefail
           APK="$(find apps/tauri/gen/android -name '*.apk' -type f -print -quit)"
-          sha256sum "$APK" | tee "$APK.sha256"
+          VERSION="$(node -p "require('./apps/tauri/tauri.conf.json').version")"
+          DIR="$(dirname "$APK")"
+          DEST="$DIR/pizzico-${VERSION}-android.apk"
+          mv "$APK" "$DEST"
+          cd "$DIR"
+          sha256sum "$(basename "$DEST")" > "$(basename "$DEST").sha256"
+          cat "$(basename "$DEST").sha256"
 
       - name: List APK outputs
         run: find apps/tauri/gen/android -name '*.apk' -type f -exec ls -lh {} \;
