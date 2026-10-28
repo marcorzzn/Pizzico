@@ -33,6 +33,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/audit/gruppo-2-handoff.md` for the executable handoff.
 - Stroke tools on the v2 backend are still pending.
 
+## [0.1.5] - 2026-10-28
+
+Build di test P0-G. Nessun tag.
+
+### Fixed
+
+- Collisione ID layer dopo il ripristino di un progetto: `Document::add_layer`
+  ora avanza `next_layer_id` anche quando il layer arriva con un ID esplicito
+  (import PSD, `load_project`, undo/redo). Il layer aggiunto dopo un ripristino
+  non riparte più da 1 e non collide con il primo layer.
+- Writer `.pizzico`: se un documento contiene comunque due layer con lo stesso
+  ID, `serialize_document` si ferma con un errore chiaro invece di produrre un
+  archivio con `layers/layer_1.bin` duplicato.
+
+### Added
+
+- Regression test `tests/wasm-roundtrip.mjs`: PSD import + layer aggiunto +
+  salvataggio + ripristino + nuovo layer; verifica ID univoci e round-trip.
+- WASM rigenerato dal sorgente con il fix.
+
 ## [0.1.4] - 2026-10-28
 
 Build di test P0-F. Nessun tag.

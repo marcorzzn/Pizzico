@@ -1,6 +1,6 @@
 {
   "name": "pizzico",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Pizzico — Laboratorio di Ingegneria del Software Creativo (Root Monorepo)",
   "license": "MIT OR Apache-2.0",
