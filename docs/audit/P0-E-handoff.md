@@ -14,28 +14,28 @@ una release.
 
 ## Cosa manca per chiudere i due bug device
 
-Serve evidenza dalla WebView Android, non dal browser:
+Build confermata: `0.1.3` (run `40683828709`). WASM `v100 pronto` e
+`WebGPU attivo` sono verificati dal device; quindi non sono loro la causa.
+Serve l'evidenza di routing:
 
-1. **Confermare la build**: `0.1.2` (release) o `0.1.3` (run `40683828709`)?
-   Con `0.1.2` il bug CSP del WASM spiega sia touch sia import.
-2. **Log console** durante gesto e import:
-   - `chrome://inspect` via USB, oppure
-   - `adb logcat -c`, riprodurre, `adb logcat -d | Select-String "chromium|WASM|WebGPU|PSD"`.
-3. **Riga `[WebGPU]`**: `Render loop Rust attivo` o `Fallback a Canvas2D`.
-   Se manca WebGPU, il canvas resta statico: non è un bug del touch.
-4. **File PSD** che fallisce, se l'import è file-specifico, e testo esatto del
+1. **Mobile**: con `chrome://inspect` via USB eseguire lo snippet in
+   `P0-E-report.md` e toccare canvas e pulsante flottante. Il log
+   `[P0E-live] pointerdown` mostra `target`/`hit`: se `hit` non è canvas/HUD,
+   un overlay sta mangiando i tocchi.
+2. **Web (F12)**: click File → Apri PSD e incollare `[P0E] menu`, `[P0E] PSD
+   scelto`, `[P0E] import PSD` (o l'assenza di queste righe).
+3. **File PSD** che fallisce, se l'import è file-specifico, e testo esatto del
    toast “Errore parsing PSD: …”.
 
 ## Prossime azioni (in ordine)
 
-1. Se la build testata era `0.1.2`: installare `0.1.3` e ripetere il test prima
-   di scrivere altro codice.
-2. Se `0.1.3` e WebGPU è in fallback: decidere se implementare il renderer
-   Canvas2D usando `get_composite_buffer()` (debito di prodotto, non touch).
-3. Se WebGPU è attivo e il touch non arriva: catturare `pointerType`,
-   `pointerId` e `pointercancel` dal device; aggiungere il log solo allora.
-4. Se il file picker non si apre: verificare `onShowFileChooser` di wry sul
-   device con il log; in caso, passare al plugin dialog.
+1. Se `[P0E-live] hit` è un overlay: rimuoverlo dal flusso o renderlo
+   `pointer-events: none`; ricostruire 0.1.4 e testare touch + HUD.
+2. Se il click web non logga `[P0E] menu: Apri PSD`: il listener del menu non
+   parte; ispezionare l'elemento che copre il pulsante (hit-test) e correggere.
+3. Se logga il menu ma non `PSD scelto`: il picker non si apre; verificare
+   `input.click()` e `onShowFileChooser` sul device.
+4. Se logga `PSD scelto` ma non l'import: errore parser; serve il file.
 
 ## Comandi utili
 

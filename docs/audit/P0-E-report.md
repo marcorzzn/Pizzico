@@ -38,18 +38,26 @@ Tauri/Android WebView, del file usato, o della build testata.
 Non ho applicato fix "a caso" su touch/import: con questa evidenza avrebbero
 solo aggiunto variabili.
 
-## Ipotesi aperte (in ordine di probabilità)
+## Aggiornamento — evidenza dal device (0.1.3)
 
-1. **Build testata.** Se il test è stato fatto su `v0.1.2` (o sull'APK della
-   release), il bug CSP del WASM spiega entrambi i sintomi: senza engine, il
-   touch non produce nulla e l'import non può completare. La build `0.1.3`
-   (run `40683828709`) contiene il fix. Va confermato quale APK è stato
-   installato.
-2. **WebGPU assente sul device.** Se `navigator.gpu` non c'è, l'app cade nel
-   fallback Canvas2D, che oggi **riempie solo il canvas di un colore**: il
-   documento non viene disegnato e il touch sembra morto. La console stampa
-   `[WebGPU] Render loop Rust attivo` oppure `[WebGPU] Fallback a Canvas2D`.
-   Questa sarebbe una lacuna di prodotto, non un regressione del touch.
+Il device conferma: `WASM Rust v100 pronto`, `WebGPU attivo`, canvas con il
+documento visibile. Quindi le ipotesi “build 0.1.2” e “fallback Canvas2D” sono
+**smentite**. Restano:
+
+- tocco che non arriva né al canvas né al pulsante flottante (stessa area);
+- import che non produce effetti su web e mobile.
+
+## Ipotesi aperte
+
+1. **Hit-testing mobile.** Un overlay trasparente o un contenitore che copre
+   l'area del canvas (o una mancata consegna dei `pointer` nella WebView)
+   spiegherebbe perché canvas e pulsante flottante sono entrambi inerti.
+   Il logger `[P0E] pointerdown` stampa `target` e `elementFromPoint`: se
+   `hit` non è il canvas/HUD, l'overlay è identificato.
+2. **Import web.** Il bundle live è aggiornato (`index-8QImmrZ5.js`), il menu
+   è cablato (`onOpenPsd: () => J.click()`) e gli input sono nel DOM. Se il
+   click umano non apre il picker, il log `[P0E]` distingue: handler non
+   invocato, picker non aperto, oppure file scelto ma parser fallito.
 3. **File PSD specifico.** Il parser funziona sul sample; un PSD con feature
    non supportate può lanciare un errore. Serve il file (o il testo esatto del
    toast “Errore parsing PSD: …”).
@@ -59,11 +67,34 @@ solo aggiunto variabili.
 
 ## Evidenza che serve per chiudere
 
-- versione installata (Impostazioni → App) e run di provenienza dell'APK;
-- console della WebView durante il gesto e l'import: `chrome://inspect` da USB,
-  oppure `adb logcat` filtrato su `chromium`;
-- la riga `[WebGPU]` (attivo o fallback);
+- **Web (F12)**: click File → Apri PSD e incollare le righe `[P0E]`:
+  `menu: Apri PSD`, `PSD scelto`, `import PSD`; più eventuali errori rossi.
+- **Mobile (`chrome://inspect` via USB)**: eseguire lo snippet qui sotto e
+  toccare canvas e pulsante flottante; incollare `[P0E] pointerdown` con
+  `target`/`hit`.
+- la riga `[P0E] navigator.gpu` e `[WebGPU]` (attivo o fallback);
 - il file PSD che fallisce, se l'import è file-specifico.
+
+Snippet per la WebView (nessuna build necessaria, funziona sull'APK già
+installato):
+
+```js
+(() => {
+  const d = (el) => el ? `${el.tagName.toLowerCase()}${el.id ? '#'+el.id : ''}` +
+    (typeof el.className === 'string' && el.className ? '.'+el.className.trim().replace(/\s+/g,'.') : '') : 'null';
+  document.addEventListener('pointerdown', (e) => {
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    console.log('[P0E-live]', e.pointerType, 'target', d(e.target), 'hit', d(hit), e.clientX, e.clientY);
+  }, true);
+  document.querySelectorAll('input[type=file]').forEach((i) => {
+    console.log('[P0E-live] input', i.accept, i.isConnected, getComputedStyle(i).display);
+    i.addEventListener('change', () => console.log('[P0E-live] change', i.files?.[0]?.name));
+  });
+  document.querySelector('#open-psd-btn')?.addEventListener('click', () => console.log('[P0E-live] open-psd click'));
+  window.addEventListener('drop', (e) => console.log('[P0E-live] drop', e.dataTransfer?.files?.[0]?.name), true);
+  console.log('[P0E-live] pronto');
+})();
+```
 
 ## Pulizia e audit fatti
 
