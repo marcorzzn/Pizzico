@@ -154,6 +154,11 @@ packaging che lo smoke test non vede:
 Se uno dei controlli fallisce, il job fallisce e la release non viene creata.
 Il workflow rinomina l'APK e allega il `.sha256` portabile.
 
+In più, `tests/e2e/wasm-runtime.mjs` (job `test-wasm` di `ci.yml`) serve la
+build con la stessa CSP di Tauri e la carica in Chromium headless: se il WASM
+non compila — console error o badge "Errore caricamento WASM" — il job
+fallisce. È il gate che mancava a `v0.1.2`; non sostituisce il test su device.
+
 Nota: lo smoke test **non** verifica il rendering dell'interfaccia. Quello
 resta un test manuale su device (vedi checklist).
 

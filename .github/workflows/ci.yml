@@ -93,3 +93,22 @@ jobs:
           ls -lh apps/web/dist/assets/*.wasm
           echo "✅ All WASM and security header artifacts verified in dist/"
 
+      # Playwright vive in una directory isolata: il workspace non guadagna
+      # una dipendenza solo per il gate, e la versione resta pinnata qui.
+      - name: Install Playwright (isolated)
+        env:
+          PLAYWRIGHT_VERSION: 1.64.1
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pw"
+          cd "$RUNNER_TEMP/pw"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "playwright@${PLAYWRIGHT_VERSION}"
+          npx playwright install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/pw/node_modules/playwright" >> "$GITHUB_ENV"
+
+      # Carica l'app con la stessa CSP di Tauri: se WebAssembly non compila
+      # sotto quella policy, il job fallisce (v0.1.2 sarebbe passata di qui).
+      - name: Runtime WASM smoke (headless Chromium)
+        run: node tests/e2e/wasm-runtime.mjs
+
