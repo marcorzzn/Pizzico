@@ -1,6 +1,6 @@
 # ADR-0008 — Catalogo dichiarativo degli strumenti e confine dei comandi
 
-- **Stato:** accettata — Gate 1 della sessione P1-Arch
+- **Stato:** accettata — Gate 1 e 2 della sessione P1-Arch
 - **Data:** 2026-10-29
 - **Ambito:** `crates/tools` (nuovo), `crates/engine/core/tests`, UI web (fase successiva)
 
@@ -59,6 +59,21 @@ percentuali 0-100), le stesse che l'utente vede oggi. La conversione verso le un
 motore di disegno (hardness e opacity normalizzate) appartiene al confine di esecuzione,
 non allo schema: così una UI generata dai dati non deve conoscere le convenzioni interne.
 
+### Confine WASM
+
+Il catalogo attraversa il confine con due sole funzioni, senza callback e senza stato
+condiviso:
+
+- `get_tool_catalog_json() -> String` — catalogo completo; un errore interno diventa
+  un'eccezione JS con messaggio contestualizzato, mai un panic;
+- `get_tool_schema_json(id: &str) -> Option<String>` — JSON dello strumento, oppure
+  `undefined` se l'id non esiste o non è valido. "Non c'è" non è un errore.
+
+Lato TypeScript i tipi vivono in `packages/shared` (`ParamSpec` come unione discriminata
+su `kind`, parser con controllo di `schemaVersion`) e il wrapper tipizzato in
+`packages/worker-core` (`getToolCatalog`, `getToolSchema`). Il parser TS verifica
+struttura e versione, non duplica le regole di merito già validate in Rust.
+
 ## Perché non un sistema di plugin a runtime
 
 Il formato è dati, non codice. In `wasm32-unknown-unknown` non esiste caricamento
@@ -82,9 +97,9 @@ separazione che rende la UI generabile e testabile.
 
 - Aggiungere uno strumento diventa: un modulo Rust che costruisce il suo `ToolSchema`,
   una registrazione. Nessuna modifica al bridge o alla UI (fase 4 lo dimostra).
-- Il catalogo non è ancora collegato all'app: nessun cambiamento visibile finché il
-  bridge non lo espone (fase 2) e la UI non lo consuma (fase 3). Questo è voluto: il
-  Gate 1 è verificabile con `cargo test`, senza toccare il runtime.
+- Il catalogo attraversa il confine WASM (Gate 2), ma la UI non lo consuma ancora:
+  nessun cambiamento visibile fino al Gate 3. Questo è voluto: ogni gate è verificabile
+  senza toccare il livello successivo.
 - Rischio dichiarato: schema e comportamento possono divergere finché la UI non è
   generata dai dati. Mitigazione: i valori predefiniti dei builtin coincidono con quelli
   correnti della UI (raggio 20 px, durezza 80%, opacità 100%, colore `#22c55e`) e il
@@ -97,7 +112,7 @@ separazione che rende la UI generabile e testabile.
 | Gate | Contenuto | Stato |
 | --- | --- | --- |
 | 1 | Comandi verificati byte per byte + catalogo validato in Rust | **questa sessione** |
-| 2 | Esposizione WASM (`tool_catalog_json`, `tool_schema_json`) | in attesa di approvazione |
+| 2 | Esposizione WASM e tipi TypeScript del catalogo | **chiuso in questa sessione** |
 | 3 | UI data-driven che sostituisce gli slider cablati | pianificato |
 | 4 | Strumento fittizio visibile in UI senza toccare `main.ts` | pianificato |
 

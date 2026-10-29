@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gate 1 command round-trip test (`engine-core`): seven commands of different
   kinds, full undo and redo with byte-exact document, layer buffers and composite
   comparison; new commands after an undo discard the redo branch.
+- WASM bridge exports `get_tool_catalog_json()` and `get_tool_schema_json(id)`;
+  unknown ids return `undefined`, internal errors throw instead of panicking.
+- Typed tool-catalog boundary: discriminated `ParamSpec` types and a versioned
+  parser in `@pizzico/shared`, `getToolCatalog()`/`getToolSchema()` wrappers in
+  `@pizzico/worker-core`.
+- Node parity test (`tests/tool-catalog.mjs`) runs against the compiled WASM and is
+  part of CI.
 
 ### Changed
 
