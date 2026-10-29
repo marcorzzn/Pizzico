@@ -12,6 +12,9 @@
 // Richiede Playwright (installato dal workflow in una directory isolata) e un
 // Chromium headless. Uso:
 //   PLAYWRIGHT_MODULE=/path/to/node_modules/playwright node tests/e2e/wasm-runtime.mjs
+//
+// Per una verifica locale con un browser di sistema (senza scaricare Chromium):
+//   PLAYWRIGHT_MODULE=/path/to/playwright-core PLAYWRIGHT_CHANNEL=chrome node tests/e2e/wasm-runtime.mjs
 
 import { copyFile, mkdtemp, readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -119,9 +122,13 @@ try {
 }
 
 const { chromium } = playwright;
+const launchOptions = { headless: true };
+if (process.env.PLAYWRIGHT_CHANNEL) {
+  launchOptions.channel = process.env.PLAYWRIGHT_CHANNEL;
+}
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch(launchOptions);
 } catch (error) {
   fail(`avvio di Chromium fallito: ${error.message}`);
 }
@@ -179,6 +186,101 @@ try {
   if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
     throw new Error("canvas #pizzico-canvas assente o senza dimensioni");
   }
+
+  // ── Gate 3: pannello parametri generato dal catalogo degli strumenti ─────
+  // Legge il DOM generato e confronta numero e tipo di controlli con lo schema:
+  // tre slider per la gomma (senza colore), tre slider più il colore per il
+  // pennello. Non guarda gli slider "a occhio".
+  const readToolPanel = () =>
+    page.$eval("#tool-param-panel", (panel) => ({
+      toolId: panel.dataset.toolId ?? null,
+      kinds: [...panel.querySelectorAll("[data-param-kind]")].map(
+        (element) => element.dataset.paramKind,
+      ),
+      ranges: [...panel.querySelectorAll('input[type="range"]')].map((input) => input.value),
+      colors: panel.querySelectorAll('input[type="color"]').length,
+    }));
+
+  await page.keyboard.press("b");
+  await page.waitForFunction(
+    () => document.querySelector("#tool-param-panel")?.dataset.toolId === "brush",
+    null,
+    { timeout: 15_000 },
+  );
+  const brushPanel = await readToolPanel();
+  if (JSON.stringify(brushPanel.kinds) !== JSON.stringify(["integer", "integer", "integer", "color"])) {
+    throw new Error(`pennello: tipi dei parametri inattesi ${JSON.stringify(brushPanel.kinds)}`);
+  }
+  if (brushPanel.colors !== 1) {
+    throw new Error(`pennello: ${brushPanel.colors} color picker, atteso 1`);
+  }
+  if (JSON.stringify(brushPanel.ranges) !== JSON.stringify(["20", "80", "100"])) {
+    throw new Error(`pennello: valori iniziali ${JSON.stringify(brushPanel.ranges)}`);
+  }
+
+  await page.keyboard.press("e");
+  await page.waitForFunction(
+    () => document.querySelector("#tool-param-panel")?.dataset.toolId === "eraser",
+    null,
+    { timeout: 15_000 },
+  );
+  const eraserPanel = await readToolPanel();
+  if (eraserPanel.kinds.length !== 3 || eraserPanel.kinds.some((kind) => kind !== "integer")) {
+    throw new Error(`gomma: tipi dei parametri inattesi ${JSON.stringify(eraserPanel.kinds)}`);
+  }
+  if (eraserPanel.colors !== 0) {
+    throw new Error(`gomma: ${eraserPanel.colors} color picker, atteso 0`);
+  }
+  if (eraserPanel.ranges.length !== 3) {
+    throw new Error(`gomma: ${eraserPanel.ranges.length} slider, attesi 3`);
+  }
+
+  console.log(
+    `  pannello pennello: ${brushPanel.kinds.length} controlli (${brushPanel.ranges.join(", ")}), ${brushPanel.colors} color picker`,
+  );
+  console.log(
+    `  pannello gomma:    ${eraserPanel.kinds.length} controlli, ${eraserPanel.colors} color picker`,
+  );
+
+  // I valori sono per strumento: il raggio impostato sul pennello deve
+  // sopravvivere a un giro pennello → gomma → pennello.
+  await page.keyboard.press("b");
+  await page.waitForFunction(
+    () => document.querySelector("#tool-param-panel")?.dataset.toolId === "brush",
+    null,
+    { timeout: 15_000 },
+  );
+  await page.$eval("#tool-param-size", (input) => {
+    input.value = "42";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await page.keyboard.press("e");
+  await page.waitForFunction(
+    () => document.querySelector("#tool-param-panel")?.dataset.toolId === "eraser",
+    null,
+    { timeout: 15_000 },
+  );
+  await page.keyboard.press("b");
+  await page.waitForFunction(
+    () => document.querySelector("#tool-param-panel")?.dataset.toolId === "brush",
+    null,
+    { timeout: 15_000 },
+  );
+
+  const persisted = await page.$eval("#tool-param-size", (input) => input.value);
+  if (persisted !== "42") {
+    throw new Error(`pennello: raggio ${persisted} dopo il cambio strumento, atteso 42`);
+  }
+
+  // Riporta il raggio al default per il tratto touch che segue.
+  await page.$eval("#tool-param-size", (input) => {
+    input.value = "20";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  // Il tratto touch più sotto usa il pennello: ripristinalo.
+  await page.keyboard.press("b");
 
   // ── Import PSD dalla UI: menu File → Apri PSD… → file chooser ────────────
   // Uso un nome distinto dal sample di boot per non confondere i toast.
