@@ -85,6 +85,9 @@ jobs:
       - name: Round-trip .pizzico (Node, no browser)
         run: node tests/wasm-roundtrip.mjs
 
+      - name: Tool catalog parity (Node, no browser)
+        run: node tests/tool-catalog.mjs
+
       - name: Build Web Application
         run: pnpm --filter @pizzico/app-web build
 
