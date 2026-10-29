@@ -958,6 +958,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pizzico-tools"
+version = "0.1.5"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "pizzico-vector"
 version = "0.1.5"
 dependencies = [

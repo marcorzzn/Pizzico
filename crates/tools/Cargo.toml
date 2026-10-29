@@ -1,0 +1,12 @@
+[package]
+name = "pizzico-tools"
+description = "Catalogo dichiarativo degli strumenti: schema dei parametri, validazione e JSON versionato."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# Dati, non esecuzione: nessuna dipendenza dal motore, così il catalogo resta
+# utilizzabile sia dal backend legacy sia da engine-v2.
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

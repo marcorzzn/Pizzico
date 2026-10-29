@@ -16,6 +16,9 @@ members = [
     "crates/selection",
     "crates/inpainting",
     "crates/commands",
+    # Catalogo dichiarativo degli strumenti (dati, non esecuzione): indipendente
+    # dal motore, così serve sia al backend legacy sia a engine-v2.
+    "crates/tools",
     "crates/wasm-bindings",
     # Motore trapiantato da Pizzart (Fase 1). Additivo: i crate legacy restano
     # in vita fino al Gate G5 (parità misurata) e vengono ritirati solo in Fase 8.
