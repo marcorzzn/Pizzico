@@ -22,12 +22,8 @@ import {
   LayerRow,
   Button,
   Slider,
-  createSlider,
-  createColorPicker,
   AlertCircleIcon,
-  BrushIcon,
   CheckIcon,
-  EraserIcon,
   EyeIcon,
   EyeOffIcon,
   FolderOpenIcon,
@@ -79,8 +75,10 @@ import {
   export_as_jpeg,
   export_as_webp,
   export_as_psd,
+  getToolSchema,
 } from '@pizzico/worker-core';
 import { saveAutosave, loadAutosave, clearAutosave } from './storage';
+import { ToolInspector, type ToolParamValues } from './tool-inspector';
 
 console.log('Pizzico Engine initializing…');
 
@@ -104,6 +102,39 @@ let brushHardness = 0.8;
 let brushOpacity = 1.0;
 let brushColorHex = '#22c55e'; // default verde vibrante come da istruzioni
 let brushColorRgba = [34, 197, 94, 255]; // [R, G, B, A]
+
+/**
+ * Valori dei parametri per strumento, popolati dal catalogo (Gate 3 P1-Arch).
+ *
+ * La mappa è per id di strumento: cambiare pennello ↔ gomma non azzera i valori,
+ * e aggiungere uno strumento non richiede una nuova variabile globale.
+ */
+const toolParamValues = new Map<string, ToolParamValues>();
+
+/**
+ * Unico punto in cui i valori dello schema diventano lo stato usato dal disegno.
+ *
+ * I nomi (`size`, `hardness`, `opacity`, `color`) sono il contratto dello schema,
+ * non della UI: il pannello non li conosce e li tratta come dati.
+ */
+function applyToolValues(toolId: string, values: ToolParamValues): void {
+  if (toolId !== 'brush' && toolId !== 'eraser') return;
+
+  if (typeof values.size === 'number') {
+    brushRadius = values.size;
+  }
+  if (typeof values.hardness === 'number') {
+    brushHardness = values.hardness / 100;
+  }
+  if (typeof values.opacity === 'number') {
+    brushOpacity = values.opacity / 100;
+    brushColorRgba[3] = Math.round(brushOpacity * 255);
+  }
+  if (typeof values.color === 'string') {
+    brushColorHex = values.color;
+    brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
+  }
+}
 
 function hexToRgba(hex: string, opacity: number): [number, number, number, number] {
   let c = hex.replace('#', '');
@@ -1283,6 +1314,16 @@ brushPropsSection.id = 'brush-inspector';
 brushPropsSection.className = 'pz-card';
 shell.inspectorPanelBody.appendChild(brushPropsSection);
 
+// Pannello parametri generato dal catalogo (Gate 3 P1-Arch). Il contenitore è
+// lo stesso di prima; cambia chi costruisce i controlli: non più `main.ts`.
+const toolInspector = new ToolInspector({
+  onChange: (toolId, values) => {
+    toolParamValues.set(toolId, values);
+    if (toolId === currentTool) applyToolValues(toolId, values);
+  },
+});
+brushPropsSection.appendChild(toolInspector.element);
+
 // Sezione contestuale: Proprietà del livello attivo
 const layerPropsSection = document.createElement('div');
 layerPropsSection.id = 'active-layer-inspector';
@@ -1368,82 +1409,25 @@ function updateInspector() {
     const deselBtn = document.getElementById('inspector-deselect-btn');
     deselBtn?.addEventListener('click', handleDeselect);
   } else {
-    brushPropsSection.innerHTML = `
-      <div class="pz-card-header">
-        <span style="display: inline-flex; align-items: center; gap: 6px;">${currentTool === 'eraser' ? EraserIcon(16) : BrushIcon(16)}<span>Strumento: ${currentTool === 'eraser' ? 'Gomma' : 'Pennello'}</span></span>
-        <span style="font-size: 11px; color: var(--pz-accent);">${currentTool === 'eraser' ? 'Eraser Mode (E)' : 'Brush Mode (B)'}</span>
-      </div>
+    const schema = getToolSchema(currentTool);
+    if (!schema) {
+      toolInspector.element.remove();
+      brushPropsSection.innerHTML = `
+        <div class="pz-card-header"><span>Strumento: ${currentTool}</span></div>
+        <div style="font-size: 12px; color: var(--pz-text-muted);">
+          Nessun parametro dichiarato per questo strumento.
+        </div>
+      `;
+    } else {
+      // Il pannello è lo stesso di prima; cambia chi costruisce i controlli.
+      brushPropsSection.innerHTML = '';
+      brushPropsSection.appendChild(toolInspector.element);
+      toolInspector.setSchema(schema, toolParamValues.get(currentTool));
 
-    `;
-
-    // Controlli costruiti con i componenti di ui-kit: gli ID restano quelli che
-    // il resto del file interroga, e gli effetti su brushRadius/Hardness/Opacity
-    // e brushColorRgba sono identici a prima.
-    brushPropsSection.appendChild(
-      createSlider({
-        id: 'brush-radius-input',
-        label: 'Dimensione (Raggio)',
-        min: 1,
-        max: 100,
-        value: brushRadius,
-        unit: ' px',
-        onInput: (v) => {
-          brushRadius = v;
-        },
-      })
-    );
-
-    brushPropsSection.appendChild(
-      createSlider({
-        id: 'brush-hardness-input',
-        label: 'Durezza (Hardness)',
-        min: 0,
-        max: 100,
-        value: Math.round(brushHardness * 100),
-        unit: '%',
-        onInput: (v) => {
-          brushHardness = v / 100.0;
-        },
-      })
-    );
-
-    brushPropsSection.appendChild(
-      createSlider({
-        id: 'brush-opacity-input',
-        label: 'Opacità Tratto',
-        min: 1,
-        max: 100,
-        value: Math.round(brushOpacity * 100),
-        unit: '%',
-        onInput: (v) => {
-          brushOpacity = v / 100.0;
-          brushColorRgba[3] = Math.round(brushOpacity * 255);
-        },
-      })
-    );
-
-    const colorRow = document.createElement('div');
-    colorRow.style.cssText =
-      'display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--pz-surface-hover);';
-
-    const colorLabel = document.createElement('span');
-    colorLabel.className = 'pz-slider-title';
-    colorLabel.textContent = 'Colore Tratto';
-
-    colorRow.append(
-      colorLabel,
-      createColorPicker({
-        id: 'brush-color-picker',
-        label: 'Colore tratto',
-        value: brushColorHex,
-        onChange: (hex) => {
-          brushColorHex = hex;
-          brushColorRgba = hexToRgba(brushColorHex, brushOpacity);
-        },
-      })
-    );
-
-    brushPropsSection.appendChild(colorRow);
+      const values = toolInspector.getValues();
+      toolParamValues.set(currentTool, values);
+      applyToolValues(currentTool, values);
+    }
   }
 
   // 3. Proprietà Livello Attivo
