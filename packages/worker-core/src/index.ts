@@ -82,6 +82,7 @@ export {
 export type { InitOutput, InitInput } from '../pkg/pizzico_wasm_bindings';
 
 export * from './worker';
+export * from './tools';
 
 // ── WorkerClient ──────────────────────────────────────────────────────────────
 
