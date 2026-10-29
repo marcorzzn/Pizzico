@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@deprecated not supported in engine-v2` annotations in the public API.
 - `pizzico-session` crate: WASM-safe port of the editor session semantics.
 - Dual licensing: full `LICENSE-MIT` and `LICENSE-APACHE` texts.
+- `pizzico-tools` crate: declarative tool catalog with validated, typed parameter
+  schemas (`integer`, `float`, `color`, `boolean`, `choice`), deterministic
+  ordering and versioned JSON (`schemaVersion: 1`). Data only: no engine
+  dependency, no runtime plugin loading. See `docs/ADR/0008-tool-registry.md`.
+- Gate 1 command round-trip test (`engine-core`): seven commands of different
+  kinds, full undo and redo with byte-exact document, layer buffers and composite
+  comparison; new commands after an undo discard the redo branch.
 
 ### Changed
 
