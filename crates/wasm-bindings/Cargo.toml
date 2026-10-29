@@ -20,6 +20,8 @@ pizzico-commands = { path = "../commands" }
 pizzico-io-psd = { path = "../io-psd" }
 pizzico-io-native = { path = "../io-native" }
 pizzico-raster = { path = "../raster" }
+# Catalogo dichiarativo degli strumenti: dati validati, nessuna dipendenza dal motore.
+pizzico-tools = { path = "../tools" }
 
 # Motore trapiantato da Pizzart (Fase 4.2). Opzionali: si attivano con `engine-v2`.
 pizzico-engine-core = { path = "../engine/core", optional = true }

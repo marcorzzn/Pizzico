@@ -312,6 +312,19 @@ export function get_layers_metadata(): any;
 export function get_selection(): any;
 
 /**
+ * Catalogo completo per la UI.
+ *
+ * In caso di errore lancia un'eccezione JS con un messaggio già contestualizzato:
+ * non esiste un percorso che produca un panic nel runtime WASM.
+ */
+export function get_tool_catalog_json(): string;
+
+/**
+ * Schema di uno strumento, o `undefined` se non esiste.
+ */
+export function get_tool_schema_json(id: string): string | undefined;
+
+/**
  * Restituisce true se è presente una selezione rettangolare attiva.
  */
 export function has_active_selection(): boolean;
@@ -440,6 +453,8 @@ export interface InitOutput {
     readonly get_layer_count: () => number;
     readonly get_layers_metadata: () => [number, number, number];
     readonly get_selection: () => [number, number, number];
+    readonly get_tool_catalog_json: () => [number, number, number, number];
+    readonly get_tool_schema_json: (a: number, b: number) => [number, number, number, number];
     readonly has_active_selection: () => number;
     readonly init_panic_hook: () => void;
     readonly init_webgpu: (a: number, b: number) => any;

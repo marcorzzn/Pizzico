@@ -19,6 +19,8 @@
 //! - `init_webgpu(canvas_id: &str) -> Promise` — avvia il render loop WebGPU
 //! - `begin_stroke()`, `brush_stroke()`, `eraser_stroke()`, `end_stroke()` — Brush Engine
 //! - `undo()`, `redo()`, `can_undo()`, `can_redo()`, `get_history_info()` — History System
+//! - `get_tool_catalog_json()`, `get_tool_schema_json(id)` — catalogo degli strumenti
+//!   (schema dei parametri per la UI, non esecuzione)
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,6 +32,7 @@ use pizzico_raster::brush::{BoundingBox, Brush};
 
 pub mod engine;
 pub mod gpu;
+pub mod tools;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Stato Globale Documento Attivo & History (Thread-Local per runtime WASM)

@@ -991,6 +991,7 @@ dependencies = [
  "pizzico-io-psd",
  "pizzico-raster",
  "pizzico-render",
+ "pizzico-tools",
  "serde",
  "serde_json",
  "wasm-bindgen",
