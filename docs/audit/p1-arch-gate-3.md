@@ -63,10 +63,21 @@ Rust non sono stati toccati in questo gate.
 ## Build di test per il device
 
 - Web: `apps/web/dist` è pronta; il bundle contiene il WASM ottimizzato.
-- Android: workflow `Android APK` eseguito sul branch:
-  [run 40926446626](https://github.com/marcorzzn/pizzico/actions/runs/40926446626).
-  L'artifact `pizzico-apk` contiene l'APK firmato (o non firmato, se i secret non
-  fossero configurati).
+- Android: workflow `Android APK` sul branch, run
+  [40926446626](https://github.com/marcorzzn/pizzico/actions/runs/40926446626),
+  concluso con **success**. I passi `Decode keystore`, `Verify keystore`,
+  `Configure Android signing` e `Build APK` sono verdi: l'APK è firmato.
+- Artifact `pizzico-apk` (14.4 MB zippato) scaricato in
+  `scratch/apk/universal/release/pizzico-0.1.5-android.apk`
+  (38 353 891 byte, SHA-256 `4ec8b5f0…f08bc6b`, uguale al `.sha256` del workflow).
+- Igiene dell'artifact: contiene anche un vecchio `pizzico-0.1.1-android.apk`
+  (27/10). Non è il file da installare; l'upload path della CI dovrebbe essere
+  ristretto ai soli output del run corrente. È un follow-up del workflow, fuori
+  dal perimetro del Gate 3.
+- Installazione: `adb install -r scratch/apk/universal/release/pizzico-0.1.5-android.apk`
+  oppure copia sul telefono e apertura diretta (consentire l'installazione da
+  sorgenti sconosciute). Se sul telefono esiste la vecchia app con un identifier
+  diverso, le due possono convivere.
 - Nota ambientale: la build Vite locale richiede l'avvio del servizio esbuild con
   stdio piped, che il sandbox blocca; è stata eseguita una volta con accesso completo.
   La CI non ha questo vincolo. Playwright locale ha usato Chrome di sistema
