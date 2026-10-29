@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@pizzico/worker-core`.
 - Node parity test (`tests/tool-catalog.mjs`) runs against the compiled WASM and is
   part of CI.
+- `ToolInspector`: the brush/eraser inspector is generated from `ToolSchema`
+  instead of hardcoded sliders. Brush shows three sliders plus the colour picker,
+  eraser three sliders and no colour; values persist per tool across switches.
+  `main.ts` drops from 1607 to 1433 lines.
+- E2E runtime test asserts the generated brush/eraser panels and value
+  persistence; `PLAYWRIGHT_CHANNEL` allows a local system browser without
+  downloading Chromium.
 
 ### Changed
 

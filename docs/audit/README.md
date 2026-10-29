@@ -19,6 +19,7 @@ records, not living documents.
 | [fase-7-ricognizione.md](fase-7-ricognizione.md) | Phase 7 reconnaissance: state of `apps/tauri`, missing Android toolchain, risks and a revised estimate. |
 | [p1-arch-gate-1.md](p1-arch-gate-1.md) | Gate 1 of the modular refactor: command round-trip certification and the new declarative tool catalog. |
 | [p1-arch-gate-2.md](p1-arch-gate-2.md) | Gate 2 of the modular refactor: WASM catalog exports, typed TypeScript boundary and the Node parity test. |
+| [p1-arch-gate-3.md](p1-arch-gate-3.md) | Gate 3: the brush/eraser inspector is generated from the catalog, with E2E assertions and the test build. |
 
 Supporting evidence in this directory:
 

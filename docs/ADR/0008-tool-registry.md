@@ -1,6 +1,6 @@
 # ADR-0008 — Catalogo dichiarativo degli strumenti e confine dei comandi
 
-- **Stato:** accettata — Gate 1 e 2 della sessione P1-Arch
+- **Stato:** accettata — Gate 1, 2 e 3 della sessione P1-Arch
 - **Data:** 2026-10-29
 - **Ambito:** `crates/tools` (nuovo), `crates/engine/core/tests`, UI web (fase successiva)
 
@@ -97,13 +97,21 @@ separazione che rende la UI generabile e testabile.
 
 - Aggiungere uno strumento diventa: un modulo Rust che costruisce il suo `ToolSchema`,
   una registrazione. Nessuna modifica al bridge o alla UI (fase 4 lo dimostra).
-- Il catalogo attraversa il confine WASM (Gate 2), ma la UI non lo consuma ancora:
-  nessun cambiamento visibile fino al Gate 3. Questo è voluto: ogni gate è verificabile
-  senza toccare il livello successivo.
+- Il catalogo attraversa il confine WASM (Gate 2) e la UI lo consuma (Gate 3): il
+  pannello dei parametri di pennello e gomma è generato dagli schemi, non più da
+  slider cablati in `main.ts` (1607 → 1433 righe). Il componente vive in
+  `apps/web/src/tool-inspector.ts`; potrà salire in `ui-kit` quando ci sarà un
+  secondo consumatore.
+- L'adattatore di esecuzione in `main.ts` conosce ancora i nomi `size`, `hardness`,
+  `opacity`, `color`: è il debito dichiarato che il Gate 4 dovrà eliminare quando
+  lo strumento fittizio dovrà disegnare, non solo comparire.
+- Il catalogo descrive i parametri, non l'elenco degli strumenti nella toolbar:
+  quella resta cablata in `ui-web` e il Gate 4 la dovrà generare dal catalogo per
+  dimostrare l'estensibilità end-to-end.
 - Rischio dichiarato: schema e comportamento possono divergere finché la UI non è
   generata dai dati. Mitigazione: i valori predefiniti dei builtin coincidono con quelli
   correnti della UI (raggio 20 px, durezza 80%, opacità 100%, colore `#22c55e`) e il
-  Gate 3 confronterà i controlli generati con quelli attuali.
+  Gate 3 ha confrontato i controlli generati con quelli attuali.
 - La gomma non dichiara il parametro colore: la UI generata smetterà di mostrarlo. È una
   correzione di comportamento, non una regressione.
 
@@ -113,7 +121,7 @@ separazione che rende la UI generabile e testabile.
 | --- | --- | --- |
 | 1 | Comandi verificati byte per byte + catalogo validato in Rust | **questa sessione** |
 | 2 | Esposizione WASM e tipi TypeScript del catalogo | **chiuso in questa sessione** |
-| 3 | UI data-driven che sostituisce gli slider cablati | pianificato |
+| 3 | UI data-driven che sostituisce gli slider cablati | **chiuso in questa sessione** |
 | 4 | Strumento fittizio visibile in UI senza toccare `main.ts` | pianificato |
 
 ## Riferimenti
